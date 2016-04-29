@@ -1,0 +1,68 @@
+\documentclass{article}
+
+\title{ACT-R -- subsymbolic parameters}
+\date{}
+\begin{document}
+\maketitle
+\section*{Base-level learning}
+\noindent Switched on by subsymbolic=True.\\
+The equation describing learning of base-level activation for a chunk $i$ is:
+$$B_i = ln(\sum_{j=1}^{n}(t_j^{-d}))+ \eta$$
+\begin{itemize}
+\item $n$: The number of presentations for chunk $i$
+\item $t_j$ : The time since the jth presentation
+\item $d$: The decay parameter (set by decay)
+\item $\eta$: the instantaneous noise
+\end{itemize}
+The (instantaneous) noise:
+$$\sigma^2=s^2*\pi^2/3$$
+\begin{itemize}
+    \item $s$: The noise parameter (set by instantaneous\_noise)
+\end{itemize}
+Retrieval latency:
+$$T=Fe^{-A}$$
+\begin{itemize}
+    \item $A$: Activation of the chunk retrieved
+    \item $F$: The latency parameter (set by latency\_parameter)
+\end{itemize}
+Retrieval latency when retrieval fails:
+$$T=Fe^{-\tau}$$
+\begin{itemize}
+    \item $\tau$: The retrieval threshold (set by retrieval\_threshold)
+    \item $F$: The latency parameter (set by latency\_parameter)
+\end{itemize}
+For an example see u4\_paired in \textbf{tutorials}.
+\section*{Source and activation}
+\noindent Switched on by subsymbolic=True and specifying buffer\_spreading\_activation (see below).\\
+$$A_i = B_i + \sum_{k}\sum_{j}W_{kj}*S_{ji}$$
+\begin{itemize}
+\item $A_i$: activation of the chunk $i$
+\item $B_i$: base-level activation, see above
+\item $W_{kj}$: the amount of activation from source $j$ in buffer $k$
+\item $S_{ji}$: the strength of association from source $j$ to chunk $i$
+\end{itemize}
+$W_{kj}$ is set by buffer\_spreading\_activation. The value of this parameter is a dictionary in which keys specify what buffers should be used for spreading activations, values specify the amount of activation in these buffers.
+$$S_{ji}=S - ln( fan_j )$$
+\begin{itemize}
+    \item $S$: the maximum associative strength (set by strength\_of\_association)
+    \item $fan_j$: the number of chunks in declarative memory in which $j$ is the value of a slot plus one for chunk $j$ being associated with itself
+\end{itemize}
+For an example see u5\_fan in \textbf{tutorials}.
+\section*{Adding partial matching}
+Switched on by subsymbolic=True and partial\_matching=True.
+$$A_i = B_i + \sum_{k}\sum_{j}W_{kj}*S_{ji} + \sum_{l}M_{li}$$
+\begin{itemize}
+    \item $M_{li}$: The similarity between the value $l$ in the retrieval specification and the value in the corresponding slot of chunk $i$
+\end{itemize}
+The similarity currently only uses default values - a maximum similarity (0) and a maximum different (-1). To be added: let the modeler set these values. For an example see u5\_grouped in \textbf{tutorials}.
+\section*{Utility in production rules}
+\noindent Switched on by partial\_matching=True.
+The (utility) noise:
+$$\sigma^2=s^2*\pi^2/3$$
+\begin{itemize}
+    \item $s$: The noise parameter (set by utility\_noise)
+\end{itemize}
+Each rule can specify its own utility (by having the parameter utility=n, where n is a number). Each rule can also specify reward it creates for utility learning (by having the parameter reward=n, where n is a number). Utility learning is set by utility\_learning=True. The learning rate for utility learning is set by utility\_alpha. For an example see u6\_simple in \textbf{tutorials}.
+
+
+\end{document}
