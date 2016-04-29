@@ -10,7 +10,7 @@ This is an early release of the package. Significant, radical changes might occu
 Installing pyactr
 -----------------
 
-Run setup.py or put the subfolder pyactr/ in your Python path.
+Run python setup.py install (or python setup.py develop in order to use a symlink). Or put the subfolder pyactr/ in your Python path.
 
 Requirements
 ------------
