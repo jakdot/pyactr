@@ -1,11 +1,11 @@
 """
-Simple model on motor control.
+A simple model on motor control. This does not correspond to any tutorial model in Lisp ACT-R, it just shows some basic workings of the motor module and environment examples.
 """
 
 import pyactr.model as model
-import pyactr.examples_environment.timed_text as env
-import pyactr.examples_environment.triggered_text as env2
-import pyactr.examples_environment.triggered_timed_text as env3
+import timed_text as env
+import triggered_text as env2
+import triggered_timed_text as env3
 
 class MotorModel(object):
 

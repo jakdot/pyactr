@@ -1,5 +1,5 @@
 """
-Example 1, counting. Corresponds to count in ACT-R tutorials, Unit 1.
+An example of a model using retrieval and goal buffers. It corresponds to the simplest model in ACT-R tutorials, Unit 1, 'count'.
 """
 
 from pyactr.model import ACTRModel
@@ -31,13 +31,13 @@ g.add(counting.Chunk("countFrom", start=2, end=4))
 #adding stuff to goal buffer
 
     
-#production rules follow; they are methods that create generators: first yield yields buffer tests, the second yield yields buffer changes;
+#production rules follow; they are generator functions: first yield yields buffer tests, the second yield yields buffer changes; in other words, the first yield corresponds to LHS, the second yield is RHS in ACT-R
 def start():
     yield {"=g":counting.Chunk("countFrom", start="=x", count=None)}
-    yield {"=g":counting.Chunk("countFrom", count="=x"),
-                "+retrieval": counting.Chunk("countOrder", first="=x")}
-#e.g., this rule would look as follows in Lisp ACT-R:
-#(p
+    yield {"=g":counting.Chunk("countFrom", count="=x"),\
+            "+retrieval": counting.Chunk("countOrder", first="=x")}
+
+#this rule would look as follows in Lisp ACT-R:
 #(p start
 #=goal>
 #  ISA         countFrom
@@ -53,10 +53,10 @@ def start():
 #)
 
 def increment():
-    yield {"=g":counting.Chunk("countFrom", count="=x", end="~=x"),
-                "=retrieval": counting.Chunk("countOrder", first="=x", second="=y")}
-    yield {"=g":counting.Chunk("countFrom", count="=y"),
-                "+retrieval": counting.Chunk("countOrder", first="=y")}
+    yield {"=g":counting.Chunk("countFrom", count="=x", end="~=x"),\
+            "=retrieval": counting.Chunk("countOrder", first="=x", second="=y")}
+    yield {"=g":counting.Chunk("countFrom", count="=y"),\
+            "+retrieval": counting.Chunk("countOrder", first="=y")}
 
 def stop():
     yield {"=g":counting.Chunk("countFrom", count=counting.Chunk("_variablesvalues", variables="x"), end="=x")}

@@ -1,12 +1,14 @@
 """
-Demo - pressing a key by ACT-R model. Tutorial 2 of Lisp ACT-R.
+Demo - pressing a key by ACT-R model. It corresponds to 'demo2' in Lisp ACT-R, unit 2.
 """
 
 import string
 import random
+import warnings
 
 import pyactr.environment as env
 import pyactr.model as model
+
 
 class Environment(env.Environment): #subclass Environment
     """
@@ -57,6 +59,7 @@ class Model(object):
         yield {"=g": self.m.Chunk("read", state=self.done), "+manual": self.m.Chunk("_manual", cmd="presskey", key="=letter")}
     
 if __name__ == "__main__":
+    warnings.simplefilter("ignore")
     environ = Environment()
     m = Model(environ)
     m.m.productions(m.find_unattended_letter, m.encode_letter, m.respond)

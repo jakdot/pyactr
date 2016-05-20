@@ -72,8 +72,10 @@ class Buffer(collections.MutableSet):
         if actrvariables == None:
             actrvariables = {}
         elem = self._data.pop()
-        mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
-
+        try:
+            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
+        except utilities.ACTRError as arg:
+            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
         elem_attr_val = {x[0]: x[1] for x in elem}
         elem_attr_val.update(mod_attr_val) #updates original chunk with attr-val from otherchunk
         mod_chunk = chunks.Chunk(otherchunk.typename, **elem_attr_val) #creates new chunk

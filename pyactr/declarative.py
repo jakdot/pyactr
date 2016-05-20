@@ -47,7 +47,7 @@ class DecMem(collections.MutableMapping):
             except TypeError:
                 self._data[key] = {round(float(x), 4) for x in time}
         else:
-            raise TypeError("Only chunks can be added as attributes to Declarative Memory")
+            raise utilities.ACTRError("Only chunks can be added as attributes to Declarative Memory; '%s' is not a chunk" % key)
 
     def add(self, key, time=0):
         """
@@ -112,7 +112,10 @@ class DecMemBuffer(buffers.Buffer):
         """
         if actrvariables == None:
             actrvariables = {}
-        mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()}
+        try:
+            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()}
+        except utilities.ACTRError as arg:
+            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
         chunk_tobe_matched = chunks.Chunk(otherchunk.typename, **mod_attr_val)
 
         max_A = float("-inf")

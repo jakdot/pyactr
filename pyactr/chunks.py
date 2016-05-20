@@ -4,8 +4,10 @@ Chunks
 
 import collections
 import re
+import warnings
 
 import pyactr.utilities as utilities
+
 
 def chunktype(cls_name, field_names, verbose=False):
     """
@@ -25,21 +27,24 @@ class Chunk(collections.Sequence):
     """
 
     class EmptyValue(object):
+        """
+        Empty values used in chunks. These are None values.
+        """
 
-            def __init__(self):
+        def __init__(self):
                 self.value = None
 
-            def __eq__(self, val):
-                if val == None or val == "None":
-                    return True
-                else:
-                    return False
+        def __eq__(self, val):
+            if val == None or val == "None":
+                return True #Chunks make strings out of values; this holds for everything but cases in which chunks themselves are values; so, None will be turned into a string as well, hence the equality
+            else:
+                return False
 
-            def __hash__(self):
-                return hash(None)
+        def __hash__(self):
+            return hash(None)
 
-            def __repr__(self):
-                return repr(None)
+        def __repr__(self):
+            return repr(None)
 
     _chunktypes = {}
 
@@ -83,12 +88,12 @@ class Chunk(collections.Sequence):
             if set(self._chunktypes[typename]._fields) != set(kwargs.keys()):
 
                 chunktype(typename, dictionary.keys())  #If there are more args than in the original chunktype, chunktype has to be created again, with slots for new attributes
-                print("Warning: Chunk type", typename, "is extended with new attributes")
+                warnings.warn("Chunk type %s is extended with new attributes" % typename)
 
         except KeyError:
 
             chunktype(typename, dictionary.keys())  #If chunktype completely missing, it is created first
-            print("Warning: Chunk type", typename, "not defined; added automatically")
+            warnings.warn("Chunk type %s was not defined; added automatically" % typename)
 
         finally:
             self.actrchunk = self._chunktypes[typename](**kwargs)
@@ -199,6 +204,7 @@ class Chunk(collections.Sequence):
                     except KeyError:
                         pass
                     self.boundvars.setdefault("~=" + var, set([])).add(matching_val)
+
             #checking values, e.g., 10 or !10
 
             if varval["values"]:

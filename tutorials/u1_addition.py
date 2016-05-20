@@ -1,5 +1,5 @@
 """
-Example 2, addition. Corresponds to addition in ACT-R tutorials, Unit 1.
+An example of a model using goal and retrieval. It corresponds to 'addition' in ACT-R tutorials, Unit 1.
 """
 
 from pyactr.model import ACTRModel

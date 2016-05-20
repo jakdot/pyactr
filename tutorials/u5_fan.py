@@ -1,6 +1,8 @@
 """
-Fan experiment, unit5.
+The fan experiment from unit 5 of Lisp ACT-R.
 """
+
+import warnings
 
 import pyactr.model as model
 
@@ -85,6 +87,7 @@ class Model(object):
         yield {"=g": self.model.Chunk("sentence_goal", state="d")}
 
 if __name__ == "__main__":
+    warnings.simplefilter("ignore")
     m = Model("hippie", "bank", subsymbolic=True, latency_factor=0.63, strength_of_association=1.6, buffer_spreading_activation={"g":1}, activation_trace=True)
     m.model.productions(m.start, m.harvesting_person, m.harvesting_location, m.retrieve_from_person, m.retrieve_from_location, m.respond_yes, m.mismatch_person_no, m.mismatch_location_no)
     sim = m.model.simulation(realtime=True)

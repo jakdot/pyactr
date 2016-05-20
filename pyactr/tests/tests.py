@@ -6,6 +6,7 @@ Requires Python >= 3.3
 import unittest
 import collections
 import re
+import warnings
 
 import pyactr.chunks as chunks
 
@@ -17,7 +18,6 @@ import pyactr.utilities as util
 import pyactr.model as model
 
 import pyactr.tests.modeltests as modeltests
-
 
 class TestChunks1(unittest.TestCase):
     """

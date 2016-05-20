@@ -1,9 +1,10 @@
 """
-Pairing a word to a number, can be run repeatedly.
+Pairing a word to a number, can be run repeatedly. It corresponds to 'paired' in Lisp ACT-R, unit 4.
 """
 
 import string
 import random
+import warnings
 
 import pyactr.environment as env
 import pyactr.model as model
@@ -89,6 +90,7 @@ class Model(object):
         yield {"=g": self.m.Chunk("goal", state=self.start), "~visual": None, "=g2": self.m.Chunk("pair", answer="=val"), "~g2": None}
 
 if __name__ == "__main__":
+    warnings.simplefilter("ignore")
     environ = Environment()
     m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0)
     m.m.productions(m.attend_probe, m.read_probe, m.recall, m.cannot_recall, m.study_answer, m.associate)

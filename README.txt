@@ -10,7 +10,7 @@ This is an early release of the package. Significant, radical changes might occu
 Installing pyactr
 -----------------
 
-Run python setup.py install (or python setup.py develop in order to use a symlink). Or put the subfolder pyactr/ in your Python path.
+Run python setup.py install (or python setup.py develop). Or put the subfolder pyactr/ in your Python path.
 
 Requirements
 ------------
@@ -20,7 +20,7 @@ Requires Python3 (>=3.3), numpy and simpy.
 Documentation
 -------------
 
-The folder docs/ discusses inner workings of pyactr, and presents several examples as to how ACT-R cognitive models should be written in pyactr. The folder tutorials/ has tutorial models taken from Lisp ACT-R. The folder examples_environemnt/ presents a few cases of environment that interacts with ACT-R.
+The folder docs/ discusses inner workings of pyactr, and presents several examples as to how ACT-R cognitive models should be written in pyactr. The folder tutorials/ has tutorial models taken from Lisp ACT-R. The folder examples_environment/ presents a few examples of environments that interact with ACT-R.
 
 Modifying pyactr
 ----------------

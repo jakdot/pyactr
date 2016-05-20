@@ -1,5 +1,5 @@
 """
-Example 3, semantics. Corresponds to semantic in ACT-R tutorials, Unit 1.
+The most complex model in unit 1 of ACT-R tutorials, 'semantic'.
 """
 
 from pyactr.model import ACTRModel
@@ -75,7 +75,7 @@ semantic.chunktype("isMember", ("object", "category", "judgment"))
 #g.add(semantic.Chunk("isMember", object=chunk_dict['canary'], category=chunk_dict['animal']))
 g.add(semantic.Chunk("isMember", object=chunk_dict['canary'], category=chunk_dict['fish']))
 
-#production rules follow; they are methods that create generators: first yield yields buffer tests, the second yield yields buffer changes;
+#production rules follow; they are functions that create generators: first yield yields buffer tests, the second yield yields buffer changes;
 def initialRetrieve():
     yield {"=g":semantic.Chunk("isMember", object="=obj", category="=cat", judgment=None)}
     yield {"=g":semantic.Chunk("isMember", judgment="pending"), "+retrieval": semantic.Chunk("property", object="=obj", attribute=chunk_dict['category'])}

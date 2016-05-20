@@ -50,13 +50,16 @@ class Goal(buffers.Buffer):
         """
         Retrieve a chunk does not work in goal buffer.
         """
-        raise AttributeError("Attempt to retrieve from goal. This is not possible.")
+        raise utilities.ACTRError("An attempt to retrieve from goal in the chunk '%s'; retrieving from goal is not possible" % otherchunk)
 
     def create(self, otherchunk, harvest=None, actrvariables=None):
         """
         Creates (aka sets) a chunk in goal buffer.
         """
-        mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
+        try:
+            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
+        except utilities.ACTRError as arg:
+            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
 
         new_chunk = chunks.Chunk(otherchunk.typename, **mod_attr_val) #creates new chunk
 

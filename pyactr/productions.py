@@ -10,6 +10,7 @@ import pyactr.goals as goals
 import pyactr.vision as vision
 import pyactr.motor as motor
 import pyactr.utilities as utilities
+from pyactr.utilities import ACTRError
 
 Event = utilities.Event
 
@@ -133,9 +134,10 @@ class ProductionRules(object):
 
         max_utility = float("-inf")
         used_rulename = None
+        self.used_rulename = None
 
         for rulename in self.rules:
-            #print(rulename) #for debugging
+            self.used_rulename = rulename
             production = self.rules[rulename]["rule"]()
             utility = self.rules[rulename]["utility"]
 
@@ -148,6 +150,7 @@ class ProductionRules(object):
                 max_utility = utility
                 used_rulename = rulename
         if used_rulename:
+            self.used_rulename = used_rulename
             production = self.rules[used_rulename]["rule"]()
             self.rules[used_rulename]["selecting_time"].append(time)
             
@@ -174,14 +177,15 @@ class ProductionRules(object):
         """
         temp_actrvariables = dict(self.__actrvariables)
         ordering_dict = {"!": 0, "?": 0, "=": 1, "@": 2, "*": 3, "+": 4, "~": 4}
-        dictionary = collections.OrderedDict.fromkeys(sorted(RHSdictionary, key=lambda x:ordering_dict[x[0]]))
+        try:
+            dictionary = collections.OrderedDict.fromkeys(sorted(RHSdictionary, key=lambda x:ordering_dict[x[0]]))
+        except KeyError:
+            raise ACTRError("The RHS rule '%s' is invalid; every condition in RHS rules must start with one of these signs: %s" % (self.used_rulename, list(self._RHSCONVENTIONS.keys())))
         dictionary.update(RHSdictionary)
         for key in dictionary:
             submodule_name = key[1:] #this is the name of updated submodule
             code = key[0] #this is what the key should do
             
-            assert code in self._RHSCONVENTIONS, "RHS must start with one of these signs: %s" % list(self._RHSCONVENTIONS.keys())
-
             try:
                 temp_actrvariables.pop("=" + submodule_name) #pop used submodule (needed for strict harvesting)
             except KeyError:
@@ -222,7 +226,7 @@ class ProductionRules(object):
                 try:
                     cleared.clear(time, self.dm[name]) #if nothing else works, check whether buffer instance was bound to a decl. mem by user
                 except KeyError:
-                    raise AttributeError("It is not specified to what memory the buffer %s should be cleared" % name)
+                    raise ACTRError("It is not specified to what memory the buffer %s should be cleared" % name)
         yield Event(roundtime(time), name, "CLEARED")
 
 
@@ -366,15 +370,13 @@ class ProductionRules(object):
         for key in dictionary:
             submodule_name = key[1:] #this is the module
             code = key[0] #this is what the module should do; standardly, query, i.e., ?, or test, =
-            assert code in self._LHSCONVENTIONS, "LHS must start with one of these signs: %s" % list(self._LHSCONVENTIONS.keys())
+            if code not in self._LHSCONVENTIONS:
+                raise ACTRError("The LHS rule '%s' is invalid; every condition in LHS rules must start with one of these signs: %s" % (self.used_rulename, list(self._LHSCONVENTIONS.keys())))
             result = getattr(self, self._LHSCONVENTIONS[code])(submodule_name, self.buffers.get(submodule_name), dictionary[key], temp_actrvariables)
-            try:
-                if not result[0]:
-                    return False
-                else:
-                    temp_actrvariables.update(result[1])
-            except TypeError:
-                raise TypeError("ACT-R test %s is invalid" % dictionary)
+            if not result[0]:
+                return False
+            else:
+                temp_actrvariables.update(result[1])
         self.__actrvariables = temp_actrvariables
         return True
 

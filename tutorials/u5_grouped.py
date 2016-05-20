@@ -1,6 +1,8 @@
 """
-Recalling numbers.
+Recalling numbers. It corresponds to 'grouped' in Lisp ACT-R, unit 5.
 """
+
+import warnings
 
 import pyactr.environment as env
 import pyactr.model as model
@@ -81,8 +83,8 @@ class Model(object):
         yield {"=g": self.model.Chunk("recall_list", group_position=self.dictchunks[3]), "+retrieval": self.model.Chunk("group", parent="=l", position=self.dictchunks[3])}
 
 if __name__ == "__main__":
+    warnings.simplefilter("ignore")
     m = Model(subsymbolic=True, instantaneous_noise=0.15, retrieval_threshold=-0.5, partial_matching=True, activation_trace=True)
-    #subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0)
     m.model.productions(m.recall_first_group, m.start_recall_of_group, m.harvest_first_item, m.harvest_second_item, m.harvest_third_item, m.recall_second_group, m.recall_third_group)
     sim = m.model.simulation(realtime=False)
     sim.run(20)

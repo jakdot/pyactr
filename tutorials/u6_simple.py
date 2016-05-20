@@ -1,14 +1,13 @@
 """
-Testing utilities of production rules and changes in utilities.
+Testing utilities of production rules and changes in utilities. It corresponds to 'testing_simple' in Lisp ACT-R, unit 6.
 """
+
+import warnings
 
 import pyactr.environment as env
 import pyactr.model as model
 
 class Model(object):
-    """
-    Model pressing the right key.
-    """
 
     def __init__(self, **kwargs):
         self.m = model.ACTRModel(**kwargs)
@@ -33,6 +32,7 @@ class Model(object):
         yield {"~g": None}
 
 if __name__ == "__main__":
+    warnings.simplefilter("ignore")
     m = Model(subsymbolic=True, utility_noise=10, utility_learning=True)
     m.m.productions(m.one, m.two, m.three)
     sim = m.m.simulation(realtime=True)

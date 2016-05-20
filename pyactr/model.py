@@ -3,6 +3,7 @@ ACT-R Model.
 """
 
 import simpy
+import warnings
 
 import pyactr.chunks as chunks
 import pyactr.goals as goals
@@ -10,6 +11,7 @@ import pyactr.productions as productions
 import pyactr.declarative as declarative
 import pyactr.motor as motor
 import pyactr.vision as vision
+from pyactr.utilities import ACTRError
 
 class ACTRModel(object):
     """
@@ -132,7 +134,7 @@ class ACTRModel(object):
                     cont = yield pro
                 except simpy.Interrupt:
                     if not pro.triggered:
-                        print("Process in %s interupted" % name)
+                        warnings.warn("Process in %s interupted" % name)
                         pro.interrupt() #interrupt process
 
                 #if first extra process is followed by another process (returned as cont), do what follows; used only for motor
@@ -212,7 +214,8 @@ class ACTRModel(object):
         """
         Sets similarities between chunks. By default, different chunks have the value of -1. This can be changed.
         """
-        assert value <= 0, "Values in similarities must be 0 or smaller than 0"
+        if value > 0:
+            raise ACTRError("Values in similarities must be 0 or smaller than 0")
         self.__Similarities[tuple((chunk, otherchunk))] = value
 
     def simulation(self, realtime=False, trace=True, environment_process=None, **kwargs):

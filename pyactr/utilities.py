@@ -7,7 +7,6 @@ import re
 import math
 import numpy as np
 
-
 #for querying buffers
 
 _BUSY = "busy"
@@ -38,7 +37,12 @@ _ENV = "ENVIRONMENT"
 def roundtime(time):
     return round(time, 4)
 
+##############class for ACT-R Exceptions##############
 
+class ACTRError(Exception):
+    """
+    Exception specific to ACT-R.
+    """
 
 #############utilities for chunks######################################
 
@@ -75,10 +79,7 @@ def get_similarity(d, val1, val2):
     """
     Gets similarity for partial matching.
     """
-    try:
-        dis = d[tuple((val1, val2))]
-    except KeyError:
-        dis = d.get(tuple((val2, val1)), -1) #-1 is the default value
+    dis = d.get(tuple((val2, val1)), -1) #-1 is the default value
     return dis
 
 #############utilities for rules######################################
@@ -89,12 +90,13 @@ def check_bound_vars(actrvariables, elem):
     """
     result = actrvariables.get(elem, elem)
     try:
-        if splitting(result).get("variables") or splitting(result).get("negvariables"):
-            raise NameError("Free ACT-R variable on Right hand side of the rule; alternatively, a variable + something extra on Right hand side; neither can be used")
+        if splitting(result).get("variables"):
+            raise ACTRError("Object '%s' is a variable that is not bound to any value; this is illegal in ACT-R" % splitting(result).get("variables").pop()) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
+        if splitting(result).get("negvariables"):
+            raise ACTRError("Object '%s' is a variable that is not bound to any value; this is illegal in ACT-R" % splitting(result).get("negvariables"))
     except TypeError:
         pass
-    finally:
-        return result
+    return result
 
 def modify_utilities(time, reward, rules, model_parameters):
     """

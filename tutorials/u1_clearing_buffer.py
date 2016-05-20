@@ -1,5 +1,5 @@
 """
-Example 4. This shows
+An example using goal and retrieval. It shows strict harvesting at work and how declarative memory is updated.
 """
 
 from pyactr.model import ACTRModel
