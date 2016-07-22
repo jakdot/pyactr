@@ -23,7 +23,7 @@ def chunktype(cls_name, field_names, verbose=False):
 
 class Chunk(collections.Sequence):
     """
-    ACT-R chunks. Based off namedtuple (tuple with dictionary-like properties).
+    ACT-R chunks. Based on namedtuple (tuple with dictionary-like properties).
     """
 
     class EmptyValue(object):
@@ -36,7 +36,7 @@ class Chunk(collections.Sequence):
 
         def __eq__(self, val):
             if val == None or val == "None":
-                return True #Chunks make strings out of values; this holds for everything but cases in which chunks themselves are values; so, None will be turned into a string as well, hence the equality
+                return True #Chunks make strings out of values; (this holds for everything but cases in which chunks themselves are values;) so, None will be turned into a string as well, hence the equality
             else:
                 return False
 
@@ -64,7 +64,6 @@ class Chunk(collections.Sequence):
         self.typename = typename
         self.boundvars = {} #dict of bound variables
 
-        #chunk is created with an extra _ in keywords (to avoid problems when chunk attributes have names already assigned to other attributes)
         kwargs = {}
         for key in dictionary:
 
@@ -75,7 +74,7 @@ class Chunk(collections.Sequence):
             elif type(dictionary[key]) == tuple:
                 dictionary[key] = tuple(str(x) if not isinstance(dictionary[key], Chunk) else x for x in dictionary[key])
 
-            #adding _ to minimize/avoid attribute clashes
+            #adding _ to minimize/avoid name clashes
             kwargs[key+"_"] = dictionary[key]
         try:
             for elem in self._chunktypes[typename]._fields:

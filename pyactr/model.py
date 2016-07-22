@@ -208,7 +208,9 @@ class ACTRModel(object):
         """
         Creates production rules out of functions. One or more functions can be inserted.
         """
+
         self.__Productions = productions.Productions(*rules)
+        return self.__Productions
 
     def set_similarities(self, chunk, otherchunk, value):
         """

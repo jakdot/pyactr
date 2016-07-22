@@ -16,7 +16,7 @@ Event = utilities.Event
 
 roundtime = utilities.roundtime
 
-class Productions(collections.MutableMapping):
+class Productions(collections.UserDict):
     """
     Production rules.
     """
@@ -38,7 +38,7 @@ class Productions(collections.MutableMapping):
                 reward = None
             else:
                 reward = inspect.getargspec(rule).defaults[0-reward_position]
-            self.update({rule.__name__: {"rule": rule, "utility": utility, "reward": reward, "selecting_time": []}})
+            self.update({rule.__name__: {"rule": rule, "utility": utility, "reward": reward}})
 
     def __contains__(self, elem):
         return elem in self._rules
@@ -52,7 +52,7 @@ class Productions(collections.MutableMapping):
 
     def __getitem__(self, key):
         return self._rules[key]
-
+    
     def __delitem__(self, key):
         del self._rules[key]
 
@@ -70,7 +70,10 @@ class Productions(collections.MutableMapping):
         return txt
 
     def __setitem__(self, key, value):
-        self._rules[key] = value
+        if isinstance(value, collections.MutableMapping):
+            self._rules[key] = {"rule": value["rule"], "utility": value.get("utility", 0), "reward": value.get("reward", None), "selecting_time": value.get("selecting_time", [])}
+        else:
+            self._rules[key] = {"rule": value, "utility": 0, "reward": 0, "selecting_time": []}
 
 class ProductionRules(object):
     """
@@ -176,7 +179,7 @@ class ProductionRules(object):
         Updates buffers (RHS of production rules).
         """
         temp_actrvariables = dict(self.__actrvariables)
-        ordering_dict = {"!": 0, "?": 0, "=": 1, "@": 2, "*": 3, "+": 4, "~": 4}
+        ordering_dict = {"!": 0, "?": 0, "=": 1, "@": 2, "*": 3, "+": 4, "~": 5}
         try:
             dictionary = collections.OrderedDict.fromkeys(sorted(RHSdictionary, key=lambda x:ordering_dict[x[0]]))
         except KeyError:
