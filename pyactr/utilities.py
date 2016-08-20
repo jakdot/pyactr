@@ -6,15 +6,16 @@ import collections
 import re
 import math
 import numpy as np
+import pyparsing as pp
 
 #for querying buffers
 
 _BUSY = "busy"
 _FREE = "free"
-_ERROR = "error" 
-_VISAUTOBUFFERING = "auto_buffering" 
+_ERROR = "error"
+_VISAUTOBUFFERING = "auto_buffering"
 
-#for rules
+#for chunks
 
 ACTRVARIABLE = "="
 ACTRVARIABLER = "\=" #used for regex
@@ -25,16 +26,29 @@ ACTRNEGR = "\~" #used for regex
 ACTRRETRIEVE = "+"
 ACTRRETRIEVER = "\+" #used for regex
 
+#special chunk that can be used in production rules
+Varval = collections.namedtuple("_variablesvalues", "variables, values, negvariables, negvalues")
+
 #for Events
 
 Event = collections.namedtuple('Event', 'time proc action')
+
+#for rules
 
 _UNKNOWN = "UNKNOWN"
 _PROCEDURAL = "PROCEDURAL"
 _EMPTY = ""
 _ENV = "ENVIRONMENT"
 
+_RHSCONVENTIONS = {"?": "extra_test", "=": "modify", "+": "retrieveorset",\
+        "!": "execute", "~": "clear", "@": "overwrite", "*": "modify_request"}
+_LHSCONVENTIONS = {"=": "test", "?": "query"}
+_INTERRUPTIBLE = {"retrieveorset", "modify_request"}
+
 def roundtime(time):
+    """
+    Rounds time to tenths of miliseconds.
+    """
     return round(time, 4)
 
 ##############class for ACT-R Exceptions##############
@@ -46,7 +60,7 @@ class ACTRError(Exception):
 
 #############utilities for chunks######################################
 
-def splitting(info):
+def splitting(info, empty=True):
     """
     Splitting info into variables, negative variables, values and negative values. Used in chunks.
 
@@ -61,17 +75,24 @@ def splitting(info):
     except TypeError:
         try: #assume it's a attr-val chunk
             if info.typename == "_variablesvalues":
-                for x in info.removeempty():
-                    if type(x[1]) == tuple:
-                        varval[x[0]] = set(x[1])
+                if empty:
+                    subpart = info.removeempty()
+                else:
+                    subpart = info.removeunused()
+                for x in subpart:
+                    if isinstance(x[1], tuple) or isinstance(x[1], set):
+                        varval[x[0]] = set(x[1]) #tuples and sets are iterated over and added to the set
                     else:
-                        varval[x[0]] = set([x[1]])
+                        varval[x[0]] = set([x[1]]) #other elements (strings, chunks) are added as a whole
+            else:
+                varval["values"] = set([info]) #varval empty -> only a chunk present
         except AttributeError: #it's just values
             pass
+    else:
+        if not any(varval.values()):
+            varval["values"] = set([info]) #varval empty -> only values present
+
     assert len(set(varval["values"])) <= 1, "Any attribute must have at most one value"
-    assert len(set(varval["variables"])) <= 1, "Any attribute must have at most one variable"
-    if not any(varval.values()):
-        varval["values"] = set([info]) #varval empty -> only values present
 
     return varval
 
@@ -82,20 +103,58 @@ def get_similarity(d, val1, val2):
     dis = d.get(tuple((val2, val1)), -1) #-1 is the default value
     return dis
 
+def getchunk():
+    """
+    Using pyparsing, create chunk reader for chunk strings.
+    """
+    slot = pp.Word(pp.alphas + "_", pp.alphanums + "_")
+    special_value = pp.Group(pp.oneOf([ACTRVARIABLE, ACTRNEG + ACTRVARIABLE, ACTRNEG])\
+            + pp.Word(pp.alphanums + "_" + '"' + "'"))
+    strvalue = pp.QuotedString('"', unquoteResults=False)
+    strvalue2 = pp.QuotedString("'", unquoteResults=False)
+    varvalue = pp.Word(pp.alphanums + "_")
+    value = varvalue | special_value | strvalue | strvalue2
+    chunk_reader = pp.OneOrMore(pp.Group(slot + value))
+    return chunk_reader
+
 #############utilities for rules######################################
+
+def getrule():
+    """
+    Using pyparsing, get rule out of a string.
+    """
+    arrow = pp.Literal("==>")
+    buff = pp.Word(pp.alphas, pp.alphanums + "_")
+    special_valueLHS = pp.oneOf([x for x in _LHSCONVENTIONS.keys()])
+    end_buffer = pp.Literal(">")
+    special_valueRHS = pp.oneOf([x for x in _RHSCONVENTIONS.keys()])
+    chunk = getchunk()
+    rule_reader = pp.Group(pp.OneOrMore(pp.Group(special_valueLHS + buff + end_buffer + pp.Group(pp.Optional(chunk))))) + arrow + pp.Group(pp.OneOrMore(pp.Group(special_valueRHS + buff + end_buffer + pp.Group(pp.Optional(chunk)))))
+    return rule_reader
 
 def check_bound_vars(actrvariables, elem):
     """
     Check that elem is a bound variable, or not a variable. If the test goes through, return elem.
     """
-    result = actrvariables.get(elem, elem)
-    try:
-        if splitting(result).get("variables"):
-            raise ACTRError("Object '%s' is a variable that is not bound to any value; this is illegal in ACT-R" % splitting(result).get("variables").pop()) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
-        if splitting(result).get("negvariables"):
-            raise ACTRError("Object '%s' is a variable that is not bound to any value; this is illegal in ACT-R" % splitting(result).get("negvariables"))
-    except TypeError:
-        pass
+    result = None
+    varval = splitting(elem)
+    for x in varval:
+        for _ in range(len(varval[x])):
+            if x == "variables":
+                var = str(varval[x].pop())
+                var = ACTRVARIABLE + var
+                try:
+                    temp_result = actrvariables[var]
+                except KeyError:
+                    raise ACTRError("Object '%s' in the value '%s' is a variable that is not bound; this is illegal in ACT-R" % (var[1:], elem)) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
+            if x == "values":
+                temp_result = varval[x].pop()
+            if x == "negvariables" or x == "negvalues":
+                raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of ACT-R rules; the object '%s' is illegal in ACT-R" % elem)
+            if result and temp_result != result:
+                raise ACTRError("It looks like in '%s', one slot would have to carry two values at the same time; this is illegal in ACT-R" % elem)
+            else:
+                result = temp_result
     return result
 
 def modify_utilities(time, reward, rules, model_parameters):

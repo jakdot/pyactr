@@ -4,10 +4,10 @@ Chunks
 
 import collections
 import re
+import random
 import warnings
 
 import pyactr.utilities as utilities
-
 
 def chunktype(cls_name, field_names, verbose=False):
     """
@@ -17,7 +17,7 @@ def chunktype(cls_name, field_names, verbose=False):
         field_names = field_names.replace(',', ' ').split()
     except AttributeError:  # no .replace or .split
         pass  # assume it's already a sequence of identifiers
-    field_names = tuple(name + "_" for name in field_names)
+    field_names = tuple(sorted(name + "_" for name in field_names))
     
     Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, verbose)}) #chunktypes are not returned; they are stored as Chunk class attribute
 
@@ -32,11 +32,11 @@ class Chunk(collections.Sequence):
         """
 
         def __init__(self):
-                self.value = None
+            self.value = None
 
         def __eq__(self, val):
             if val == None or val == "None":
-                return True #Chunks make strings out of values; (this holds for everything but cases in which chunks themselves are values;) so, None will be turned into a string as well, hence the equality
+                return True #Chunks make strings out of values; (this holds for everything but cases in which chunks themselves are values); so, None will be turned into a string as well, hence the equality
             else:
                 return False
 
@@ -47,17 +47,11 @@ class Chunk(collections.Sequence):
             return repr(None)
 
     _chunktypes = {}
+    _undefinedchunktypecounter = 0
+    _chunks = {}
 
     __emptyvalue = EmptyValue()
 
-    __actrvariable = "?"
-    __actrvariableR = "\?" #used for regex
-    __actrvalue = "!"
-    __actrvalueR = "\!" #used for regex
-    __actrneg = "~"
-    __actrnegR = "~" #used for regex
-
-    __negactrvariable = "~"
     _similarities = {} #dict of similarities between chunks
 
     def __init__(self, typename, **dictionary):
@@ -121,7 +115,20 @@ class Chunk(collections.Sequence):
         return re.sub("_$", "", self.actrchunk._fields[pos]), self.actrchunk[pos]
 
     def __hash__(self):
-        return hash(tuple(self.removeempty()))
+        def func():
+            for x in self.removeempty():
+                varval = sorted(utilities.splitting(x[1]).items(), reverse=True) #(neg)values and (neg)variables have to be checked
+                for idx in range(len(varval)):
+                    for _ in range(len(varval[idx][1])):
+                        value = varval[idx][1].pop()
+                        if idx == 0 or idx == 2: #idx == 0 -> variables; idx == 2 -> negvariables
+                            try:
+                                varval[idx+1][1].add(self.boundvars[utilities.ACTRVARIABLE + value]) #add value based on a variable
+                            except KeyError:
+                                yield tuple([x[0], tuple([varval[idx][0], hash(value)])]) #get hash of variable if it is not bound
+                        else:
+                            yield tuple([x[0], tuple([varval[idx][0], hash(value)])]) #values get their hash directly
+        return hash(tuple(func()))
 
     def __iter__(self):
         for x, y in zip(self.actrchunk._fields, self.actrchunk):
@@ -131,16 +138,21 @@ class Chunk(collections.Sequence):
         return len(self.actrchunk)
 
     def __repr__(self):
-        reprtxt = ', '.join('%s=%s' % (re.sub("_$", "", name), getattr(self.actrchunk, name)) for name in self.actrchunk._fields)
+        reprtxt = ""
+        for x, y in self:
+            try:
+                if y.typename == "_variablesvalues":
+                    temp = y.removeempty()
+                    if len(temp) == 1 and temp[0][0] == "values":
+                        y = temp[0][1]
+            except AttributeError:
+                pass
+            if reprtxt:
+                reprtxt = ", ".join([reprtxt, '%s=%s' % (x, y)])
+            else:
+                reprtxt = '%s=%s' % (x, y)
         return self.typename + "(" + reprtxt + ")"
 
-
-    def __removeemptyandvars__(self):
-        """
-        Removes attribute-value pairs that have the value __emptyvalue or a variable(s). Careful! Returns a generator with attr-value pairs.
-        """
-        return (x for x in self if x[1] != self.__emptyvalue and str(x[1])[0] != self.__actrvariable)
-    
     def __lt__(self, otherchunk):
         """
         Checks whether one chunk is proper part of another (given bound variables in boundvars).
@@ -161,7 +173,7 @@ class Chunk(collections.Sequence):
         if self == otherchunk:
             return True
         else:
-            return self.__lt__(otherchunk)
+            return self < otherchunk
 
     def match(self, otherchunk):
         """
@@ -174,14 +186,20 @@ class Chunk(collections.Sequence):
         for x in self:
 
             try:
-                matching_val = getattr(otherchunk.actrchunk, x[0] + "_")
+                matching_val = getattr(otherchunk.actrchunk, x[0] + "_") #get the value of attr
             except AttributeError:
-                matching_val = None
+                matching_val = None #if it is missing, it must be None
 
-            varval = utilities.splitting(x[1])
+            try:
+                if matching_val.typename == "_variablesvalues":
+                    matching_val = matching_val.values #the value might be written using _variablesvalues chunk; in that case, get it out
+            except AttributeError:
+                pass
+
+            varval = utilities.splitting(x[1], empty=False)
 
             #checking variables, e.g., =x
-            if varval["variables"]:
+            if varval["variables"] != self.__emptyvalue and varval["variables"]:
                 if matching_val == self.__emptyvalue:
                     similarity -= 1
                 for var in varval["variables"]:
@@ -195,7 +213,7 @@ class Chunk(collections.Sequence):
                         self.boundvars.update({"=" + var: matching_val}) #if boundvars lack =x, update and proceed
 
             #checking negvariables, e.g., ~=x
-            if varval["negvariables"]:
+            if varval["negvariables"] != self.__emptyvalue and varval["negvariables"]:
                 for var in varval["negvariables"]:
                     try:
                         if self.boundvars["=" + var] == matching_val:
@@ -208,7 +226,7 @@ class Chunk(collections.Sequence):
 
             if varval["values"]:
                 val = varval["values"].pop()
-                if val not in set([self.__emptyvalue]) and val != matching_val: #set membership distingushes emptyvalue and None
+                if val != None and val != matching_val: #None is the misssing value of the attribute
                     similarity += utilities.get_similarity(self._similarities, val, matching_val) 
             #checking negvalues, e.g., ~!10
             if varval["negvalues"]:
@@ -217,25 +235,97 @@ class Chunk(collections.Sequence):
                        similarity += utilities.get_similarity(self._similarities, negval, matching_val) 
         return similarity
 
-
     def removeempty(self):
         """
         Removes attribute-value pairs that have the value __emptyvalue. Careful! Returns a generator with attr-value pairs.
         """
-        return (x for x in self if x[1] != self.__emptyvalue)
+        def func():
+            for x in self:
+                try:
+                    if x[1].removeempty():
+                        if x[1] != self.__emptyvalue:
+                            yield x
+                except AttributeError:
+                    if x[1] != self.__emptyvalue:
+                        yield x
+        return tuple(func())
 
     def removeunused(self):
         """
         Removes values that were only added to fill in empty slots, using None. Careful! Returns a generator with attr-value pairs.
         """
-        return (x for x in self if x[1] != None)
+        def func():
+            for x in self:
+                try:
+                    if x[1].removeunused():
+                        if x[1] != None:
+                            yield x
+                except AttributeError:
+                    if x[1] != None:
+                        yield x
+        return tuple(func())
+        #return (x for x in self if x[1] != None) old version
 
-
-#create special chunk for LHS
+#special chunk that can be used in production rules
 chunktype("_variablesvalues", "variables, values, negvariables, negvalues")
 
-#create special chunk for Motor
+#special chunk for Motor
 chunktype("_manual", "cmd, key")
 
-#create special chunk for Vision
+#special chunk for Vision
 chunktype("_visual", "object")
+
+def createchunkdict(chunk):
+    """
+    Returns typename and chunkdict from pyparsed list.
+    """
+    sp_dict = {utilities.ACTRVARIABLE: "variables", utilities.ACTRNEG: "negvalues", utilities.ACTRNEG + utilities.ACTRVARIABLE: "negvariables", utilities.ACTRVALUE: "values", utilities.ACTRNEG + utilities.ACTRVALUE: "negvalues"}
+    chunk_dict = {}
+    for elem in chunk:
+        temp_dict = chunk_dict.get(elem[0], Chunk("_variablesvalues"))._asdict()
+        for idx in range(1, len(elem)):
+            try:
+                if elem[idx][1][0] == "'" or elem[idx][1][0] == '"':
+                    temp_dict.update({sp_dict[elem[idx][0]]: elem[idx][1][1:-1]})
+                else:
+                    temp_dict.update({sp_dict[elem[idx][0]]: elem[idx][1]})
+            except (KeyError, IndexError):
+                if elem[idx][0] == "'" or elem[idx][0] == '"':
+                    temp_dict.update({"values": elem[idx][1:-1]})
+                else:
+                    try:
+                        temp_dict.update({"values": Chunk._chunks[elem[idx]]})
+                    except KeyError:
+                        temp_dict.update({"values": elem[idx]})
+        temp_dict = {k: v for k, v in temp_dict.items() if v != None}
+        chunk_dict[elem[0]] = Chunk("_variablesvalues", **temp_dict)
+    type_chunk = ""
+    try:
+        type_chunk = chunk_dict.pop("isa").values #change this - any combination of capital/small letters
+        type_chunk = chunk_dict.pop("ISA").values
+    except KeyError:
+        pass
+    return type_chunk, chunk_dict
+
+def makechunk(nameofchunk="", typename="", **dictionary):
+    """
+    Creates a chunk.
+    """
+    if not nameofchunk:
+        nameofchunk = "unnamedchunk"
+    if not typename:
+        typename = "undefined" + str(Chunk._undefinedchunktypecounter)
+        Chunk._undefinedchunktypecounter += 1
+    created_chunk = Chunk(typename, **dictionary)
+    created_chunk._chunks[nameofchunk] = created_chunk
+    return created_chunk
+
+def chunkstring(name='', string=''):
+    """
+    Returns a chunk when given a string. The string is specified in the form: slot value slot value (arbitrary number of slot-value pairs can be used). isa-slot is used as the type of chunk. If no isa-slot is provided, chunk is assigned an 'undefined' type.
+    """
+    chunk_reader = utilities.getchunk()
+    chunk = chunk_reader.parseString(string, parseAll=True)
+    type_chunk, chunk_dict = createchunkdict(chunk)
+    created_chunk = makechunk(name, type_chunk, **chunk_dict)
+    return created_chunk

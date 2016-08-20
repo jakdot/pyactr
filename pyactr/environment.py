@@ -4,15 +4,16 @@ Environment used for ACT-R model.
 
 import pyactr.utilities as utilities
     
-Event = utilities.Event
 roundtime = utilities.roundtime
-
-_ENV = utilities._ENV
 
 class Environment(object):
     """
     Environment module for ACT-R. Shows whatever is seen on screen at the moment, allows interaction with ACT-R module.
     """
+
+
+    Event = utilities.Event
+    _ENV = utilities._ENV
     
     run_time = 1
     trigger = None

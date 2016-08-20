@@ -15,7 +15,7 @@ import pyactr.goals as goals
 import pyactr.declarative as declarative
 import pyactr.utilities as util
 
-import pyactr.model as model
+import pyactr as actr
 
 import pyactr.tests.modeltests as modeltests
 
@@ -25,7 +25,7 @@ class TestChunks1(unittest.TestCase):
     """
 
     def setUp(self):
-        self.chunktype = chunks.chunktype("test", ("arg1", "arg2"))
+        chunks.chunktype("test", ("arg1", "arg2"))
         self.chunk = chunks.Chunk("test", arg1="v1", arg2="v2")
         self.chunk2 = chunks.Chunk("test", arg1="v1")
         self.chunk3 = chunks.Chunk("test", arg2="v2", arg1="v1")
@@ -64,7 +64,7 @@ class TestChunks2(unittest.TestCase):
     """
 
     def setUp(self):
-        self.chunktype = chunks.chunktype("test", ("arg1", "arg2"))
+        chunks.chunktype("test", ("arg1", "arg2"))
         self.chunk = chunks.Chunk("test", arg1="v1", arg2="v2")
         self.chunk2 = chunks.Chunk("test", arg1="~!v1")
         self.chunk3 = chunks.Chunk("test", arg1="~!v2")
@@ -81,7 +81,7 @@ class TestChunks3(unittest.TestCase):
     """
 
     def setUp(self):
-        self.chunktype = chunks.chunktype("test", ("arg1", "arg2"))
+        chunks.chunktype("test", ("arg1", "arg2"))
         self.chunk = chunks.Chunk("test", arg1="v1", arg2="v2")
         self.chunk2 = chunks.Chunk("test", arg1="=x")
         self.chunk3 = chunks.Chunk("test", arg2="=x")
@@ -140,7 +140,9 @@ class TestChunks4(unittest.TestCase):
     """
 
     def setUp(self):
-        self.chunktype = chunks.chunktype("test", ("arg1", "arg2"))
+        chunks.chunktype("test", ("arg1", "arg2"))
+        self.chunkvar1 = chunks.Chunk("test", arg1=chunks.Chunk("_variablesvalues", values="v1", variables=None), arg2=chunks.Chunk("_variablesvalues", values="v2"))
+        self.chunkvar2 = chunks.Chunk("test", arg1=chunks.Chunk("_variablesvalues", values="v1"), arg2=chunks.Chunk("_variablesvalues", values="v2"))
         self.chunk = chunks.Chunk("test", arg1="v1", arg2="v2")
         self.chunk2 = chunks.Chunk("test", arg1=chunks.Chunk("_variablesvalues", variables="x"))
         self.chunk2e = chunks.Chunk("test", arg1=chunks.Chunk("_variablesvalues", variables=tuple(("x",))))
@@ -191,6 +193,7 @@ class TestChunks4(unittest.TestCase):
         self.chunk22.boundvars = {"~=one" : {"v2", "v3", "v5"}, "=two": "v2", "~=three": {"v1", "v4"}, "=five": "v5"}
 
     def test_chunks(self):
+        self.assertTrue(self.chunkvar1 == self.chunkvar2)
         self.assertTrue(self.chunk2 < self.chunk)
         self.assertTrue(self.chunk2 <= self.chunk)
         self.assertTrue(self.chunk2e < self.chunk)
@@ -215,6 +218,147 @@ class TestChunks4(unittest.TestCase):
         self.assertEqual(self.chunk20.boundvars, {"=one": "v1", "~=one" : {"v2", "v3", "v5"}, "~=two": {"v1"}, "=two": "v2", "~=three": {"v1", "v4"}, "=five": "v5", "~=five": {"v2"}})
         self.assertFalse(self.chunk21 <= self.chunk)
         self.assertFalse(self.chunk22 <= self.chunk)
+
+class Testchunkstring(unittest.TestCase):
+    """
+    Testing chunk comparisons using chunkstring. Basic cases.
+    """
+
+    def setUp(self):
+        chunks.chunktype("test", ("arg1", "arg2"))
+        self.chunk = chunks.chunkstring("c1", "isa test arg1 'v1' arg2 'v2'")
+        self.chunk2 = chunks.chunkstring("c2", \
+                "isa    test\
+                arg1    'v1'\
+                arg2    'v2'")
+        self.chunk2p = chunks.chunkstring("c2p", \
+                'isa    test\
+                arg2    "v2"\
+                arg1    "v1"')
+        self.chunk2not = chunks.chunkstring("c2not", \
+                'isa    test\
+                arg2    "v1"\
+                arg1    "v2"')
+        self.chunk3 = chunks.Chunk("test", arg1=chunks.Chunk("_variablesvalues", values="v1"), arg2=chunks.Chunk("_variablesvalues", values="v2"))
+        self.chunk4 = chunks.Chunk("test", arg1="v1", arg2="v2")
+        self.chunk5 = chunks.chunkstring("c5", \
+                "isa test\
+                arg1 None\
+                arg2 ~=x\
+                arg2  =y")
+        self.chunk5a = chunks.chunkstring("c5a",\
+                "isa test\
+                arg2 ~= x\
+                arg2 = y")
+        self.chunk6 = chunks.Chunk("test", arg2="~=x=y")
+        self.chunk6not = chunks.Chunk("test", arg2="~=x")
+        self.chunk6not2 = chunks.Chunk("test", arg2="=y")
+        self.chunk5.boundvars = {"=x" : "v1", "=y" : "v5"}
+        self.chunk5a.boundvars = self.chunk5.boundvars
+        self.chunk6.boundvars = self.chunk5.boundvars
+        self.chunk6not.boundvars = self.chunk5.boundvars
+        self.chunk6not2.boundvars = self.chunk5.boundvars
+
+    def test_chunks(self):
+        self.assertTrue(self.chunk3 == self.chunk4)
+        self.assertTrue(self.chunk == self.chunk2)
+        self.assertFalse(self.chunk2 == self.chunk2not)
+        self.assertTrue(self.chunk2 == self.chunk2p)
+        self.assertTrue(self.chunk == self.chunk3)
+        self.assertTrue(self.chunk == self.chunk4)
+        self.assertTrue(self.chunk2 == self.chunk4)
+        self.assertTrue(self.chunk5 == self.chunk6)
+        self.assertTrue(self.chunk5a == self.chunk6)
+        self.assertFalse(self.chunk5a == self.chunk6not)
+        self.assertFalse(self.chunk5a == self.chunk6not2)
+
+class Testchunkstring2(unittest.TestCase):
+    """
+    Testing chunk comparisons using chunkstring. Advanced cases in which chunks embed chunks embed chunks.
+    """
+
+    def setUp(self):
+        self.chunk = chunks.chunkstring("c1", \
+                "isa    newtest\
+                arg2    'v2'\
+                arg1    'v1'")
+        self.chunk2 = chunks.chunkstring("c2", \
+                "arg1    c1\
+                newarg   10")
+        self.chunk3 = chunks.chunkstring("c3", \
+                "arg1    5\
+                newarg   c1")
+        self.chunk4 = chunks.chunkstring("c4", \
+                "arg1    5\
+                newarg   = x")
+        self.chunk5 = chunks.chunkstring("c5", \
+                "isa    nexttest\
+                a1      'v7'\
+                a5      c4")
+        self.chunk6 = chunks.chunkstring("c6", \
+                "isa    nexttest\
+                a5      =x\
+                a1      'v7'")
+        chunks.chunktype("countFrom", ("start", "count"))
+        self.chunk7 = chunks.chunkstring("c7", \
+                "isa countFrom\
+                start =x\
+                count None")
+        self.chunk7super = chunks.chunkstring("c7s", \
+                "isa countFrom\
+                start 2")
+        self.chunk8 = chunks.chunkstring("c7s", \
+                "isa countFrom\
+                start 2")
+        self.chunk9 = chunks.chunkstring("c7s", \
+                "isa countFrom\
+                start None")
+        self.chunk10 = chunks.chunkstring("c10", \
+                "isa countOrder\
+                first 2")
+        self.chunk11 = chunks.chunkstring("c11", \
+                "isa countOrder\
+                first 2\
+                second 4")
+        self.chunk12 = chunks.chunkstring("c12", \
+                "isa countOrder\
+                first 3\
+                first =zz")
+        self.chunk13 = chunks.chunkstring("c13", \
+                "isa countOrder\
+                first 3")
+        self.chunk14 = chunks.chunkstring("c14", \
+                "isa countOrder\
+                first None")
+
+        self.chunkc2 = chunks.Chunk("testchunkstring2type1", arg1=self.chunk, newarg=10)
+        self.chunkc3 = chunks.Chunk("testchunkstring2type1", newarg="=x", arg1=5)
+        self.chunkc5 = chunks.Chunk("testchunkstring2type3", a1="v7", a5=self.chunk4)
+        self.chunk4.boundvars = {"=x" : self.chunk, "=y" : "v5"}
+        self.chunk3.boundvars = {"=x" : self.chunk, "=y" : "v5"}
+        self.chunkc3.boundvars = {"=x" : self.chunk, "=y" : "v5"}
+        self.chunk6.boundvars = {"=x" : self.chunk4}
+
+
+    def test_chunks(self):
+        self.assertFalse(self.chunk == self.chunk2)
+        self.assertTrue(self.chunkc2 == self.chunk2)
+        self.assertTrue(self.chunkc3 == self.chunk3)
+        self.assertTrue(self.chunkc3 == self.chunk4)
+        self.assertTrue(self.chunk5 == self.chunkc5)
+        self.assertTrue(self.chunk6 == self.chunkc5)
+        self.assertFalse(self.chunk7 == self.chunk7super)
+        self.assertFalse(self.chunk7super <= self.chunk7)
+        self.assertTrue(self.chunk7 <= self.chunk7super)
+        self.assertTrue(self.chunk7 == self.chunk7super)
+        self.assertFalse(self.chunk8 == self.chunk9)
+        self.assertFalse(self.chunk8 <= self.chunk9)
+        self.assertFalse(self.chunk9 <= self.chunk8)
+        self.assertTrue(self.chunk10 <= self.chunk11)
+        self.assertEqual(self.chunk12.boundvars, {})
+        self.assertTrue(self.chunk12 <= self.chunk13)
+        self.assertEqual(self.chunk12.boundvars, {'=zz': '3'})
+
 
 class TestBuffers(unittest.TestCase):
     """
@@ -249,6 +393,90 @@ class TestCountModel(unittest.TestCase):
         self.test.productions(counting.start, counting.increment, counting.stop)
         self.sim = self.test.simulation(trace=False)
 
+
+    def test_procedure(self):
+        while True:
+            self.sim.step()
+            if self.test.current_event:
+                break
+        self.assertEqual(self.sim.now, 0)
+        self.assertEqual(self.test.current_event.proc, 'PROCEDURAL')
+        self.assertEqual(self.test.current_event.action, 'CONFLICT RESOLUTION')
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RULE SELECTED: start":
+                break
+        self.assertEqual(self.sim.now, 0)
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RULE FIRED: start":
+                break
+        self.assertEqual(self.sim.now, 0.05)
+        while True:
+            self.sim.step()
+            if self.test.current_event.proc == "retrieval":
+                break
+        self.assertEqual(self.sim.now, 0.05)
+        self.assertEqual(self.test.current_event.action, 'START RETRIEVAL')
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RETRIEVED: countOrder(first=2, second=3)":
+                break
+        self.assertEqual(self.sim.now, 0.1)
+        while True:
+            self.sim.step()
+            if self.test.current_event.proc == "PROCEDURAL":
+                break
+        self.assertEqual(self.sim.now, 0.1)
+        self.assertEqual(self.test.current_event.action, 'CONFLICT RESOLUTION')
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RULE FIRED: increment":
+                break
+        self.assertEqual(self.sim.now, 0.15)
+        while True:
+            self.sim.step()
+            if self.test.current_event.proc == "retrieval":
+                break
+        self.assertEqual(self.test.current_event.action, 'START RETRIEVAL')
+        self.assertEqual(self.sim.now, 0.15)
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RETRIEVED: countOrder(first=3, second=4)":
+                break
+        self.assertEqual(self.sim.now, 0.2)
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "CONFLICT RESOLUTION":
+                break
+        self.assertEqual(self.sim.now, 0.2)
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RULE FIRED: increment":
+                break
+        self.assertEqual(self.sim.now, 0.25)
+        while True:
+            self.sim.step()
+            if self.test.current_event.proc == "retrieval":
+                break
+        self.assertEqual(self.test.current_event.action, 'START RETRIEVAL')
+        self.assertEqual(self.sim.now, 0.25)
+        while True:
+            self.sim.step()
+            if self.test.current_event.action == "RULE FIRED: stop":
+                break
+        self.assertEqual(self.sim.now, 0.3)
+
+
+class TestCountModelstring(unittest.TestCase):
+    """
+    Testing Count model, the simplest model in Lisp ACT-R (the string version).
+    """
+    
+    def setUp(self):
+        self.counting = modeltests.Counting_stringversion()
+        self.test = self.counting.model
+        self.sim = self.test.simulation(trace=False)
 
     def test_procedure(self):
         while True:
@@ -456,7 +684,6 @@ class TestModel1(unittest.TestCase):
         self.test.productions(m1.start, m1.increment, m1.stop)
         self.sim = self.test.simulation(trace=False)
 
-
     def test_procedure(self):
         while True:
             self.sim.step()
@@ -653,7 +880,7 @@ class TestBaseLevelLearningModel(unittest.TestCase):
         start_retrieval_time = self.sim.now
         while True:
             self.sim.step()
-            if self.test.current_event.action == "RETRIEVED: pair(probe=bank, answer=0)":
+            if self.test.current_event.action == "RETRIEVED: pair(answer=0, probe=bank)":
                 break
         retrieved_time = self.sim.now
         self.assertEqual(round(retrieved_time-start_retrieval_time, 3), 0.89)
@@ -785,11 +1012,11 @@ class TestProductionUtilities(unittest.TestCase):
         while True:
             self.sim.step()
             if self.test.current_event.action == "RULE SELECTED: two" and time != self.sim.now:
-                self.test.current_event = model.productions.Event(self.test.current_event.time, self.test.current_event.proc, "deleted")
+                self.test.current_event = actr.productions.Event(self.test.current_event.time, self.test.current_event.proc, "deleted")
                 time = self.sim.now
                 times_two.append(time)
             if self.test.current_event.action == "RULE SELECTED: one" and time != self.sim.now:
-                self.test.current_event = model.productions.Event(self.test.current_event.time, self.test.current_event.proc, "deleted")
+                self.test.current_event = actr.productions.Event(self.test.current_event.time, self.test.current_event.proc, "deleted")
                 time = self.sim.now
                 times_one.append(time)
             if self.test.current_event.action == "RULE FIRED: three" and time != self.sim.now:
@@ -805,11 +1032,13 @@ class TestProductionUtilities(unittest.TestCase):
         utility_two = ut_two
         for idx in range(len(times_two)):
             utility_two = utility_two + 0.2*(10-times_two[idx]-utility_two)
-        self.assertEqual(self.test._ACTRModel__Productions["one"]["utility"], round(utility_one, 4))
+        self.assertEqual(self.test._ACTRModel__productions["one"]["utility"], round(utility_one, 4))
 
-        self.assertEqual(self.test._ACTRModel__Productions["two"]["utility"], round(utility_two, 4))
+        self.assertEqual(self.test._ACTRModel__productions["two"]["utility"], round(utility_two, 4))
 
-        self.assertEqual(self.test._ACTRModel__Productions["three"]["utility"], 1.99)
+        self.assertEqual(self.test._ACTRModel__productions["three"]["utility"], 1.99)
+
+
 
 
 if __name__ == '__main__':

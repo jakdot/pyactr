@@ -4,7 +4,7 @@ The fan experiment from unit 5 of Lisp ACT-R.
 
 import warnings
 
-import pyactr.model as model
+import pyactr as actr
 
 class Model(object):
     """
@@ -12,83 +12,161 @@ class Model(object):
     """
 
     def __init__(self, person, location, **kwargs):
-        self.model = model.ACTRModel(environment=None, **kwargs)
+        self.model = actr.ACTRModel(environment=None, **kwargs)
 
-        self.model.chunktype("comprehend", "relation arg1 arg2")
-        self.model.chunktype("meaning", "word")
+        actr.chunktype("comprehend", "relation arg1 arg2")
+        actr.chunktype("meaning", "word")
 
         dict_dm = {}
         words = "hippie bank fireman lawyer guard beach castle dungeon earl forest giant park church captain cave debutante store in".split()
 
         for word in words:
-            dict_dm[word] = self.model.Chunk("meaning", word=word)
+            dict_dm[word] = actr.makechunk(nameofchunk=word, typename="meaning", word=word)
 
         for idx, word in enumerate("park church bank".split(), start=1):
-            dict_dm[idx] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["hippie"], arg2=dict_dm[word])
+            dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["hippie"], arg2=dict_dm[word])
             print(idx, word)
         
         for idx, word in enumerate("park cave".split(), start=4):
-            dict_dm[idx] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["captain"], arg2=dict_dm[word])
+            dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["captain"], arg2=dict_dm[word])
         
-        dict_dm[6] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["debutante"], arg2=dict_dm["bank"])
-        dict_dm[7] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["fireman"], arg2=dict_dm["park"])
+        dict_dm[6] = actr.makechunk(nameofchunk=6, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["debutante"], arg2=dict_dm["bank"])
+        dict_dm[7] = actr.makechunk(nameofchunk=7, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["fireman"], arg2=dict_dm["park"])
 
         for idx, word in enumerate("beach castle dungeon".split(), start=8):
-            dict_dm[idx] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["giant"], arg2=dict_dm[word])
+            dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["giant"], arg2=dict_dm[word])
         
         for idx, word in enumerate("castle forest".split(), start=11):
-            dict_dm[idx] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["earl"], arg2=dict_dm[word])
-        dict_dm[13] = self.model.Chunk("comprehend", relation=dict_dm["in"], arg1=dict_dm["lawyer"], arg2=dict_dm["store"])
+            dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["earl"], arg2=dict_dm[word])
+        dict_dm[13] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["lawyer"], arg2=dict_dm["store"])
 
         self.dm = self.model.DecMem(set(dict_dm.values()))
         
         self.retrieval = self.model.dmBuffer("retrieval", self.dm)
 
-        self.harvest_person = self.model.Chunk("chunk", value="harvest_person")
-        self.harvest_location = self.model.Chunk("chunk", value="harvest_location")
-        self.test = self.model.Chunk("chunk", value="test")
-        self.get_retrieval = self.model.Chunk("chunk", value="get_retrieval")
-        self.get_retrieval = self.model.Chunk("chunk", value="get_retrieval")
+        self.harvest_person = actr.makechunk(nameofchunk="harvest_person", typename="chunk", value="harvest_person")
+        self.harvest_location = actr.makechunk(nameofchunk="harvest_location", typename="chunk", value="harvest_location")
+        self.test = actr.makechunk(nameofchunk="test", typename="chunk", value="test")
+        self.get_retrieval = actr.makechunk(nameofchunk="get_retrieval", typename="chunk", value="get_retrieval")
 
-        self.model.chunktype("sentence_goal", "arg1 arg2 state")
+        actr.chunktype("sentence_goal", "arg1 arg2 state")
         g = self.model.goal("g")
-        g.add(self.model.Chunk("sentence_goal", arg1=person, arg2=location, state=self.test))
+        g.add(actr.makechunk(typename="sentence_goal", arg1=person, arg2=location, state=self.test))
 
-    def start(self):
-        yield {"=g": self.model.Chunk("sentence_goal", arg1="=person", state=self.test)}
-        yield {"=g": self.model.Chunk("sentence_goal", state=self.harvest_person), "+retrieval": self.model.Chunk("meaning", word="=person")}
+        self.model.productionstring(name="start", string="""
+        =g>
+        isa     sentence_goal
+        arg1    =person
+        state   test
+        ==>
+        =g>
+        isa     sentence_goal
+        state   harvest_person
+        +retrieval>
+        isa     meaning
+        word    =person""")
 
-    def harvesting_person(self):
-        yield {"=g": self.model.Chunk("sentence_goal", arg2="=location", state=self.harvest_person), "=retrieval": self.model.Chunk("nonempty")}
-        yield {"=g": self.model.Chunk("sentence_goal", state=self.harvest_location, arg1="=retrieval"), "+retrieval": self.model.Chunk("meaning", word="=location")}
-        
-    def harvesting_location(self):
-        yield {"=g": self.model.Chunk("sentence_goal", state=self.harvest_location), "=retrieval": self.model.Chunk("nonempty"), "?retrieval": {"state": "free"}}
-        yield {"=g": self.model.Chunk("sentence_goal", state=self.get_retrieval, arg2="=retrieval")}
+        self.model.productionstring(name="harvesting_person", string="""
+        =g>
+        isa     sentence_goal
+        arg2    =location
+        state   harvest_person
+        =retrieval>
+        isa     nonempty
+        ==>
+        =g>
+        isa     sentence_goal
+        state   harvest_location
+        arg1    =retrieval
+        +retrieval>
+        isa     meaning
+        word    =location""")
 
-    def retrieve_from_person(self):
-        yield {"=g": self.model.Chunk("sentence_goal", state=self.get_retrieval, arg1="=person")}
-        yield {"=g": self.model.Chunk("sentence_goal", state=None), "+retrieval": self.model.Chunk("comprehend", arg1="=person")}
+        self.model.productionstring(name="harvesting_location", string="""
+        =g>
+        isa     sentence_goal
+        state   harvest_location
+        =retrieval>
+        isa     nonempty
+        ?retrieval>
+        state   free
+        ==>
+        =g>
+        isa     sentence_goal
+        state   get_retrieval
+        arg2    =retrieval""")
 
-    def retrieve_from_location(self):
-        yield {"=g": self.model.Chunk("sentence_goal", state=self.get_retrieval, arg2="=location")}
-        yield {"=g": self.model.Chunk("sentence_goal", state=None), "+retrieval": self.model.Chunk("comprehend", arg2="=location")}
+        self.model.productionstring(name="retrieve_from_person", string="""
+        =g>
+        isa     sentence_goal
+        state   get_retrieval
+        arg1    =person
+        ==>
+        =g>
+        isa     sentence_goal
+        state   None
+        +retrieval>
+        isa     comprehend
+        arg1    =person""")
 
-    def respond_yes(self):
-        yield {"=g": self.model.Chunk("sentence_goal", state=None, arg1="=person", arg2="=location"), "=retrieval": self.model.Chunk("comprehend", arg1="=person", arg2="=location")}
-        yield {"=g": self.model.Chunk("sentence_goal", state="k")}
+        self.model.productionstring(name="retrieve_from_location", string="""
+        =g>
+        isa     sentence_goal
+        state   get_retrieval
+        arg2    =location
+        ==>
+        =g>
+        isa     sentence_goal
+        state   None
+        +retrieval>
+        isa     comprehend
+        arg2    =location""")
 
-    def mismatch_person_no(self):
-        yield {"=g": self.model.Chunk("sentence_goal", state=None, arg1="=person", arg2="=location"), "=retrieval": self.model.Chunk("comprehend", arg1="~=person")}
-        yield {"=g": self.model.Chunk("sentence_goal", state="d")}
+        self.model.productionstring(name="respond_yes", string="""
+        =g>
+        isa     sentence_goal
+        state   None
+        arg1    =person
+        arg2    =location
+        =retrieval>
+        isa     comprehend
+        arg1    =person
+        arg2    =location
+        ==>
+        =g>
+        isa     sentence_goal
+        state   'k'""")
 
-    def mismatch_location_no(self):
-        yield {"=g": self.model.Chunk("sentence_goal", state=None, arg1="=person", arg2="=location"), "=retrieval": self.model.Chunk("comprehend", arg2="~=location")}
-        yield {"=g": self.model.Chunk("sentence_goal", state="d")}
+        self.model.productionstring(name="mismatch_person_no", string="""
+        =g>
+        isa     sentence_goal
+        state   None
+        arg1    =person
+        arg2    =location
+        =retrieval>
+        isa     comprehend
+        arg1    ~=person
+        ==>
+        =g>
+        isa     sentence_goal
+        state   'd'""")
+
+        t3= self.model.productionstring(name="mismatch_location_no", string="""
+        =g>
+        isa     sentence_goal
+        state   None
+        arg1    =person
+        arg2    =location
+        =retrieval>
+        isa     comprehend
+        arg2    ~=location
+        ==>
+        =g>
+        isa     sentence_goal
+        state   'd'""")
 
 if __name__ == "__main__":
     warnings.simplefilter("ignore")
     m = Model("hippie", "bank", subsymbolic=True, latency_factor=0.63, strength_of_association=1.6, buffer_spreading_activation={"g":1}, activation_trace=True)
-    m.model.productions(m.start, m.harvesting_person, m.harvesting_location, m.retrieve_from_person, m.retrieve_from_location, m.respond_yes, m.mismatch_person_no, m.mismatch_location_no)
     sim = m.model.simulation(realtime=True)
-    sim.run(3)
+    sim.run(2)

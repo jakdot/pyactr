@@ -15,7 +15,7 @@ Run python setup.py install (or python setup.py develop). Or put the subfolder p
 Requirements
 ------------
 
-Requires Python3 (>=3.3), numpy and simpy.
+Requires Python3 (>=3.3), numpy, simpy and pyparsing.
 
 Documentation
 -------------

@@ -22,12 +22,16 @@ class Productions(collections.UserDict):
     """
     
     __rules_info = collections.namedtuple("rules_info", "rule utility reward selecting_time")
+
+    _undefinedrulecounter = 0
         
     def __init__(self, *rules):
         self._rules = {}
         for rule in rules:
+            print(rule)
             try:    
                 utility_position = len(inspect.getargspec(rule).args)-inspect.getargspec(rule).args.index('utility')
+                print(inspect.getargspec(rule).args)
             except ValueError:
                 utility = 0
             else:
@@ -75,6 +79,8 @@ class Productions(collections.UserDict):
         else:
             self._rules[key] = {"rule": value, "utility": 0, "reward": 0, "selecting_time": []}
 
+
+
 class ProductionRules(object):
     """
     Production knowledge.
@@ -83,10 +89,9 @@ class ProductionRules(object):
     _UNKNOWN = utilities._UNKNOWN
     _PROCEDURAL = utilities._PROCEDURAL
     _EMPTY = utilities._EMPTY
-    _RHSCONVENTIONS = {"?": "extra_test", "=": "modify", "+": "retrieveorset", "!": "execute", "~": "clear", "@": "overwrite", "*": "modify_request"}
-    _LHSCONVENTIONS = {"=": "test", "?": "query"}
-    _INTERRUPTIBLE = {"retrieveorset", "modify_request"}
-
+    _RHSCONVENTIONS = utilities._RHSCONVENTIONS
+    _LHSCONVENTIONS = utilities._LHSCONVENTIONS
+    _INTERRUPTIBLE = utilities._INTERRUPTIBLE
 
     def __init__(self, rules, buffers, dm, model_parameters = None):
         self.__actrvariables = {} #variables in a fired rule
@@ -391,8 +396,6 @@ class ProductionRules(object):
             return False, None
 
         for chunk in tested:
-            #print("Chunk:", dictionary[key]) #for debugging
-            #print("Must be part of:", chunk) #for debugging
             testchunk.boundvars = dict(temp_actrvariables)
 
             if testchunk <= chunk:

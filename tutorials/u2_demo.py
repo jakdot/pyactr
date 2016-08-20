@@ -6,63 +6,92 @@ import string
 import random
 import warnings
 
-import pyactr.environment as env
-import pyactr.model as model
+import pyactr as actr
 
 
-class Environment(env.Environment): #subclass Environment
+class Environment(actr.Environment): #subclass Environment
     """
     Environment, putting a random letter on screen.
     """
 
     def __init__(self):
         self.text = string.ascii_uppercase
-        self.run_time = 0.3
+        self.run_time = 2
 
     def environment_process(self, start_time):
         """
         Environment process. Random letter appears, model has to press the key corresponding to the letter.
         """
         time = start_time
-        yield env.Event(env.roundtime(time), env._ENV, "STARTING ENVIRONMENT") 
+        yield self.Event(time, self._ENV, "STARTING ENVIRONMENT") 
         letter = random.sample(self.text, 1)[0]
         self.output(letter, trigger=letter) #output on environment
         time = time + self.run_time
-        yield env.Event(env.roundtime(time), env._ENV, "PRINTED LETTER %s" % letter)
+        yield self.Event(time, self._ENV, "PRINTED LETTER %s" % letter)
 
-class Model(object):
-    """
-    Model pressing the right key.
-    """
 
-    def __init__(self, env):
-        self.m = model.ACTRModel(environment=env)
+environ = Environment()
 
-        g = self.m.goal("g")
-        g2 = self.m.goal("g2", set_delay=0.2)
-        self.start = self.m.Chunk("chunk", value="start")
-        self.attend_let = self.m.Chunk("chunk", value="attend_let")
-        self.response = self.m.Chunk("chunk", value="response")
-        self.done = self.m.Chunk("chunk", value="done")
-        g.add(self.m.Chunk("read", state=self.start))
+m = actr.ACTRModel(environment=environ)
 
-    def find_unattended_letter(self):
-        yield {"=g": self.m.Chunk("read", state=self.start), "?visual": {"state": "free"}}
-        yield {"=g": self.m.Chunk("read", state=self.attend_let), "+visual": None}
+g = m.goal("g")
+g2 = m.goal("g2", set_delay=0.2)
+actr.makechunk(name="start", typename="chunk", value="start")
+actr.makechunk(nameofchunk="start", typename="chunk", value="start")
+actr.makechunk(nameofchunk="attend_let", typename="chunk", value="attend_let")
+actr.makechunk(nameofchunk="response", typename="chunk", value="response")
+actr.makechunk(nameofchunk="done", typename="chunk", value="done")
+g.add(actr.chunkstring(name="reading", string="""
+        isa     read
+        state   start"""))
 
-    def encode_letter(self):
-        yield {"=g": self.m.Chunk("read", state=self.attend_let), "=visual": self.m.Chunk("_visual", object="=letter")}
-        yield {"=g": self.m.Chunk("read", state=self.response), "+g2": self.m.Chunk("image", img="=letter")}
+t1 = m.productionstring(name="find_unattended_letter", string="""
+        =g>
+        isa     read
+        state   start
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     read
+        state   attend_let
+        +visual>""")
 
-    def respond(self):
-        yield {"=g": self.m.Chunk("read", state=self.response), "=g2": self.m.Chunk("image", img="=letter"), "?manual": {"state": "free"}}
-        yield {"=g": self.m.Chunk("read", state=self.done), "+manual": self.m.Chunk("_manual", cmd="presskey", key="=letter")}
-    
+t2 = m.productionstring(name="encode_letter", string="""
+        =g>
+        isa     read
+        state   attend_let
+        =visual>
+        isa     _visual
+        object  =letter
+        ==>
+        =g>
+        isa     read
+        state   response
+        +g2>
+        isa     image
+        img     =letter""")
+
+m.productionstring(name="respond", string="""
+        =g>
+        isa     read
+        state   response
+        =g2>
+        isa     image
+        img     =letter
+        ?manual>
+        state   free
+        ==>
+        =g>
+        isa     read
+        state   done
+        +manual>
+        isa     _manual
+        cmd     'presskey'
+        key     =letter""")
+
 if __name__ == "__main__":
-    warnings.simplefilter("ignore")
-    environ = Environment()
-    m = Model(environ)
-    m.m.productions(m.find_unattended_letter, m.encode_letter, m.respond)
-    sim = m.m.simulation(realtime=True, environment_process=environ.environment_process, start_time=0)
+    sim = m.simulation(realtime=True, environment_process=environ.environment_process, start_time=0)
     sim.run(4)
+    print(m.dm)
 

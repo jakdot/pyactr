@@ -2,12 +2,12 @@
 Models testing symbolic system of ACT-R.
 """
 
-import pyactr.model as model
+import pyactr as actr
 
 class Counting(object):
 
     def __init__(self):
-        self.model = model.ACTRModel()
+        self.model = actr.ACTRModel()
 
         #Each chunk type should be defined first.
         self.model.chunktype("countOrder", ("first", "second"))
@@ -49,10 +49,86 @@ class Counting(object):
         yield {"=g":self.model.Chunk("countFrom", count="=x", end="=x")}
         yield {"!g": ("clear", (0, self.model.DecMem()))}
 
+class Counting_stringversion(object):
+
+    def __init__(self):
+        self.model = actr.ACTRModel()
+
+        self.model.chunktype("countOrder", "first, second")
+
+        self.dm = self.model.DecMem()
+
+        self.dm.add(self.model.chunkstring(string="\
+                isa countOrder\
+                first 1\
+                second 2"))
+        self.dm.add(self.model.chunkstring(string="\
+                isa countOrder\
+                first 2\
+                second 3"))
+        self.dm.add(self.model.chunkstring(string="\
+                isa countOrder\
+                first 3\
+                second 4"))
+        self.dm.add(self.model.chunkstring(string="\
+                isa countOrder\
+                first 4\
+                second 5"))
+
+        self.retrieval = self.model.dmBuffer("retrieval", self.dm)
+        #creating buffer for dm
+    
+        self.g = self.model.goal("g", default_harvest=self.dm)
+        #creating goal buffer
+
+        self.model.chunktype("countFrom", ("start", "end", "count"))
+        self.g.add(self.model.chunkstring(string="\
+                isa countFrom\
+                start   2\
+                end 4"))
+
+        self.model.productionstring(name="start", string="""
+                =g>
+                isa countFrom
+                start =x
+                count None
+                ==>
+                =g>
+                isa countFrom
+                count =x
+                +retrieval>
+                isa countOrder
+                first =x""")
+
+        self.model.productionstring(name="increment", string="""
+        =g>
+        isa     countFrom
+        count       =x
+        end         ~=x
+        =retrieval>
+        isa     countOrder
+        first       =x
+        second      =y
+        ==>
+        =g>
+        isa     countFrom
+        count       =y
+        +retrieval>
+        isa     countOrder
+        first       =y""")
+
+        self.model.productionstring(name="stop", string="""
+        =g>
+        isa     countFrom
+        count       =x
+        end         =x
+        ==>
+        ~g>""")
+
 class Addition(object):
 
     def __init__(self):
-        self.model = model.ACTRModel()
+        self.model = actr.ACTRModel()
         self.model.chunktype("countOrder", ("first", "second"))
 
         self.model.chunktype("add", ("arg1", "arg2", "sum", "count"))
@@ -87,7 +163,7 @@ class Addition(object):
 class Model1(object):
 
     def __init__(self):
-        self.model = model.ACTRModel()
+        self.model = actr.ACTRModel()
 
         self.model.chunktype("countOrder", ("first", "second"))
 
@@ -119,7 +195,7 @@ class Model1(object):
 class Model2(object):
     
     def __init__(self):
-        self.model = model.ACTRModel()
+        self.model = actr.ACTRModel()
 
         self.model.chunktype("twoVars", ("x", "y"))
 
@@ -149,7 +225,7 @@ class Model2(object):
 class Model3(object):
     
     def __init__(self):
-        self.model = model.ACTRModel()
+        self.model = actr.ACTRModel()
 
         self.model.chunktype("twoVars", ("x", "y"))
 
@@ -176,10 +252,10 @@ class Model3(object):
         yield {"?retrieval": {"buffer": "full"}, "?g": {"buffer": "empty"}}
         yield {"~retrieval": None}
 
-class MotorModel(model.ACTRModel):
+class MotorModel(actr.ACTRModel):
 
     def __init__(self):
-        self.model = model.ACTRModel()
+        self.model = actr.ACTRModel()
 
         g = self.model.goal("g")
 
@@ -206,14 +282,11 @@ import string
 import random
 
 import pyactr.environment as env
-import pyactr.model as model
 
-class Environment1(env.Environment): #subclass Environment
+class Environment1(actr.Environment): #subclass Environment
     """
     Environment, putting a random letter on screen.
     """
-
-
 
     def __init__(self):
         self.text = {"bank": "0", "card": "1", "dart": "2", "face": "3", "game": "4",
@@ -229,15 +302,15 @@ class Environment1(env.Environment): #subclass Environment
         used_text = {key: self.text[key] for key in sorted(list(self.text))[0:number_pairs]}
 
         time = start_time
-        yield env.Event(env.roundtime(time), env._ENV, "STARTING ENVIRONMENT")
+        yield self.Event(env.roundtime(time), self._ENV, "STARTING ENVIRONMENT")
         for _ in range(number_trials):
            for word in used_text: 
                 self.output(word, trigger=used_text[word]) #output on environment
                 time += self.run_time
-                yield env.Event(env.roundtime(time), env._ENV, "PRINTED WORD %s" % word)
+                yield self.Event(env.roundtime(time), self._ENV, "PRINTED WORD %s" % word)
                 self.output(used_text[word]) #output on environment
                 time += self.run_time
-                yield env.Event(env.roundtime(time), env._ENV, "PRINTED NUMBER %s" % used_text[word])
+                yield self.Event(env.roundtime(time), self._ENV, "PRINTED NUMBER %s" % used_text[word])
 
 class Paired(object):
     """
@@ -245,7 +318,7 @@ class Paired(object):
     """
 
     def __init__(self, env, **kwargs):
-        self.m = model.ACTRModel(environment=env, **kwargs)
+        self.m = actr.ACTRModel(environment=env, **kwargs)
 
         self.m.chunktype("pair", "probe answer")
         
@@ -257,13 +330,13 @@ class Paired(object):
 
         g = self.m.goal("g")
         self.m.goal("g2", set_delay=0.2)
-        self.start = self.m.Chunk("chunk", value="start")
-        self.attending = self.m.Chunk("chunk", value="attending")
-        self.testing = self.m.Chunk("chunk", value="testing")
-        self.response = self.m.Chunk("chunk", value="response")
-        self.study = self.m.Chunk("chunk", value="study")
-        self.attending_target = self.m.Chunk("chunk", value="attending_target")
-        self.done = self.m.Chunk("chunk", value="done")
+        self.start = self.m.Chunk("somechunk", value="start")
+        self.attending = self.m.Chunk("somechunk", value="attending")
+        self.testing = self.m.Chunk("somechunk", value="testing")
+        self.response = self.m.Chunk("somechunk", value="response")
+        self.study = self.m.Chunk("somechunk", value="study")
+        self.attending_target = self.m.Chunk("somechunk", value="attending_target")
+        self.done = self.m.Chunk("somechunk", value="done")
         g.add(self.m.Chunk("read", state=self.start))
 
     def attend_probe(self):
@@ -300,7 +373,7 @@ class Utilities(object):
     """
 
     def __init__(self, **kwargs):
-        self.m = model.ACTRModel(**kwargs)
+        self.m = actr.ACTRModel(**kwargs)
 
         self.dm = self.m.DecMem()
 

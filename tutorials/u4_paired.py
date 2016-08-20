@@ -6,10 +6,9 @@ import string
 import random
 import warnings
 
-import pyactr.environment as env
-import pyactr.model as model
+import pyactr as actr
 
-class Environment(env.Environment): #subclass Environment
+class Environment(actr.Environment): #subclass Environment
     """
     Environment, putting a random letter on screen.
     """
@@ -28,15 +27,15 @@ class Environment(env.Environment): #subclass Environment
         used_text = {key: self.text[key] for key in random.sample(list(self.text), number_pairs)}
 
         time = start_time
-        yield env.Event(env.roundtime(time), env._ENV, "STARTING ENVIRONMENT")
+        yield self.Event(time, self._ENV, "STARTING ENVIRONMENT")
         for _ in range(number_trials):
            for word in used_text: 
                 self.output(word, trigger=used_text[word]) #output on environment
                 time += self.run_time
-                yield env.Event(env.roundtime(time), env._ENV, "PRINTED WORD %s" % word)
+                yield self.Event(time, self._ENV, "PRINTED WORD %s" % word)
                 self.output(used_text[word]) #output on environment
                 time += self.run_time
-                yield env.Event(env.roundtime(time), env._ENV, "PRINTED NUMBER %s" % used_text[word])
+                yield self.Event(time, self._ENV, "PRINTED NUMBER %s" % used_text[word])
 
 class Model(object):
     """
@@ -44,56 +43,129 @@ class Model(object):
     """
 
     def __init__(self, env, **kwargs):
-        self.m = model.ACTRModel(environment=env, **kwargs)
+        self.m = actr.ACTRModel(environment=env, **kwargs)
 
-        self.m.chunktype("pair", "probe answer")
+        actr.chunktype("pair", "probe answer")
         
-        self.m.chunktype("goal", "state")
+        actr.chunktype("goal", "state")
 
         self.dm = self.m.DecMem()
 
-        self.m.dmBuffer("retrieval", self.dm)
+        retrieval = self.m.dmBuffer("retrieval", self.dm)
 
         g = self.m.goal("g")
         self.m.goal("g2", set_delay=0.2)
-        self.start = self.m.Chunk("chunk", value="start")
-        self.attending = self.m.Chunk("chunk", value="attending")
-        self.testing = self.m.Chunk("chunk", value="testing")
-        self.response = self.m.Chunk("chunk", value="response")
-        self.study = self.m.Chunk("chunk", value="study")
-        self.attending_target = self.m.Chunk("chunk", value="attending_target")
-        self.done = self.m.Chunk("chunk", value="done")
-        g.add(self.m.Chunk("read", state=self.start))
+        start = actr.makechunk(nameofchunk="start", typename="chunk", value="start")
+        actr.makechunk(nameofchunk="attending", typename="chunk", value="attending")
+        actr.makechunk(nameofchunk="testing", typename="chunk", value="testing")
+        actr.makechunk(nameofchunk="response", typename="chunk", value="response")
+        actr.makechunk(nameofchunk="study", typename="chunk", value="study")
+        actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
+        actr.makechunk(nameofchunk="done", typename="chunk", value="done")
+        g.add(actr.makechunk(typename="read", state=start))
 
-    def attend_probe(self):
-        yield {"=g": self.m.Chunk("goal", state=self.start), "?visual": {"state": "auto_buffering"}}
-        yield {"=g": self.m.Chunk("goal", state=self.attending), "+visual": None}
+        self.m.productionstring(name="attend_probe", string="""
+        =g>
+        isa     goal
+        state   start
+        ?visual>
+        state   auto_buffering
+        ==>
+        =g>
+        isa     goal
+        state   attending
+        +visual>""")
 
-    def read_probe(self):
-        yield {"=g": self.m.Chunk("goal", state=self.attending), "=visual": self.m.Chunk("_visual", object="=word")}
-        yield {"=g": self.m.Chunk("goal", state=self.testing), "+g2": self.m.Chunk("pair", probe="=word"), "+retrieval": self.m.Chunk("pair", probe="=word")}
+        self.m.productionstring(name="read_probe", string="""
+        =g>
+        isa     goal
+        state   attending
+        =visual>
+        isa     _visual
+        object  =word
+        ==>
+        =g>
+        isa     goal
+        state   testing
+        +g2>
+        isa     pair
+        probe   =word
+        +retrieval>
+        isa     pair
+        probe   =word""")
 
-    def recall(self):
-        yield {"=g": self.m.Chunk("goal", state=self.testing), "=retrieval": self.m.Chunk("pair", answer="=ans"), "?manual": {"state": "free"},  "?visual": {"state": "free"}}
-        yield {"+manual": self.m.Chunk("_manual", cmd="presskey", key="=ans"), "=g": self.m.Chunk("goal", state=self.study), "~visual": None}
+        self.m.productionstring(name="recall", string="""
+        =g>
+        isa     goal
+        state   testing
+        =retrieval>
+        isa     pair
+        answer  =ans
+        ?manual>
+        state   free
+        ?visual>
+        state   free
+        ==>
+        +manual>
+        isa     _manual
+        cmd     'presskey'
+        key     =ans
+        =g>
+        isa     goal
+        state   study
+        ~visual>""")
 
-    def cannot_recall(self):
-        yield {"=g": self.m.Chunk("goal", state=self.testing), "?retrieval": {"state": "error"}, "?visual": {"state": "free"}}
-        yield {"=g": self.m.Chunk("goal", state=self.study), "~visual": None}
+        self.m.productionstring(name="cannot_recall", string="""
+        =g>
+        isa     goal
+        state   testing
+        ?retrieval>
+        state   error
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     goal
+        state   study
+        ~visual>""")
 
-    def study_answer(self):
-        yield {"=g": self.m.Chunk("goal", state=self.study), "?visual": {"state": "auto_buffering"}}
-        yield {"=g": self.m.Chunk("goal", state=self.attending_target), "+visual": None}
+        self.m.productionstring(name="study_answer", string="""
+        =g>
+        isa     goal
+        state   study
+        ?visual>
+        state   auto_buffering
+        ==>
+        =g>
+        isa     goal
+        state   attending_target
+        +visual>""")
 
-    def associate(self):
-        yield {"=g": self.m.Chunk("goal", state=self.attending_target), "=visual": self.m.Chunk("_visual", object="=val"), "=g2": self.m.Chunk("pair", probe="=word"), "?visual": {"state": "free"}}
-        yield {"=g": self.m.Chunk("goal", state=self.start), "~visual": None, "=g2": self.m.Chunk("pair", answer="=val"), "~g2": None}
+        self.m.productionstring(name="associate", string="""
+        =g>
+        isa     goal
+        state   attending_target
+        =visual>
+        isa     _visual
+        object  =val
+        =g2>
+        isa     pair
+        probe   =word
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     goal
+        state   start
+        ~visual>
+        =g2>
+        isa     pair
+        answer  =val
+        ~g2>""")
 
 if __name__ == "__main__":
-    warnings.simplefilter("ignore")
     environ = Environment()
     m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0)
-    m.m.productions(m.attend_probe, m.read_probe, m.recall, m.cannot_recall, m.study_answer, m.associate)
     sim = m.m.simulation(realtime=True, environment_process=environ.environment_process, number_pairs=1, number_trials=2, start_time=0)
     sim.run(12)
     print(m.dm)

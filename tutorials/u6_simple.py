@@ -4,40 +4,52 @@ Testing utilities of production rules and changes in utilities. It corresponds t
 
 import warnings
 
-import pyactr.environment as env
-import pyactr.model as model
+import pyactr as actr
 
 class Model(object):
 
     def __init__(self, **kwargs):
-        self.m = model.ACTRModel(**kwargs)
+        self.m = actr.ACTRModel(**kwargs)
 
         self.dm = self.m.DecMem()
 
         self.m.dmBuffer("retrieval", self.dm)
 
         g = self.m.goal("g")
-        g.add(self.m.Chunk("start", state="start"))
+        g.add(actr.makechunk(typename="start", state="start"))
 
-    def one(self, utility=1):
-        yield {"=g": self.m.Chunk("start", state="start")}
-        yield {"=g": self.m.Chunk("change", state="change")}
+        self.m.productionstring(name="one", string="""
+        =g>
+        isa     start
+        state   'start'
+        ==>
+        =g>
+        isa     change
+        state   'change'""", utility=1)
 
-    def two(self, utility=5):
-        yield {"=g": self.m.Chunk("start", state="start")}
-        yield {"=g": self.m.Chunk("dontchange", state="start")}
-    
-    def three(self, reward=10):
-        yield {"=g": self.m.Chunk("change", state="change")}
-        yield {"~g": None}
+        self.m.productionstring(name="two", string="""
+        =g>
+        isa     start
+        state   'start'
+        ==>
+        =g>
+        isa     dontchange
+        state   'start'""", utility=5)
+
+        self.m.productionstring(name="three", string="""
+        =g>
+        isa     change
+        state   'change'
+        ==>
+        ~g>""", reward=10)
+
 
 if __name__ == "__main__":
     warnings.simplefilter("ignore")
     m = Model(subsymbolic=True, utility_noise=10, utility_learning=True)
-    m.m.productions(m.one, m.two, m.three)
     sim = m.m.simulation(realtime=True)
-    print(m.m._ACTRModel__Productions)
+    print(m.m._ACTRModel__productions)
     sim.run(1)
-    print(m.m._ACTRModel__Productions)
+    print(m.m._ACTRModel__productions)
     print(m.dm)
 

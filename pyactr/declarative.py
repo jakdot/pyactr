@@ -123,12 +123,12 @@ class DecMemBuffer(buffers.Buffer):
         retrieved = None
         for chunk in self.dm:
             try:
-                if extra_tests["recently_retrieved"]:
-                    if self.finst and chunk not in self.recent:
+                if extra_tests["recently_retrieved"] == False or extra_tests["recently_retrieved"] == 'False':
+                    if self.finst and chunk in self.recent:
                         continue
 
                 else:
-                    if self.finst and chunk in self.recent:
+                    if self.finst and chunk not in self.recent:
                         continue
             except KeyError:
                 pass
