@@ -120,7 +120,12 @@ class ProductionRules(object):
                 "activation_trace": False,
                 "utility_noise": 0,
                 "utility_learning": False,
-                "utility_alpha": 0.2
+                "utility_alpha": 0.2,
+                "motor_preparation": 0.25,
+                "motor_initiation": 0.05, #default
+                "motor_execution": 0.1, #taken form LispACT-R ex. for pressing a key
+                "motor_finish": 0.1, #taken from an example for pressing a key
+                "strict_harvesting": False
                 }
         try:
             assert set(model_parameters.keys()).issubset(set(self.model_parameters.keys())), "Incorrect model parameter(s) %s" % set(model_parameters.keys()).difference(set(self.model_parameters.keys()))
@@ -207,10 +212,11 @@ class ProductionRules(object):
                 yield from production #this either moves production on to modify, retrieve etc. (see RHSCONVENTIONS for the list), or it appends that process to the processes that have to be done as an extra process by model, i.e., not directly by productions (distinction made as in ACT-R)
 
         #this last part is strict harvesting
-        for key in temp_actrvariables:
-            submodule_name = key[1:]
-            if submodule_name in self.buffers:
-               self.procs.append((submodule_name, self.clear(submodule_name, self.buffers[submodule_name], None, self.__actrvariables, time)))
+        if self.model_parameters["strict_harvesting"]:
+            for key in temp_actrvariables:
+                submodule_name = key[1:]
+                if submodule_name in self.buffers:
+                    self.procs.append((submodule_name, self.clear(submodule_name, self.buffers[submodule_name], None, self.__actrvariables, time)))
 
     def extra_test(self, name, tested, test, temp_actrvariables, time):
         """
@@ -242,7 +248,10 @@ class ProductionRules(object):
         """
         Executes a command.
         """
-        getattr(executed, executecommand[0])(*executecommand[1])
+        try:
+            getattr(executed, executecommand[0])(*executecommand[1])
+        except TypeError:
+            getattr(executed, executecommand[0])(executecommand[1])
         yield Event(roundtime(time), name, "EXECUTED")
 
     def modify(self, name, modified, otherchunk, temp_actrvariables, time):
@@ -326,7 +335,10 @@ class ProductionRules(object):
         """
         Carries out preparation of motor action. 
         """
-        preparation = 0.25 #taken from ACT-R example for pressing keys, nothing else implemented (manual, sec. Motor Module)
+        if self.model_parameters["motor_preparation"]:
+            preparation = self.model_parameters["motor_preparation"] #taken from ACT-R example for pressing keys, nothing else implemented (manual, sec. Motor Module)
+        else:
+            preparation = 0 #if nothing needs to be prepared (i.e., a repeated mvt), preparation defaults to 0
                 
         newchunk = motorbuffer.create(otherchunk, temp_actrvariables)
 
@@ -345,9 +357,9 @@ class ProductionRules(object):
         """
         Carries out the rest of motor action. Motor action is split in two because of assumption in ACT-R that the two parts can act independently of each other.
         """
-        initiation = 0.05 #default
-        execution = 0.1 #taken from example for press key
-        movement_finish = 0.1 #taken from example for press key
+        initiation = self.model_parameters["motor_initiation"] 
+        execution = self.model_parameters["motor_execution"] 
+        movement_finish = self.model_parameters["motor_finish"] 
         
         motorbuffer.preparation = motorbuffer._FREE
         motorbuffer.processor = motorbuffer._BUSY

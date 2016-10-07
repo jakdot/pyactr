@@ -182,7 +182,7 @@ class Model(object):
 
 if __name__ == "__main__":
     warnings.simplefilter("ignore")
-    m = Model(subsymbolic=True, instantaneous_noise=0.15, retrieval_threshold=-10, partial_matching=True, activation_trace=True)
+    m = Model(subsymbolic=True, instantaneous_noise=0.15, retrieval_threshold=-10, partial_matching=True, activation_trace=True, strict_harvesting=True)
     sim = m.model.simulation(realtime=False)
     sim.run(3)
 

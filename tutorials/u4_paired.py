@@ -165,7 +165,7 @@ class Model(object):
 
 if __name__ == "__main__":
     environ = Environment()
-    m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0)
+    m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0, strict_harvesting=True)
     sim = m.m.simulation(realtime=True, environment_process=environ.environment_process, number_pairs=1, number_trials=2, start_time=0)
     sim.run(12)
     print(m.dm)

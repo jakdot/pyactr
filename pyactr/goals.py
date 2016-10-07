@@ -19,8 +19,7 @@ class Goal(buffers.Buffer):
 
     def add(self, elem, time=0, harvest=None):
         """
-        Clears current buffer (into a memory) and adds a new chunk. Decl. memory is either specified as default_harvets, when Goal is initialized, or it can be specified as the argument of harvest.
-
+        If the buffer has a chunk, it clears current buffer (into the memory associated with the goal buffer). It adds a new chunk, specified as elem. Decl. memory is either specified as default_harvest, when Goal is initialized, or it can be specified as harvest.
         """
         self.clear(time, harvest)
         super().add(elem)

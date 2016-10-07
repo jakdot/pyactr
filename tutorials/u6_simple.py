@@ -46,7 +46,7 @@ class Model(object):
 
 if __name__ == "__main__":
     warnings.simplefilter("ignore")
-    m = Model(subsymbolic=True, utility_noise=10, utility_learning=True)
+    m = Model(subsymbolic=True, utility_noise=10, utility_learning=True, strict_harvesting=True)
     sim = m.m.simulation(realtime=True)
     print(m.m._ACTRModel__productions)
     sim.run(1)

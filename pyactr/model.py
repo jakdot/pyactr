@@ -177,8 +177,8 @@ class ACTRModel(object):
                         if name in self.__interruptibles and proc[1] != self.__interruptibles[name]:
                             self.__interruptibles[name] = proc[1]
                             self.__dict_extra_proc[name].interrupt() #otherwise, interrupt them
-            for _ in range(3):
-                yield self.__simulation.timeout(0) #move procedural process to the bottom; right now, this is a hack - it yields 0 timeout three times, so other processes get enough cycles to start etc.
+            for _ in range(5):
+                yield self.__simulation.timeout(0) #move procedural process to the bottom; right now, this is a hack - it yields 0 timeout five times, so other processes get enough cycles to start etc.
             pro = self.__simulation.process(self.__localprocess__(self.__pr._PROCEDURAL, self.__pr.procedural_process(self.__simulation.now)))
             self.__procs_started = yield pro
             self.__proc_activate = self.__simulation.event() #start the event
@@ -239,6 +239,8 @@ class ACTRModel(object):
                     rhs[each[0]+each[1]] = {x[0]:x[1] for x in each[3]}
                 elif each[0] == temp_dictRHS["clear"]:
                     rhs[each[0]+each[1]] = None
+                elif each[0] == temp_dictRHS["execute"]:
+                    rhs[each[0]+each[1]] = each[3][0]
                 else:
                     type_chunk, chunk_dict = chunks.createchunkdict(each[3])
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)

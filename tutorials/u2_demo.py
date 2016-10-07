@@ -96,5 +96,4 @@ m.productionstring(name="respond", string="""
 if __name__ == "__main__":
     sim = m.simulation(realtime=True, environment_process=environ.environment_process, start_time=0)
     sim.run(4)
-    print(m.dm)
 

@@ -712,7 +712,7 @@ class TestModel2(unittest.TestCase):
     """
     
     def setUp(self):
-        self.m2 = modeltests.Model2()
+        self.m2 = modeltests.Model2(strict_harvesting=True)
         self.test = self.m2.model
         self.test.productions(self.m2.start, self.m2.switch, self.m2.clear)
         self.sim = self.test.simulation(trace=False)
@@ -743,7 +743,7 @@ class TestModel3(unittest.TestCase):
     """
     
     def setUp(self):
-        self.m3 = modeltests.Model3()
+        self.m3 = modeltests.Model3(strict_harvesting=True)
         self.dm = self.m3.dm
         self.test = self.m3.model
         self.test.productions(self.m3.start, self.m3.switch, self.m3.clear)
@@ -824,7 +824,7 @@ class TestBaseLevelLearningModel(unittest.TestCase):
     
     def setUp(self):
         environ = modeltests.Environment1()
-        m = modeltests.Paired(environ, subsymbolic=True, baselevel_learning=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0)
+        m = modeltests.Paired(environ, subsymbolic=True, baselevel_learning=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0, strict_harvesting=True)
         self.test = m.m
         m.m.productions(m.attend_probe, m.read_probe, m.recall, m.cannot_recall, m.study_answer, m.associate, m.clear_imaginal)
         self.sim = m.m.simulation(trace=False, environment_process=environ.environment_process, number_pairs=1, number_trials=2, start_time=0)

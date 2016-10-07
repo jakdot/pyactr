@@ -167,6 +167,6 @@ class Model(object):
 
 if __name__ == "__main__":
     warnings.simplefilter("ignore")
-    m = Model("hippie", "bank", subsymbolic=True, latency_factor=0.63, strength_of_association=1.6, buffer_spreading_activation={"g":1}, activation_trace=True)
+    m = Model("hippie", "bank", subsymbolic=True, latency_factor=0.63, strength_of_association=1.6, buffer_spreading_activation={"g":1}, activation_trace=True, strict_harvesting=True)
     sim = m.model.simulation(realtime=True)
     sim.run(2)

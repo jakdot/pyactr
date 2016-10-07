@@ -40,8 +40,6 @@ retrieval = counting.dmBuffer(name="retrieval", declarative_memory=dm)
 g = counting.goal(name="g")
 
 actr.chunktype("countFrom", ("start", "end", "count"))
-g.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
-#adding stuff to goal buffer
 
 #production rules follow; using productionstring, they are similar to Lisp ACT-R
 
@@ -83,6 +81,8 @@ counting.productionstring(name="stop", string="""
     ==>
     ~g>""")
 
+#adding stuff to goal buffer
+g.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
 
 if __name__ == "__main__":
     x = counting.simulation()

@@ -54,6 +54,14 @@ class Buffer(collections.MutableSet):
         Discard an element without clearing it into a memory.
         """
         self._data.discard(elem)
+    
+    def show(self, attr):
+        """
+        Prints the content of the buffer.
+        """
+        if self._data:
+            chunk = self._data.copy().pop()
+        print(getattr(chunk, attr))
 
     def test_buffer(self, inquiry):
         """

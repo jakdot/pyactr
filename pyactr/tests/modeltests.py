@@ -194,8 +194,8 @@ class Model1(object):
 
 class Model2(object):
     
-    def __init__(self):
-        self.model = actr.ACTRModel()
+    def __init__(self, **kwargs):
+        self.model = actr.ACTRModel(**kwargs)
 
         self.model.chunktype("twoVars", ("x", "y"))
 
@@ -224,8 +224,8 @@ class Model2(object):
 
 class Model3(object):
     
-    def __init__(self):
-        self.model = actr.ACTRModel()
+    def __init__(self, **kwargs):
+        self.model = actr.ACTRModel(**kwargs)
 
         self.model.chunktype("twoVars", ("x", "y"))
 
