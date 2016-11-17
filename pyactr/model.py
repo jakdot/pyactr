@@ -2,8 +2,10 @@
 ACT-R Model.
 """
 
-import simpy
+
 import warnings
+
+import simpy
 
 import pyactr.chunks as chunks
 import pyactr.goals as goals
@@ -12,12 +14,35 @@ import pyactr.utilities as utilities
 import pyactr.declarative as declarative
 import pyactr.motor as motor
 import pyactr.vision as vision
+import pyactr.simulation as simulation
 
 class ACTRModel(object):
     """
     ACT-R model, running ACT-R simulations.
     """
 
+    MODEL_PARAMETERS = {"subsymbolic": False,
+                "rule_firing": 0.05,
+                "latency_factor": 0.1,
+                "decay": 0.5,
+                "baselevel_learning": True,
+                "instantaneous_noise" : 0,
+                "retrieval_threshold" : 0,
+                "buffer_spreading_activation" : {},
+                "strength_of_association": 0,
+                "partial_matching": False,
+                "activation_trace": False,
+                "utility_noise": 0,
+                "utility_learning": False,
+                "utility_alpha": 0.2,
+                "motor_prepared": False,
+                "strict_harvesting": False,
+                "automatic_visual_search": True,
+                "emma": True,
+                "emma_noise": True,
+                "eye_mvt_angle_parameter": 1, #in LispACT-R: 1
+                "eye_mvt_scaling_parameter": 0.01, #in LispACT-R: 0.01, but dft frequency -- 0.01 -- 0.05 would roughly correspond to their combination in EMMA
+                }
 
     def __init__(self, environment=None, **kwargs):
 
@@ -32,157 +57,16 @@ class ACTRModel(object):
         self.__productions = productions.Productions()
         self.__similarities = {}
 
-        self.__interruptibles = {} #interruptible processes
+        self.model_parameters = self.MODEL_PARAMETERS.copy()
 
-        self.model_parameters = kwargs
+        try:
+            assert set(kwargs.keys()).issubset(set(self.MODEL_PARAMETERS.keys())), "Incorrect model parameter(s) %s. The only possible model parameters are: '%s'" % (set(kwargs.keys()).difference(set(self.MODEL_PARAMETERS.keys())), set(self.MODEL_PARAMETERS.keys()))
+            self.model_parameters.update(kwargs)
+        except TypeError:
+            pass
 
         self.__env = environment
-
-        #here below -- simulation values, accesible by user
-        self.current_event = None
     
-    
-    def __activate__(self, event):
-        """
-        Triggers proc_activate, needed to activate procedural process.
-        """
-        if event.action != self.__pr._UNKNOWN and event.proc != self.__pr._PROCEDURAL:
-            if not self.__proc_activate.triggered:
-                self.__proc_activate.succeed()
-
-    def __envGenerator__(self, ep, **kwargs):
-        """
-        Creates simulation process for process in environment.
-        """
-        generator = ep(**kwargs)
-        event = next(generator)
-        while True:
-            pro = self.__simulation.process(self.__envprocess__(event))
-            yield pro | self.__environment_activate
-            if self.__environment_activate.triggered:
-                expected, triggered = self.__environment_activate.value
-                self.__environment_activate = self.__simulation.event()
-                pro.interrupt()
-            try:
-                event = generator.send(self.__simulation.now)
-            except StopIteration:
-                generator = None
-            if not generator:
-                break
-
-
-    def __envprocess__(self, event):
-        """
-        Runs local environment process.
-        """
-        try:
-            yield self.__simulation.timeout(event.time-self.__simulation.now)
-        except simpy.Interrupt:
-            pass
-        else:
-            self.__printenv__(event)
-        finally:
-            self.__activate__(event)
-
-    def __extraprocessGenerator__(self, name):
-        """
-        Creates simulation process for other rules.
-        """
-        while True:
-            try:
-                _, proc = next(filter(lambda x: x[0] == name, self.__procs_started))
-            except StopIteration:
-                if name in self.__interruptibles:
-                    self.__interruptibles.pop(name) #remove this process from interruptibles since it's finished
-                yield self.__dict_extra_proc_activate[name]
-                self.__dict_extra_proc_activate[name] = self.__simulation.event()
-            else:
-                self.__procs_started.remove((name, proc))
-                if not self.__dict_extra_proc_activate[name].triggered:
-                    self.__dict_extra_proc_activate[name].succeed() #activate modules that were used
-                pro = self.__simulation.process(self.__localprocess__(name, proc))
-
-                try:
-                    cont = yield pro
-                except simpy.Interrupt:
-                    if not pro.triggered:
-                        warnings.warn("Process in %s interupted" % name)
-                        pro.interrupt() #interrupt process
-
-                #if first extra process is followed by another process (returned as cont), do what follows; used only for motor
-                else:
-                    if cont:
-                        pro = self.__simulation.process(self.__localprocess__(name, cont))
-                        try:
-                            yield pro
-                        except simpy.Interrupt:
-                            pass
-
-    def __localprocess__(self, name, generator):
-        """
-        Triggers local process. name is the name of module. generator must only yield Events.
-        """
-        while True:
-            event = next(generator)
-            try:
-                yield self.__simulation.timeout(event.time-self.__simulation.now)
-            except simpy.Interrupt:
-                break
-            else:
-                self.__printevent__(event)
-                self.__activate__(event)
-            try:
-                if self.__env.trigger in self.__pr.env_interaction:
-                    self.__environment_activate.succeed(value=tuple((self.__env.trigger, self.__pr.env_interaction)))
-                self.__pr.env_interaction = set()
-            except AttributeError:
-                pass
-
-    def __printevent__(self, event):
-        """
-        Stores current event in self.current_event and prints event.
-        """
-        if event.action != self.__pr._UNKNOWN:
-            self.current_event = event
-            if self.__trace:
-                print(event[0:3])
-    
-    def __printenv__(self, event, suppressed=True):
-        """
-        Prints environment event. By default, suppressed.
-        """
-        if event.action != self.__pr._UNKNOWN and not suppressed:
-            print(event[0:3])
-
-    def __procprocessGenerator__(self):
-        """
-        Creates simulation process for procedural rules.
-        """
-        pro = self.__simulation.process(self.__localprocess__(self.__pr._PROCEDURAL, self.__pr.procedural_process(self.__simulation.now))) #create procedural process
-        self.__procs_started = yield pro #run the process, keep its return value
-        while True:
-
-            try:
-                self.__procs_started.remove(self.__pr._PROCEDURAL)
-            except ValueError:
-                yield self.__proc_activate #wait for proc_activate
-            else:
-                for proc in self.__procs_started:
-                    name = proc[0]
-                    if not self.__dict_extra_proc_activate[name].triggered:
-                        if proc[1].__name__ in self.__pr._INTERRUPTIBLE:
-                            self.__interruptibles[name] = proc[1] #add new process interruptibles if the process can be interrupted according to ACT-R
-                        self.__dict_extra_proc_activate[name].succeed() #activate modules that were used if not active
-                    else:
-                        if name in self.__interruptibles and proc[1] != self.__interruptibles[name]:
-                            self.__interruptibles[name] = proc[1]
-                            self.__dict_extra_proc[name].interrupt() #otherwise, interrupt them
-            for _ in range(5):
-                yield self.__simulation.timeout(0) #move procedural process to the bottom; right now, this is a hack - it yields 0 timeout five times, so other processes get enough cycles to start etc.
-            pro = self.__simulation.process(self.__localprocess__(self.__pr._PROCEDURAL, self.__pr.procedural_process(self.__simulation.now)))
-            self.__procs_started = yield pro
-            self.__proc_activate = self.__simulation.event() #start the event
-
     def dmBuffer(self, name, declarative_memory, data=None, finst=0):
         """
         Creates and returns declarative memory buffer for ACTRModel.
@@ -199,13 +83,15 @@ class ACTRModel(object):
         self.__buffers[name] = g
         return g
     
-    def visualBuffer(self, name, default_harvest=None):
+    def visualBuffer(self, name_visual, name_visual_location, default_harvest=None):
         """
-        Creates and returns goal buffer for ACTRModel.
+        Creates and returns visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned.
         """
-        v = vision.Visual(self.__env, default_harvest)
-        self._visbuffers[name] = v
-        return v
+        v1 = vision.Visual(self.__env, default_harvest)
+        v2 = vision.VisualLocation(self.__env, default_harvest)
+        self._visbuffers[name_visual] = v1
+        self._visbuffers[name_visual_location] = v2
+        return v1, v2
 
     def productions(self, *rules):
         """
@@ -257,9 +143,9 @@ class ACTRModel(object):
         self.__similarities[tuple((chunk, otherchunk))] = value
         self.__similarities[tuple((otherchunk, chunk))] = value
 
-    def simulation(self, realtime=False, trace=True, environment_process=None, **kwargs):
+    def simulation(self, realtime=False, trace=True, gui=True, environment_process=None, **kwargs):
         """
-        Returns a simpy environment whose simulation can be run with run(max_time) command.
+        Returns a simulation that has to be run with simulation.run(max_time) command.
         """
         decmem = {name: self.__buffers[name].dm for name in self.__buffers\
                 if self.__buffers[name].dm != None} #dict of declarative memories used
@@ -274,52 +160,11 @@ class ACTRModel(object):
                 self.__buffers.update(self._visbuffers)
             else:
                 dm = next(iter(decmem.values()))
-                self.__buffers["visual"] = vision.Visual(self.__env, dm) #adding vision buffer
+                self.__buffers["visual"] = vision.Visual(self.__env, dm) #adding vision buffers
+                self.__buffers["visual_location"] = vision.VisualLocation(self.__env, dm) #adding vision buffers
 
-        self.__pr = productions.ProductionRules(self.__productions, self.__buffers, decmem, self.model_parameters)
+        used_productions = productions.ProductionRules(self.__productions, self.__buffers, decmem, self.model_parameters)
 
         chunks.Chunk._similarities = self.__similarities
 
-        #creating simulation environment
-
-        self.__simulation = simpy.Environment()
-        if realtime:
-            self.__simulation = simpy.RealtimeEnvironment()
-
-        #setting trace
-
-        self.__trace = trace
-
-        self.__dict_extra_proc = {key: None for key in self.__buffers}
-
-        self.__simulation.process(self.__procprocessGenerator__())
-
-        self.__dict_extra_proc_activate = {}
-
-        for each in self.__dict_extra_proc:
-            if each != self.__pr._PROCEDURAL:
-                self.__dict_extra_proc[each] = self.__simulation.process(self.__extraprocessGenerator__(each)) #create simulation processes for all buffers, store them in dict_extra_proc
-                self.__dict_extra_proc_activate[each] = self.__simulation.event() #create simulation events for all buffers that control simulation flow (they work as locks)
-        
-        self.__proc_activate = self.__simulation.event() #special event (lock) for procedural module
-        
-        self.__procs_started = [] #list of processes that are started as a result of production rules
-
-        #activate environment process, if environment present
-        if self.__env:
-            self.__proc_environment = self.__simulation.process(self.__envGenerator__(ep=environment_process, **kwargs))
-            self.__environment_activate = self.__simulation.event()
-        
-        return self.__simulation
-
-    def show_time(self):
-        """
-        Returns current time in simulation.
-        """
-        try:
-            t = self.__simulation.now
-        except AttributeError:
-            raise AttributeError("No simulation is running")
-        else:
-            return t
-
+        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, used_productions, environment_process, **kwargs)

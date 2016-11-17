@@ -6,33 +6,14 @@ import string
 import random
 import warnings
 
+import tkinter as tk #delete later
 import pyactr as actr
 
+stimulus = random.sample(string.ascii_uppercase, 1)[0]
+text = {1: {'text': stimulus, 'position': (100,100)}}
+environ = actr.Environment(focus_position=(100,100))
 
-class Environment(actr.Environment): #subclass Environment
-    """
-    Environment, putting a random letter on screen.
-    """
-
-    def __init__(self):
-        self.text = string.ascii_uppercase
-        self.run_time = 2
-
-    def environment_process(self, start_time):
-        """
-        Environment process. Random letter appears, model has to press the key corresponding to the letter.
-        """
-        time = start_time
-        yield self.Event(time, self._ENV, "STARTING ENVIRONMENT") 
-        letter = random.sample(self.text, 1)[0]
-        self.output(letter, trigger=letter) #output on environment
-        time = time + self.run_time
-        yield self.Event(time, self._ENV, "PRINTED LETTER %s" % letter)
-
-
-environ = Environment()
-
-m = actr.ACTRModel(environment=environ)
+m = actr.ACTRModel(environment=environ, motor_prepared=True)
 
 g = m.goal("g")
 g2 = m.goal("g2", set_delay=0.2)
@@ -48,25 +29,13 @@ g.add(actr.chunkstring(name="reading", string="""
         isa     read
         state   start"""))
 
-t1 = m.productionstring(name="find_unattended_letter", string="""
-        =g>
-        isa     read
-        state   start
-        ?visual>
-        state   free
-        ==>
-        =g>
-        isa     read
-        state   attend_let
-        +visual>""")
-
 t2 = m.productionstring(name="encode_letter", string="""
         =g>
         isa     read
-        state   attend_let
+        state   start
         =visual>
         isa     _visual
-        object  =letter
+        value  =letter
         ==>
         =g>
         isa     read
@@ -90,10 +59,10 @@ m.productionstring(name="respond", string="""
         state   done
         +manual>
         isa     _manual
-        cmd     'presskey'
+        cmd     'press_key'
         key     =letter""")
 
 if __name__ == "__main__":
-    sim = m.simulation(realtime=True, environment_process=environ.environment_process, start_time=0)
-    sim.run(4)
 
+    sim = m.simulation(realtime=True, environment_process=environ.environment_process, stimuli=text, triggers=stimulus, times=1)
+    sim.run(1)

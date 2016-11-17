@@ -8,34 +8,6 @@ import warnings
 
 import pyactr as actr
 
-class Environment(actr.Environment): #subclass Environment
-    """
-    Environment, putting a random letter on screen.
-    """
-
-    def __init__(self):
-        self.text = {"bank": "0", "card": "1", "dart": "2", "face": "3", "game": "4",
-                "hand": "5", "jack": "6", "king": "7", "lamb": "8", "mask": "9",
-                "neck": "0", "pipe": "1", "quip": "2", "rope": "3", "sock": "4",
-                "tent": "5", "vent": "6", "wall": "7", "xray": "8", "zinc": "9"}
-        self.run_time = 5
-
-    def environment_process(self, number_pairs, number_trials, start_time=0):
-        """
-        Environment process. Random letter appears, model has to press the key corresponding to the letter.
-        """
-        used_text = {key: self.text[key] for key in random.sample(list(self.text), number_pairs)}
-
-        time = start_time
-        yield self.Event(time, self._ENV, "STARTING ENVIRONMENT")
-        for _ in range(number_trials):
-           for word in used_text: 
-                self.output(word, trigger=used_text[word]) #output on environment
-                time += self.run_time
-                yield self.Event(time, self._ENV, "PRINTED WORD %s" % word)
-                self.output(used_text[word]) #output on environment
-                time += self.run_time
-                yield self.Event(time, self._ENV, "PRINTED NUMBER %s" % used_text[word])
 
 class Model(object):
     """
@@ -64,25 +36,47 @@ class Model(object):
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
         g.add(actr.makechunk(typename="read", state=start))
 
-        self.m.productionstring(name="attend_probe", string="""
+        self.m.productionstring(name="find_probe", string="""
         =g>
         isa     goal
         state   start
-        ?visual>
-        state   auto_buffering
+        ?visual_location>
+        buffer  empty
         ==>
         =g>
         isa     goal
-        state   attending
-        +visual>""")
+        state   attend
+        ?visual_location>
+        attended False
+        +visual_location>
+        isa _visuallocation
+        screen_x <400""")
+        
+        self.m.productionstring(name="attend_probe", string="""
+        =g>
+        isa     goal
+        state   attend
+        =visual_location>
+        isa    _visuallocation
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     goal
+        state   reading
+        =visual_location>
+        isa     _visuallocation
+        +visual>
+        cmd     move_attention
+        screen_pos =visual_location""")
 
         self.m.productionstring(name="read_probe", string="""
         =g>
         isa     goal
-        state   attending
+        state   reading
         =visual>
         isa     _visual
-        object  =word
+        value  =word
         ==>
         =g>
         isa     goal
@@ -90,6 +84,8 @@ class Model(object):
         +g2>
         isa     pair
         probe   =word
+        =visual>
+        isa     visual
         +retrieval>
         isa     pair
         probe   =word""")
@@ -108,7 +104,7 @@ class Model(object):
         ==>
         +manual>
         isa     _manual
-        cmd     'presskey'
+        cmd     'press_key'
         key     =ans
         =g>
         isa     goal
@@ -126,28 +122,16 @@ class Model(object):
         ==>
         =g>
         isa     goal
-        state   study
-        ~visual>""")
-
-        self.m.productionstring(name="study_answer", string="""
-        =g>
-        isa     goal
-        state   study
-        ?visual>
-        state   auto_buffering
-        ==>
-        =g>
-        isa     goal
         state   attending_target
-        +visual>""")
-
+        ~visual>""")
+        
         self.m.productionstring(name="associate", string="""
         =g>
         isa     goal
         state   attending_target
         =visual>
         isa     _visual
-        object  =val
+        value   =val
         =g2>
         isa     pair
         probe   =word
@@ -156,7 +140,7 @@ class Model(object):
         ==>
         =g>
         isa     goal
-        state   start
+        state   reading
         ~visual>
         =g2>
         isa     pair
@@ -164,9 +148,20 @@ class Model(object):
         ~g2>""")
 
 if __name__ == "__main__":
-    environ = Environment()
-    m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0, strict_harvesting=True)
-    sim = m.m.simulation(realtime=True, environment_process=environ.environment_process, number_pairs=1, number_trials=2, start_time=0)
+    text = {"bank": "0", "card": "1", "dart": "2", "face": "3", "game": "4",
+                "hand": "5", "jack": "6", "king": "7", "lamb": "8", "mask": "9",
+                "neck": "0", "pipe": "1", "quip": "2", "rope": "3", "sock": "4",
+                "tent": "5", "vent": "6", "wall": "7", "xray": "8", "zinc": "9"}
+
+    used_stim = {key: text[key] for key in random.sample(list(text), 1)}
+    text = []
+    for x in zip(used_stim.keys(), used_stim.values()):
+        text.append({1: {'text': x[0], 'position': (320, 180)}})
+        text.append({1: {'text': x[1], 'position': (320, 180)}})
+    trigger = list(used_stim.values())
+    environ = actr.Environment( focus_position=(0, 0))
+    m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0, strict_harvesting=True, automatic_visual_search=False)
+    sim = m.m.simulation(realtime=True, trace=True,  gui=True, environment_process=environ.environment_process, stimuli=2*text, triggers=4*trigger,times=5)
     sim.run(12)
     print(m.dm)
 

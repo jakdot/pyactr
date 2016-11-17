@@ -185,7 +185,7 @@ class Model1(object):
                 "+retrieval": self.model.Chunk("countOrder", first="=x")}
 
     def increment(self):
-        yield {"=g":self.model.Chunk("countFrom", start="=x", end="=x"), "?retrieval": {"state":"busy"}}
+        yield {"=g":self.model.Chunk("countFrom", start="=x", end="=x"), "?retrieval": {"buffer":"full"}}
         yield {"=g":self.model.Chunk("countFrom", start="=x", end=3), "+retrieval": self.model.Chunk("countOrder", first=3)}
 
     def stop(self):
@@ -255,7 +255,7 @@ class Model3(object):
 class MotorModel(actr.ACTRModel):
 
     def __init__(self):
-        self.model = actr.ACTRModel()
+        self.model = actr.ACTRModel(motor_prepared=False)
 
         g = self.model.goal("g")
 
@@ -264,15 +264,15 @@ class MotorModel(actr.ACTRModel):
 
     def start(self):
         yield {"=g": self.model.Chunk("press", key="=k!a")}
-        yield {"+manual": self.model.Chunk("_manual", cmd="presskey", key="=k"), "=g": self.model.Chunk("press", key="b")}
+        yield {"+manual": self.model.Chunk("_manual", cmd="press_key", key="=k"), "=g": self.model.Chunk("press", key="b")}
 
     def go_on(self):
         yield {"=g": self.model.Chunk("press", key="=k!b")}
-        yield {"+manual": self.model.Chunk("_manual", cmd="presskey", key="=k"), "=g": self.model.Chunk("press", key="c")}
+        yield {"+manual": self.model.Chunk("_manual", cmd="press_key", key="=k"), "=g": self.model.Chunk("press", key="c")}
     
     def finish(self):
         yield {"=g": self.model.Chunk("press", key="=k!c"), "?manual": {"preparation": "free"}}
-        yield {"+manual": self.model.Chunk("_manual", cmd="presskey", key="=k"), "=g": self.model.Chunk("press", key="d")}
+        yield {"+manual": self.model.Chunk("_manual", cmd="press_key", key="=k"), "=g": self.model.Chunk("press", key="d")}
 
 """
 Demo - pressing a key by ACT-R model. Tutorial 2 of Lisp ACT-R.
@@ -280,37 +280,6 @@ Demo - pressing a key by ACT-R model. Tutorial 2 of Lisp ACT-R.
 
 import string
 import random
-
-import pyactr.environment as env
-
-class Environment1(actr.Environment): #subclass Environment
-    """
-    Environment, putting a random letter on screen.
-    """
-
-    def __init__(self):
-        self.text = {"bank": "0", "card": "1", "dart": "2", "face": "3", "game": "4",
-                "hand": "5", "jack": "6", "king": "7", "lamb": "8", "mask": "9",
-                "neck": "0", "pipe": "1", "quip": "2", "rope": "3", "sock": "4",
-                "tent": "5", "vent": "6", "wall": "7", "xray": "8", "zinc": "9"}
-        self.run_time = 5
-
-    def environment_process(self, number_pairs, number_trials, start_time=0):
-        """
-        Environment process. Random letter appears, model has to press the key corresponding to the letter.
-        """
-        used_text = {key: self.text[key] for key in sorted(list(self.text))[0:number_pairs]}
-
-        time = start_time
-        yield self.Event(env.roundtime(time), self._ENV, "STARTING ENVIRONMENT")
-        for _ in range(number_trials):
-           for word in used_text: 
-                self.output(word, trigger=used_text[word]) #output on environment
-                time += self.run_time
-                yield self.Event(env.roundtime(time), self._ENV, "PRINTED WORD %s" % word)
-                self.output(used_text[word]) #output on environment
-                time += self.run_time
-                yield self.Event(env.roundtime(time), self._ENV, "PRINTED NUMBER %s" % used_text[word])
 
 class Paired(object):
     """
@@ -320,52 +289,135 @@ class Paired(object):
     def __init__(self, env, **kwargs):
         self.m = actr.ACTRModel(environment=env, **kwargs)
 
-        self.m.chunktype("pair", "probe answer")
+        actr.chunktype("pair", "probe answer")
         
-        self.m.chunktype("goal", "state")
+        actr.chunktype("goal", "state")
 
         self.dm = self.m.DecMem()
 
-        self.m.dmBuffer("retrieval", self.dm)
+        retrieval = self.m.dmBuffer("retrieval", self.dm)
 
         g = self.m.goal("g")
         self.m.goal("g2", set_delay=0.2)
-        self.start = self.m.Chunk("somechunk", value="start")
-        self.attending = self.m.Chunk("somechunk", value="attending")
-        self.testing = self.m.Chunk("somechunk", value="testing")
-        self.response = self.m.Chunk("somechunk", value="response")
-        self.study = self.m.Chunk("somechunk", value="study")
-        self.attending_target = self.m.Chunk("somechunk", value="attending_target")
-        self.done = self.m.Chunk("somechunk", value="done")
-        g.add(self.m.Chunk("read", state=self.start))
+        start = actr.makechunk(nameofchunk="start", typename="chunk", value="start")
+        actr.makechunk(nameofchunk="attending", typename="chunk", value="attending")
+        actr.makechunk(nameofchunk="testing", typename="chunk", value="testing")
+        actr.makechunk(nameofchunk="response", typename="chunk", value="response")
+        actr.makechunk(nameofchunk="study", typename="chunk", value="study")
+        actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
+        actr.makechunk(nameofchunk="done", typename="chunk", value="done")
+        g.add(actr.makechunk(typename="read", state=start))
 
-    def attend_probe(self):
-        yield {"=g": self.m.Chunk("goal", state=self.start), "?visual": {"state": "auto_buffering"}}
-        yield {"=g": self.m.Chunk("goal", state=self.attending), "+visual": None}
+        self.m.productionstring(name="find_probe", string="""
+        =g>
+        isa     goal
+        state   start
+        ?visual_location>
+        buffer  empty
+        ==>
+        =g>
+        isa     goal
+        state   attend
+        ?visual_location>
+        attended False
+        +visual_location>
+        isa _visuallocation
+        screen_x >0""")
+        
+        self.m.productionstring(name="attend_probe", string="""
+        =g>
+        isa     goal
+        state   attend
+        =visual_location>
+        isa    _visuallocation
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     goal
+        state   reading
+        =visual_location>
+        isa     _visuallocation
+        +visual>
+        cmd     move_attention
+        screen_pos =visual_location""")
 
-    def read_probe(self):
-        yield {"=g": self.m.Chunk("goal", state=self.attending), "=visual": self.m.Chunk("_visual", object="=word")}
-        yield {"=g": self.m.Chunk("goal", state=self.testing), "+g2": self.m.Chunk("pair", probe="=word"), "+retrieval": self.m.Chunk("pair", probe="=word")}
+        self.m.productionstring(name="read_probe", string="""
+        =g>
+        isa     goal
+        state   reading
+        =visual>
+        isa     _visual
+        value  =word
+        ==>
+        =g>
+        isa     goal
+        state   testing
+        +g2>
+        isa     pair
+        probe   =word
+        =visual>
+        isa     visual
+        +retrieval>
+        isa     pair
+        probe   =word""")
 
-    def recall(self):
-        yield {"=g": self.m.Chunk("goal", state=self.testing), "=retrieval": self.m.Chunk("pair", answer="=ans"), "?manual": {"state": "free"},  "?visual": {"state": "free"}}
-        yield {"+manual": self.m.Chunk("_manual", cmd="presskey", key="=ans"), "=g": self.m.Chunk("goal", state=self.study), "~visual": None}
+        self.m.productionstring(name="recall", string="""
+        =g>
+        isa     goal
+        state   testing
+        =retrieval>
+        isa     pair
+        answer  =ans
+        ?manual>
+        state   free
+        ?visual>
+        state   free
+        ==>
+        +manual>
+        isa     _manual
+        cmd     'press_key'
+        key     =ans
+        =g>
+        isa     goal
+        state   study
+        ~visual>""")
 
-    def cannot_recall(self):
-        yield {"=g": self.m.Chunk("goal", state=self.testing), "?retrieval": {"state": "error"}, "?visual": {"state": "free"}}
-        yield {"=g": self.m.Chunk("goal", state=self.study), "~visual": None}
-
-    def study_answer(self):
-        yield {"=g": self.m.Chunk("goal", state=self.study), "?visual": {"state": "auto_buffering"}}
-        yield {"=g": self.m.Chunk("goal", state=self.attending_target), "+visual": None}
-
-    def associate(self):
-        yield {"=g": self.m.Chunk("goal", state=self.attending_target), "=visual": self.m.Chunk("_visual", object="=val"), "=g2": self.m.Chunk("pair", probe="=word"), "?visual": {"state": "free"}}
-        yield {"=g": self.m.Chunk("goal", state=self.start), "~visual": None, "=g2": self.m.Chunk("pair", answer="=val")}
-
-    def clear_imaginal(self):
-        yield {"=g": self.m.Chunk("goal", state=self.start), "=g2": self.m.Chunk("pair")}
-        yield {"=g": self.m.Chunk("goal", state=self.start)}
+        self.m.productionstring(name="cannot_recall", string="""
+        =g>
+        isa     goal
+        state   testing
+        ?retrieval>
+        state   error
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     goal
+        state   attending_target
+        ~visual>""")
+        
+        self.m.productionstring(name="associate", string="""
+        =g>
+        isa     goal
+        state   attending_target
+        =visual>
+        isa     _visual
+        value   =val
+        =g2>
+        isa     pair
+        probe   =word
+        ?visual>
+        state   free
+        ==>
+        =g>
+        isa     goal
+        state   reading
+        ~visual>
+        =g2>
+        isa     pair
+        answer  =val
+        ~g2>""")
 
 class Utilities(object):
     """
@@ -394,3 +446,9 @@ class Utilities(object):
         yield {"=g": self.m.Chunk("change", state="change")}
         yield {"~g": None}
 
+if __name__ == "__main__":
+    mm = MotorModel()
+    t = mm.model
+    t.productions(mm.start, mm.go_on, mm.finish)
+    sim = t.simulation(trace=True)
+    sim.run()

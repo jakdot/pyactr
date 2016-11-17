@@ -1,5 +1,5 @@
 """
-An example of a very simple model that simulates subject-verb agreement. Syntactic parsing is completely abstracted from.
+An example of a very simple model that simulates subject-verb agreement. We abstract away from syntactic parsing.
 """
 
 import pyactr as actr

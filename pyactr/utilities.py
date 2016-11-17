@@ -13,9 +13,8 @@ import pyparsing as pp
 _BUSY = "busy"
 _FREE = "free"
 _ERROR = "error"
-_VISAUTOBUFFERING = "auto_buffering"
 
-#for chunks
+#special charactes for chunks
 
 ACTRVARIABLE = "="
 ACTRVARIABLER = "\=" #used for regex
@@ -26,8 +25,32 @@ ACTRNEGR = "\~" #used for regex
 ACTRRETRIEVE = "+"
 ACTRRETRIEVER = "\+" #used for regex
 
-#special chunk that can be used in production rules
-Varval = collections.namedtuple("_variablesvalues", "variables, values, negvariables, negvalues")
+MANUAL = "_manual"
+VARVAL = "_variablesvalues"
+VISUAL = "_visual"
+VISUALLOCATION = "_visuallocation"
+
+SPECIALCHUNKTYPES = {VARVAL: "variables, values, negvariables, negvalues", MANUAL: "cmd, key", VISUAL: "cmd, value, color, screen_pos", VISUALLOCATION: "screen_x, screen_y, color"}
+
+#[{"test": {"position": (300, 170)}, "X": {"position": (300, 170)}}]
+
+#special values for cmd in MANUAL
+
+CMDMANUAL = set([None, "None", "press_key"])
+CMDPRESSKEY = "press_key"
+
+#special values for cmd in VISUAL
+
+CMDVISUAL = set([None, "None", "move_attention"])
+CMDMOVEATTENTION = "move_attention"
+
+#special character for visual chunks
+
+VISIONSMALLER = "<" # smaller than and 
+VISIONGREATER = ">" #
+VISIONLOWEST = "lowest" #
+VISIONHIGHEST = "highest" #
+VISIONCLOSEST = "closest" #
 
 #for Events
 
@@ -108,7 +131,7 @@ def getchunk():
     Using pyparsing, create chunk reader for chunk strings.
     """
     slot = pp.Word(pp.alphas + "_", pp.alphanums + "_")
-    special_value = pp.Group(pp.oneOf([ACTRVARIABLE, ACTRNEG + ACTRVARIABLE, ACTRNEG])\
+    special_value = pp.Group(pp.oneOf([ACTRVARIABLE, ACTRNEG + ACTRVARIABLE, ACTRNEG, VISIONGREATER, VISIONSMALLER, VISIONGREATER + ACTRVARIABLE, VISIONSMALLER + ACTRVARIABLE])\
             + pp.Word(pp.alphanums + "_" + '"' + "'"))
     strvalue = pp.QuotedString('"', unquoteResults=False)
     strvalue2 = pp.QuotedString("'", unquoteResults=False)
@@ -260,7 +283,98 @@ def retrieval_latency(activation, latency_factor):
     """
     return latency_factor*(math.exp(-activation))
 
+##########utilities for calculating visual angle in vision###########
 
+#assuming SCREEN_SIZE (pixels) = 1366:768
+#assuming SIZE (cms) = 50:28
+#assuming DISTANCE (cms) = 50
+
+def calculate_visual_angle(start_position, final_position, screen_size, simulated_screen_size, viewing_distance):
+    """
+    Calculates visual angle, needed for vision module. start_position is the current focus, final position is where the focus should be shifted. screen_size is the size of the environment in simulation, simulated_display_resolution in pixels - e.g., 1366:768, simulated_screen_size in cm - e.g., 50cm : 28cm, viewing distance in cm - e.g., 50cm
+    """
+    start_position = list(start_position)
+    final_position = list(final_position)
+    start_position[0] = float(start_position[0])
+    start_position[1] = float(start_position[1])
+    final_position[0] = float(final_position[0])
+    final_position[1] = float(final_position[1])
+    x_axis = final_position[0] - start_position[0]
+    y_axis = final_position[1] - start_position[1]
+    distance_sqrd = sum((x_axis**2, y_axis ** 2))
+    distance = math.sqrt(distance_sqrd) #distance in pxs
+    pxpercm = float(screen_size[0])/float(simulated_screen_size[0])
+    distance = distance / pxpercm #distance in cm
+    return math.atan2(distance, viewing_distance) #50 cm distance
+
+def calculate_distance(angle_degree, screen_size, simulated_screen_size, viewing_distance):
+    """
+    Calculates distance from start position that is at the border given the visual angle.
+    """
+    angle = angle_degree*math.pi/180
+    pxpercm = float(screen_size[0])/float(simulated_screen_size[0])
+    return pxpercm*math.tan(angle) * viewing_distance
+
+def calculate_pythagorian_distance(x, y):
+    """
+    x and y are 2D positions.
+    """
+    x = list(x)
+    y = list(y)
+    x[0] = float(x[0])
+    x[1] = float(x[1])
+    y[0] = float(y[0])
+    y[1] = float(y[1])
+
+    dist_sqrd = (x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2
+    return math.sqrt(dist_sqrd)
+
+def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, frequency=None):
+    """
+    Delay in visual attention using EMMA model: K*[-log frequency]*e^(k*distance). Distance is measured in degrees of visual angle.
+    """
+    if frequency:
+        delay = K * (-math.log(float(frequency)))* math.exp(k*float(angle_distance))
+    else:
+        delay = K * math.exp(k*float(angle_distance))
+    if emma_noise:
+        return np.random.gamma(shape=9, scale=delay/9)
+    else:
+        return delay
+
+def calculate_preparation_time(emma_noise):
+    """
+    Returns time to prepare eye mvt.
+    """
+    if emma_noise:
+        return np.random.gamma(shape=9, scale=0.135/9)
+    else:
+        return 0.135
+
+def calculate_execution_time(angle_distance, emma_noise):
+    """
+    Returns execution time for eye mvt. Angle_distance is in radians.
+    """
+    degree_distance = 180*angle_distance/math.pi
+    execution_time = 0.07 + 0.002*degree_distance
+    if emma_noise:
+        return np.random.gamma(shape=9, scale=execution_time/9)
+    else:
+        return execution_time
+
+def calculate_landing_site(position, angle_distance, emma_noise):
+    """
+    Returns time to prepare eye mvt.
+    """
+    position = list(position)
+    position[0] = float(position[0])
+    position[1] = float(position[1])
+    degree_distance = 180*angle_distance/math.pi
+    if emma_noise and degree_distance:
+        cov_mat = [[0.1*degree_distance,0], [0,0.1*degree_distance]]
+        return tuple(np.random.multivariate_normal(position, cov_mat))
+    else:
+        return tuple(position)
 
 ###########################################################
 #########BELOW: CURRENTLY UNUSED FUNCTIONS#################

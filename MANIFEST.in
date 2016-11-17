@@ -1,4 +1,2 @@
 include tutorials/*
-include examples_environment/*
 include docs/*.pdf
-include docs/*.ipynb

@@ -1,23 +1,36 @@
 """
-Motor module. Just basic.
+Motor module. Carries out key presses.
 """
 
 import collections
+import string
 
 import pyactr.chunks as chunks
 import pyactr.utilities as utilities
+from pyactr.utilities import ACTRError
 import pyactr.buffers as buffers
 
 class Motor(buffers.Buffer):
     """
-    Motor buffer. Only pressing keys possible, no time calculated (productions use defaults instead).
+    Motor buffer. Only pressing keys possible.
     """
+
+    LEFT_HAND = ("1", "2", "3", "4", "5", "Q", "W", "E", "R", "T", "A", "S", "D", "F", "G", "Z", "X", "C", "V", "B", "SPACE")
+    RIGHT_HAND = ("6", "7", "8", "9", "0", "Y", "U", "I", "O", "P", "H", "J", "K", "L", "N", "M", "SPACE")
+    PRESSING = ("A", "S", "D", "F", "J", "K", "L", "SPACE")
+    SLOWEST = ("5", "6")
+    OTHERS = ()
+    _MANUAL = utilities.MANUAL
+
+    TIME_PRESSES = {PRESSING: (0.15, 0.05, 0.01, 0.09), SLOWEST: (0.25, 0.05, 0.11, 0.16), OTHERS: (0.25, 0.05, 0.1, 0.15)} #numbers taken from the motor module of Lisp ACT-R models for all the standard keyboard keys; the numbers are: preparation, initiation, action, finishing movement
 
     def __init__(self):
         buffers.Buffer.__init__(self, None, None)
         self.preparation = self._FREE
         self.processor = self._FREE
         self.execution = self._FREE
+
+        self.last_key = [None, 0] #the number says what the last key was and when the last press will be finished, so that the preparation of the next move can speed up if it is a similar key, and execution waits for the previous mvt (two mvts cannot be carried out at the same time, according to ACT-R motor module)
 
     def test(self, state, inquiry):
         """
@@ -35,14 +48,22 @@ class Motor(buffers.Buffer):
         """
         Creates (aka sets) a chunk for manual control. The chunk is returned (and could be used by device or external environment).
         """
-        if otherchunk.typename != "_manual":
-            raise TypeError("Motor buffer accepts only chunk '_manual'")
+        if actrvariables == None:
+            actrvariables = {}
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
-        except utilities.ACTRError as arg:
-            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
+        except ACTRError as arg:
+            raise ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
 
-        new_chunk = chunks.Chunk(otherchunk.typename, **mod_attr_val) #creates new chunk
+        new_chunk = chunks.Chunk(self._MANUAL, **mod_attr_val) #creates new chunk
+
+        if new_chunk.cmd not in utilities.CMDMANUAL:
+            raise ACTRError("Motor module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd, utilities.CMDMANUAL))
+
+        if new_chunk.cmd == utilities.CMDPRESSKEY:
+            new_chunk.key = new_chunk.key.upper() #change key into upper case
+        if new_chunk.key not in self.LEFT_HAND and new_chunk.key not in self.RIGHT_HAND:
+            raise ACTRError("Motor module received an invalid key: %s" % new_chunk.key)
 
         return new_chunk
 

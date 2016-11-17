@@ -18,7 +18,7 @@ class Buffer(collections.MutableSet):
 
     def __init__(self, dm=None, data=None):
         self.dm = dm
-        self.state = self._FREE
+        self.state = self._FREE #set here but state of buffer instances controlled in productions
         if data == None:
             self._data = set([])
         else:

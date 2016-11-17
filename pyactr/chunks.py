@@ -8,16 +8,23 @@ import random
 import warnings
 
 import pyactr.utilities as utilities
+from pyactr.utilities import ACTRError
 
 def chunktype(cls_name, field_names, verbose=False):
     """
     Creates type chunk. Works like namedtuple.
     """
+    if cls_name in utilities.SPECIALCHUNKTYPES and field_names != utilities.SPECIALCHUNKTYPES[cls_name]:
+        raise ACTRError("You cannot redefine attributes of the chunk type '%s'; you can only use the attributes '%s'" % (cls_name, utilities.SPECIALCHUNKTYPES[cls_name]))
+
     try:
         field_names = field_names.replace(',', ' ').split()
     except AttributeError:  # no .replace or .split
         pass  # assume it's already a sequence of identifiers
     field_names = tuple(sorted(name + "_" for name in field_names))
+    for each in field_names:
+        if each == "ISA" or each == "isa":
+            raise ACTRError("You cannot use the attribute 'isa' in your chunk. That attribute is used to define chunktypes.")
     
     Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, verbose)}) #chunktypes are not returned; they are stored as Chunk class attribute
 
@@ -141,7 +148,7 @@ class Chunk(collections.Sequence):
         reprtxt = ""
         for x, y in self:
             try:
-                if y.typename == "_variablesvalues":
+                if y.typename == utilities.VARVAL:
                     temp = y.removeempty()
                     if len(temp) == 1 and temp[0][0] == "values":
                         y = temp[0][1]
@@ -191,7 +198,7 @@ class Chunk(collections.Sequence):
                 matching_val = None #if it is missing, it must be None
 
             try:
-                if matching_val.typename == "_variablesvalues":
+                if matching_val.typename == utilities.VARVAL:
                     matching_val = matching_val.values #the value might be written using _variablesvalues chunk; in that case, get it out
             except AttributeError:
                 pass
@@ -267,13 +274,8 @@ class Chunk(collections.Sequence):
         #return (x for x in self if x[1] != None) old version
 
 #special chunk that can be used in production rules
-chunktype("_variablesvalues", "variables, values, negvariables, negvalues")
-
-#special chunk for Motor
-chunktype("_manual", "cmd, key")
-
-#special chunk for Vision
-chunktype("_visual", "object")
+for key in utilities.SPECIALCHUNKTYPES:
+    chunktype(key, utilities.SPECIALCHUNKTYPES[key])
 
 def createchunkdict(chunk):
     """
@@ -282,14 +284,16 @@ def createchunkdict(chunk):
     sp_dict = {utilities.ACTRVARIABLE: "variables", utilities.ACTRNEG: "negvalues", utilities.ACTRNEG + utilities.ACTRVARIABLE: "negvariables", utilities.ACTRVALUE: "values", utilities.ACTRNEG + utilities.ACTRVALUE: "negvalues"}
     chunk_dict = {}
     for elem in chunk:
-        temp_dict = chunk_dict.get(elem[0], Chunk("_variablesvalues"))._asdict()
+        temp_dict = chunk_dict.get(elem[0], Chunk(utilities.VARVAL))._asdict()
         for idx in range(1, len(elem)):
             try:
-                if elem[idx][1][0] == "'" or elem[idx][1][0] == '"':
+                if elem[idx][0] == utilities.VISIONGREATER or elem[idx][0] == utilities.VISIONSMALLER: #this checks special visual conditions on greater/smaller than
+                    temp_dict.update({"values": elem[idx][0] + elem[idx][1]})
+                elif elem[idx][1][0] == "'" or elem[idx][1][0] == '"':
                     temp_dict.update({sp_dict[elem[idx][0]]: elem[idx][1][1:-1]})
                 else:
                     temp_dict.update({sp_dict[elem[idx][0]]: elem[idx][1]})
-            except (KeyError, IndexError):
+            except (KeyError, IndexError): #indexerror --> only a string is present; keyerror: the first element in elem[idx] is not a special symbol given above
                 if elem[idx][0] == "'" or elem[idx][0] == '"':
                     temp_dict.update({"values": elem[idx][1:-1]})
                 else:
@@ -303,6 +307,7 @@ def createchunkdict(chunk):
     try:
         type_chunk = chunk_dict.pop("isa").values #change this - any combination of capital/small letters
         type_chunk = chunk_dict.pop("ISA").values
+        type_chunk = chunk_dict.pop("Isa").values
     except KeyError:
         pass
     return type_chunk, chunk_dict
