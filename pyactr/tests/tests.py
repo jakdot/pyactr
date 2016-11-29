@@ -702,9 +702,14 @@ class TestModel1(unittest.TestCase):
         self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
-            if self.sim.current_event.action == "RULE FIRED: stop":
+            if self.sim.current_event.action == "RULE FIRED: increment":
                 break
         self.assertEqual(self.sim.show_time(), 0.25)
+        while True:
+            self.sim.step()
+            if self.sim.current_event.action == "RULE FIRED: stop":
+                break
+        self.assertEqual(self.sim.show_time(), 0.35)
 
 class TestModel2(unittest.TestCase):
     """

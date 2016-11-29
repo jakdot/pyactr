@@ -24,6 +24,7 @@ class ACTRModel(object):
     MODEL_PARAMETERS = {"subsymbolic": False,
                 "rule_firing": 0.05,
                 "latency_factor": 0.1,
+                "latency_exponent": 1.0,
                 "decay": 0.5,
                 "baselevel_learning": True,
                 "instantaneous_noise" : 0,
@@ -83,12 +84,12 @@ class ACTRModel(object):
         self.__buffers[name] = g
         return g
     
-    def visualBuffer(self, name_visual, name_visual_location, default_harvest=None):
+    def visualBuffer(self, name_visual, name_visual_location, default_harvest=None, finst=4):
         """
-        Creates and returns visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned.
+        Creates and returns visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned. Finst is relevant only for the visual location buffer.
         """
         v1 = vision.Visual(self.__env, default_harvest)
-        v2 = vision.VisualLocation(self.__env, default_harvest)
+        v2 = vision.VisualLocation(self.__env, default_harvest, finst)
         self._visbuffers[name_visual] = v1
         self._visbuffers[name_visual_location] = v2
         return v1, v2
@@ -132,7 +133,7 @@ class ACTRModel(object):
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield rhs
         self.__productions.update({name: {"rule": func, "utility": utility, "reward": reward}})
-        return self.__productions
+        return None
 
     def set_similarities(self, chunk, otherchunk, value):
         """

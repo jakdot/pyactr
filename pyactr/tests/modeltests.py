@@ -180,16 +180,16 @@ class Model1(object):
         g.add(self.model.Chunk("countFrom", start=2, end=4))
 
     def start(self):
-        yield {"=g":self.model.Chunk("countFrom", start="=x", end=4), "?retrieval": {"state":"free"}}
-        yield {"=g":self.model.Chunk("countFrom", end="=x"),
+        yield {"=g":self.model.Chunk("countFrom", start="=x", count=None), "?retrieval": {"state":"free"}}
+        yield {"=g":self.model.Chunk("countFrom", count="=x"),
                 "+retrieval": self.model.Chunk("countOrder", first="=x")}
 
     def increment(self):
-        yield {"=g":self.model.Chunk("countFrom", start="=x", end="=x"), "?retrieval": {"buffer":"full"}}
-        yield {"=g":self.model.Chunk("countFrom", start="=x", end=3), "+retrieval": self.model.Chunk("countOrder", first=3)}
+        yield {"=g":self.model.Chunk("countFrom", count="=x", end="~=x"), "=retrieval": self.model.Chunk("countOrder", first="=x", second="=y")}
+        yield {"=g":self.model.Chunk("countFrom", count="=y"), "+retrieval": self.model.Chunk("countOrder", first="=y")}
 
     def stop(self):
-        yield {"=g":self.model.Chunk("countFrom", start="=x", end="~!4"), "?retrieval": {"state":"free"}}
+        yield {"=g":self.model.Chunk("countFrom", count="=x", end="=x"), "?retrieval": {"state":"free"}}
         yield {"!g": ("clear", (0, self.model.DecMem()))}
 
 class Model2(object):

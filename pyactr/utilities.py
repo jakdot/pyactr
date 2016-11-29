@@ -277,11 +277,11 @@ def retrieval_success(activation, threshold):
     """
     return True if activation >= threshold else False
 
-def retrieval_latency(activation, latency_factor):
+def retrieval_latency(activation, latency_factor, latency_exponent):
     """
-    Calculates base-level learning: B_i = ln(sum(t_j^{-decay})) for t_j = current_time - t for t in times.
+    Calculates retrieval latency.
     """
-    return latency_factor*(math.exp(-activation))
+    return latency_factor*(math.exp(-activation*latency_exponent))
 
 ##########utilities for calculating visual angle in vision###########
 

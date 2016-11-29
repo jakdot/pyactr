@@ -4,6 +4,8 @@ An example of a very simple model that simulates subject-verb agreement. We abst
 
 import pyactr as actr
 
+import random
+
 car = actr.makechunk(nameofchunk="car",\
                       typename="word", phonology="/ka:/", meaning="[[car]]", category="noun", number="sg", syncat="subject")
 

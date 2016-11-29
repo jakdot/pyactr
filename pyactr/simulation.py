@@ -77,6 +77,7 @@ class Simulation(object):
 
         #here below -- simulation values, accesible by user
         self.current_event = None
+        self.now = self.__simulation.now
 
     def __activate__(self, event):
         """
@@ -120,7 +121,7 @@ class Simulation(object):
                     continue
                 if not self.__dict_extra_proc_activate[proc[0]].triggered:
                     self.__interruptibles[proc[0]] = proc[1] #add new process interruptibles if the process can be interrupted according to ACT-R
-                    self.__dict_extra_proc_activate[proc[0]].succeed() #activate modules that were used if not active
+                    self.__dict_extra_proc_activate[proc[0]].succeed() #activate modules that are used if not active
                 else:
                     if proc[1] != self.__interruptibles[proc[0]]:
                         self.__interruptibles[proc[0]] = proc[1]
@@ -180,7 +181,7 @@ class Simulation(object):
         while True:
             event = next(generator)
             try:
-                yield self.__simulation.timeout(event.time-self.__simulation.now)
+                yield self.__simulation.timeout(event.time-round(self.__simulation.now, 4)) #a hack -- rounded because otherwise there was a very tiny negative delay in some cases
             except simpy.Interrupt:
                 break
             else:
@@ -298,7 +299,7 @@ class Simulation(object):
         """
         self.__environmentGUI.processIncoming(  )
         if not self.__running:
-            # This is the brutal stop of the system. Should more cleanup take place?
+            # This is a brutal stop of the system. Should more cleanup take place?
             import sys
             sys.exit(1)
         self.__root.after(10, self.__periodicCall__)

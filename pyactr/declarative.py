@@ -76,6 +76,7 @@ class DecMemBuffer(buffers.Buffer):
         buffers.Buffer.__init__(self, dm, data)
         self.recent = collections.deque()
         self.finst = finst
+        self.activation = None #activation of the last retrieved element
 
     def add(self, elem, time=0):
         """
@@ -148,7 +149,7 @@ class DecMemBuffer(buffers.Buffer):
                 if utilities.retrieval_success(A, model_parameters["retrieval_threshold"]) and max_A < A:
                     max_A = A
                     retrieved = chunk
-                    extra_time = utilities.retrieval_latency(A, model_parameters["latency_factor"])
+                    extra_time = utilities.retrieval_latency(A, model_parameters["latency_factor"],  model_parameters["latency_exponent"])
 
                     if model_parameters["activation_trace"]:
                         print("(Partially) matching chunk:", chunk)
@@ -158,6 +159,7 @@ class DecMemBuffer(buffers.Buffer):
                         print("Noise:", inst_noise)
                         print("Total activation", A)
                         print("Time to retrieve", extra_time)
+                    self.activation = A
             else: #otherwise, just standard time for rule firing
                 if chunk_tobe_matched <= chunk:
                     retrieved = chunk
@@ -165,7 +167,7 @@ class DecMemBuffer(buffers.Buffer):
 
         if not retrieved:
             if model_parameters["subsymbolic"]:
-                extra_time = utilities.retrieval_latency(model_parameters["retrieval_threshold"], model_parameters["latency_factor"])
+                extra_time = utilities.retrieval_latency(model_parameters["retrieval_threshold"], model_parameters["latency_factor"],  model_parameters["latency_exponent"])
             else:
                 extra_time = model_parameters["rule_firing"]
         if self.finst:
