@@ -11,7 +11,7 @@ import pyactr.buffers as buffers
 
 #TODO
 #setting ERROR/FREE should work even in buffers that can be interrupted -- check it does
-#encoding visual info should proceed silently, currently we need to go thru loop in production rules to wait for a change in environment
+#encoding visual info should proceed silently, but currently we need to go thru loop in production rules to wait for a change in environment
 
 class VisualLocation(buffers.Buffer):
     """

@@ -3,9 +3,11 @@ pyactr
 
 Python package to create and run ACT-R cognitive models.
 
-The package supports symbolic and subsymbolic processes in ACT-R and it covers most basic cases of ACT-R modeling. The only standard piece common in ACT-R modeling that is currently missing is production compilation.
+The package supports symbolic and subsymbolic processes in ACT-R and it covers all basic cases of ACT-R modeling, including features that are not often implemented outside of the official Lisp ACT-R software.
 
-Significant, radical changes might still occur in the near future.
+The package should allow you to run any ACT-R model. If you need an ACT-R feature that's missing in the package, please let me know.
+
+Significant changes might still occur in the near future.
 
 Installing pyactr
 -----------------
@@ -34,9 +36,7 @@ Documentation is on https://github.com/jakdot/pyactr. In particular, check:
 
 2. the folder tutorials for many examples of ACT-R models. Most of those models are translated from Lisp ACT-R, so if you are familiar with that it should be easy to understand these.
 
-
 Modifying pyactr
 ----------------
 
-To ensure that modifications do not break the code, run unittests in pyactr/tests/.
-
+To ensure that modifications do not break the current code, run unittests in pyactr/tests/.

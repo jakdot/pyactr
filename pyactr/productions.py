@@ -17,68 +17,447 @@ Event = utilities.Event
 
 roundtime = utilities.roundtime
 
+#TODO: production compilation -- in ProductionRules - currently slotvals ignore that maybe there was other modification to the buffer in the same RHS of the rule, this should be included
+
+class Production(collections.UserDict):
+    """
+    Production rule.
+    """
+
+    def __init__(self, rule, utility, reward, selecting_time=None):
+        self.rule = {}
+        self.rule['rule'] = rule
+        self.rule['utility'] = utility
+        self.rule['reward'] = reward
+        if not selecting_time:
+            self.rule['selecting_time'] = []
+        else:
+            self.rule['selecting_time'] = [selecting_time]
+
+    def __contains__(self, elem):
+        return elem in self.rule
+
+    def __iter__(self):
+        for elem in self.rule:
+            yield elem
+
+    def __len__(self):
+        return len(self.rule)
+
+    def __getitem__(self, key):
+        return self.rule[key]
+    
+    def __delitem__(self, key):
+        del self.rule[key]
+
+    def __repr__(self):
+        txt = ''
+        production = self["rule"]()
+        utility = self["utility"]
+        reward = self["reward"]
+        txt += '{}\n==>\n{}\n'.format(next(production), next(production))
+        if utility:
+            txt += "Utility: {}\n".format(utility)
+        if reward:
+            txt += "Reward: {}\n".format(reward)
+        return txt
+
+    def __setitem__(self, key, value):
+        assert key in {"rule", "utility", "reward", "selecting_time"}, "The production can set only one of four values -- rule, utility, reward, selecting_time; you are using '%s'" %key
+        self.rule[key] = value
+
+
 class Productions(collections.UserDict):
     """
     Production rules.
     """
     
-    __rules_info = collections.namedtuple("rules_info", "rule utility reward selecting_time")
-
     _undefinedrulecounter = 0
+
+    __DFT_UTILITY = 0
+    __DFT_REWARD = None
         
     def __init__(self, *rules):
-        self._rules = {}
+        self.rules = {}
         for rule in rules:
             try:    
                 utility_position = len(inspect.getargspec(rule).args)-inspect.getargspec(rule).args.index('utility')
             except ValueError:
-                utility = 0
+                utility = self.__DFT_UTILITY
             else:
                 utility = inspect.getargspec(rule).defaults[0-utility_position]
             try:    
                 reward_position = len(inspect.getargspec(rule).args)-inspect.getargspec(rule).args.index('reward')
             except ValueError:
-                reward = None
+                reward = self.__DFT_REWARD
             else:
                 reward = inspect.getargspec(rule).defaults[0-reward_position]
-            self.update({rule.__name__: {"rule": rule, "utility": utility, "reward": reward}})
+            self.update({rule.__name__: {'rule': rule, 'utility': utility, 'reward': reward, 'selecting_time': []}})
+            #{"rule": rule, "utility": utility, "reward": reward}})
 
     def __contains__(self, elem):
-        return elem in self._rules
+        return elem in self.rules
 
     def __iter__(self):
-        for elem in self._rules:
+        for elem in self.rules:
             yield elem
 
     def __len__(self):
-        return len(self._rules)
+        return len(self.rules)
 
     def __getitem__(self, key):
-        return self._rules[key]
+        return self.rules[key]
     
     def __delitem__(self, key):
-        del self._rules[key]
+        del self.rules[key]
 
     def __repr__(self):
         txt = ''
-        for rulename in self._rules:
-            production = self[rulename]["rule"]()
-            utility = self[rulename]["utility"]
-            reward = self[rulename]["reward"]
-            txt += rulename + ":\n" '{}\n==>\n{}\n'.format(next(production), next(production))
-            if utility:
-                txt += "Utility: {}\n".format(utility)
-            if reward:
-                txt += "Reward: {}\n".format(reward)
+        for rulename in self.rules:
+            txt += rulename + '{}\n'.format(self.rules[rulename])
         return txt
 
     def __setitem__(self, key, value):
         if isinstance(value, collections.MutableMapping):
-            self._rules[key] = {"rule": value["rule"], "utility": value.get("utility", 0), "reward": value.get("reward", None), "selecting_time": value.get("selecting_time", [])}
+            self.rules[key] = Production(**value)
         else:
-            self._rules[key] = {"rule": value, "utility": 0, "reward": 0, "selecting_time": []}
+            self.rules[key] = Production(rule=value["rule"], utility=self.__DFT_UTILITY, reward=self.__DFT_REWARD)
+
+    def __collapse__(self, rule1, rule2, slotvals, retrieval):
+        """
+        Collapses 2 rules into 1.
+        """
+        def func():
+            production1 = rule1['rule']()
+            production2 = rule2['rule']()
+
+            pro1 = next(production1).copy()
+            pro2 = next(production2).copy()
+
+            for key in pro1:
+
+                code = key[0]
+                buff = key[1:]
+
+                #querying just kept
+                if utilities._LHSCONVENTIONS[code] == "query":
+                    continue
+
+                #here below -- testing
+                if key not in pro2:
+                    continue
+
+                pro2buff = pro2.pop(key)._asdict()
+                
+                pro1buff = pro1[key]._asdict()
+                
+                mod_attr_val = {}
+
+                if buff in slotvals:
+                    for slot in pro2buff:
+                        try:
+                            slotvals_slot = slotvals[buff][slot].removeunused()
+                        except (KeyError, AttributeError):
+                            slotvals_slot = None
+                        if not slotvals_slot:
+                            varval = utilities.merge_chunkparts(pro1buff[slot], pro2buff[slot])
+                            mod_attr_val[slot] = chunks.Chunk(utilities.VARVAL, **varval)
+                        else:
+                            mod_attr_val[slot] = pro1buff[slot]
+                elif buff == retrieval:
+                    continue #test on retrieved elem from rule1 in rule2 is removed because no retrieval
+                else:
+                    for slot in pro2buff:
+                        varval = utilities.merge_chunkparts(pro1buff[slot], pro2buff[slot])
+                        mod_attr_val[slot] = chunks.Chunk(utilities.VARVAL, **varval)
+
+                new_chunk = chunks.Chunk(pro1[key].typename, **mod_attr_val)
+                pro1[key] = new_chunk
+
+            #test on pro2 here below -- buffers might be in pro2 that are missing in pro1
+            for key in pro2:
+                
+                code = key[0]
+                buff = key[1:]
+
+                if utilities._LHSCONVENTIONS[code] == "query":
+                    temp_production1 = rule1['rule']()
+                    _, temp_testing = next(temp_production1), next(temp_production1)
+                    for temp_key in temp_testing:
+                        if utilities._RHSCONVENTIONS[temp_key[0]] != "modify" and utilities._RHSCONVENTIONS[temp_key[0]] != "extra_test" and temp_key[1:] == buff:
+                            break
+                    else:
+                        pro1.setdefault(key, {}).update(pro2[key])
+                    continue
+
+                pro2buff = pro2[key]._asdict()
+                
+                mod_attr_val = {}
+                
+                if buff in slotvals:
+                    for slot in pro2buff:
+                        try:
+                            slotvals_slot = slotvals[buff][slot].removeunused()
+                        except (KeyError, AttributeError):
+                            slotvals_slot = None
+                        if not slotvals_slot:
+                            mod_attr_val[slot] = pro2buff[slot]
+                elif buff == retrieval:
+                    continue #test on retrieved elem from rule1 in rule2 is removed because no retrieval
+                else:
+                    mod_attr_val = pro2buff.copy()
+
+                new_chunk = chunks.Chunk(pro2[key].typename, **mod_attr_val)
+                pro1[key] = new_chunk
+
+            yield pro1
+
+            pro1 = next(production1).copy()
+            pro2 = next(production2).copy()
+            
+            #anything in pro2 should go into action
+            for key in pro2:
+
+                code = key[0]
+                buff = key[1:]
+
+                if utilities._RHSCONVENTIONS[code] in {"execute", "clear", "extra_test"}:
+                    continue
+                
+                if buff not in slotvals:
+                    continue
+
+                pro1buff = slotvals[buff]
+                
+                pro2buff = pro2[key]._asdict()
+
+                mod_attr_val = {}
+                
+                for slot in pro2buff:
+                    if slot in pro1buff:
+                        varval = utilities.merge_chunkparts(pro2buff[slot], pro1buff[slot])
+                        #if varval.get("values"):
+                        #    varval = {"values": varval["values"]} #assigning values directly should trump anything else in actions
+                        mod_attr_val[slot] = chunks.Chunk(utilities.VARVAL, **varval)
+                    else:
+                        mod_attr_val[slot] = pro2buff[slot]
+
+                new_chunk = chunks.Chunk(pro2[key].typename, **mod_attr_val)
+                pro2[key] = new_chunk
+
+            #actions in pro1 here below -- buffers might be in pro1 that are missing in pro2
+            for key in pro1:
+                
+                code = key[0]
+                buff = key[1:]
+                
+                for temp_key in pro2:
+                    if temp_key[1:] == buff:
+                        key = None
+                        break
+
+                if not key:
+                    continue
+
+                if buff == retrieval:
+                    continue
+                
+                if utilities._RHSCONVENTIONS[code] in {"execute", "clear", "extra_test"}:
+                    pro2[key] = pro1[key]
+                    continue
+
+                pro1buff = pro1[key]._asdict()
+                
+                mod_attr_val = {}
+                for slot in pro1buff:
+                    mod_attr_val[slot] = pro1buff[slot]
+
+                new_chunk = chunks.Chunk(pro1[key].typename, **mod_attr_val)
+                pro2[key] = new_chunk
+
+            yield pro2
+
+        return Production(rule=func, utility=self.__DFT_UTILITY, reward=self.__DFT_REWARD)
 
 
+    def __rename__(self, name, variables):
+        """
+        Renames production, so that variable names do not clash. name is used to change the variable name to minimize clash. Returns the production with the new name.
+        """
+        def func():
+            production = self[name]['rule']()
+            for pro in production:
+                for key in pro:
+                    code = key[0]
+                    buff = key[1:]
+
+                    renaming_set = set(utilities._LHSCONVENTIONS.keys())
+                    renaming_set.update(utilities._RHSCONVENTIONS.keys())
+                    renaming_set.difference_update({utilities._RHSCONVENTIONS_REVERSED["execute"], utilities._RHSCONVENTIONS_REVERSED["clear"], utilities._RHSCONVENTIONS_REVERSED["extra_test"], utilities._LHSCONVENTIONS_REVERSED["query"]})
+
+                    if code in renaming_set:
+                        mod_attr_val = {}
+                        for elem in pro[key]:
+                            varval = utilities.make_chunkparts_without_varconflicts(elem[1], name, variables)
+                            mod_attr_val[elem[0]] = chunks.Chunk(utilities.VARVAL, **varval)
+                        new_chunk = chunks.Chunk(pro[key].typename, **mod_attr_val)
+                        pro[key] = new_chunk
+
+                yield pro
+                
+
+
+        return Production(rule=func, utility=self.__DFT_UTILITY, reward=self.__DFT_REWARD) #Reward and utility are set at dft right now, simplified
+
+    def __substitute__(self, rule, variable_dict, val_dict):
+        """
+        Substitutes variables in rule1 and rule2 according to the information in the dictionary variable_dict.
+        """
+        def func():
+            production = rule['rule']()
+            for pro in production:
+                for key in pro:
+                    code = key[0]
+                    buff = key[1:]
+
+                    renaming_set = set(utilities._LHSCONVENTIONS.keys())
+                    renaming_set.update(utilities._RHSCONVENTIONS.keys())
+                    renaming_set.difference_update({utilities._RHSCONVENTIONS_REVERSED["execute"], utilities._RHSCONVENTIONS_REVERSED["clear"], utilities._RHSCONVENTIONS_REVERSED["extra_test"], utilities._LHSCONVENTIONS_REVERSED["query"]})
+
+                    if code in renaming_set:
+                        mod_attr_val = {}
+                        for elem in pro[key]:
+                            varval = utilities.make_chunkparts_with_new_vars(elem[1], variable_dict, val_dict)
+                            mod_attr_val[elem[0]] = chunks.Chunk(utilities.VARVAL, **varval)
+                        new_chunk = chunks.Chunk(pro[key].typename, **mod_attr_val)
+                        pro[key] = new_chunk
+
+                yield pro
+
+        return Production(rule=func, utility=rule['utility'], reward=rule['reward'])
+
+    def __check_valid_compilation__(self, rule_name1, rule_name2, buffers):
+        """
+        Checks that production compilation is valid. There are several cases in which compilation is blocked because it would result in an unsafe rule (a rule that might differ in its output compared to the original rule1 and rule2 firing one after the other). The function returns True if the production compilation is unsafe and should be stopped.
+        """
+        production1 = self[rule_name1]['rule']()
+
+        pro11 = next(production1)
+        pro12 = next(production1)
+
+        production2 = self[rule_name2]['rule']()
+
+        pro21 = next(production2)
+        pro22 = next(production2)
+
+        for key in pro12:
+            code = key[0]
+            buff = key[1:]
+            if code == utilities._RHSCONVENTIONS_REVERSED["retrieveorset"]:
+                for key2 in pro22:
+                    if key2[0] == utilities._RHSCONVENTIONS_REVERSED["retrieveorset"] and key2[1:] == buff and buff not in {x for x in buffers.keys() if isinstance(buffers[x], declarative.DecMemBuffer)}:
+                        return True #both productions cannot retrieve/set a value in the same buffers (unless the buffer is retrieval)
+
+                #Checking motor buffers: If the first production makes a request in this buffer then it is not possible to compose it with a second production if that production also makes a request in that buffer or queries the buffer for anything other than state busy.
+                if buff in {x for x in buffers.keys() if isinstance(buffers[x], motor.Motor)}:
+                    for key2 in pro22:
+                        if key2[0] == utilities._RHSCONVENTIONS_REVERSED["retrieveorset"] and key2[1:] == buff:
+                            return True
+                    for key2 in pro21:
+                        if key2[0] == utilities._LHSCONVENTIONS_REVERSED["query"] and key2[1:] == buff and pro21[key2] != {"state": "busy"}:
+                            return True
+                #Checking visual buffers: If the first production makes a request of one of these buffers then it is not possible to compose it with a second production if that production also makes a request in the same buffer or queries the buffer for anything other than state busy or tests that buffer.
+                elif buff in {x for x in buffers.keys() if isinstance(buffers[x], vision.VisualLocation) or isinstance(buffers[x], vision.Visual)}:
+                    for key2 in pro22:
+                        if key2[0] == utilities._RHSCONVENTIONS_REVERSED["retrieveorset"] and key2[1:] == buff:
+                            return True
+                    for key2 in pro21:
+                        if key2[0] == utilities._LHSCONVENTIONS_REVERSED["query"] and key2[1:] == buff and pro21[key2] != {"state": "busy"}:
+                            return True
+                        elif key2[0] == utilities._LHSCONVENTIONS_REVERSED["test"] and key2[1:] == buff:
+                            return True
+                elif buff in {x for x in buffers.keys() if isinstance(buffers[x], declarative.DecMemBuffer)}:
+                    for key2 in pro21:
+                        if key2[0] == utilities._LHSCONVENTIONS_REVERSED["query"] and key2[1:] == buff and pro21[key2] == {"state": "error"}:
+                            return True
+
+        return False
+
+    def compile_rules(self, rule_name1, rule_name2, slotvals, buffers, model_parameters):
+        """
+        Rule compilation.
+        """
+        slotvals = slotvals.copy()
+
+        stop = self.__check_valid_compilation__(rule_name1, rule_name2, buffers)
+        if stop:
+            return False, False
+
+        #we have to get rid of =, ~= sign
+        modified_actrvariables = set()
+
+        #get out variables that should not be clashed
+        retrieval = None
+        for buff in slotvals:
+            if slotvals[buff]:
+                if isinstance(slotvals[buff], collections.MutableSequence):
+                    retrieval = buff #store which buffer carries retrieval info that can be discarded later
+                    #if the retrieval is not gone at the end of rule_name2 -- do not compile!!! -- this catches one case in which rules should not be combined because they might yield unsafe results
+                    if buffers[buff]:
+                        return False, False
+                else:
+                    for slot in slotvals[buff]:
+                        if slotvals[buff][slot] != chunks.Chunk.EmptyValue():
+                            var = slotvals[buff][slot]._asdict()['variables']
+                            if var != chunks.Chunk.EmptyValue():
+                                modified_actrvariables.add(var)
+
+
+        new_2rule = self.__rename__(rule_name2, modified_actrvariables) #rename all variables in rule_name2 to avoid var clashes
+
+        production2 = new_2rule['rule']()
+
+        pro2 = next(production2)
+
+        matched, valued = utilities.match(pro2, slotvals, rule_name1, rule_name2)
+
+
+        new_1rule = self.__substitute__(self[rule_name1], matched, valued)
+        
+        new_2rule = self.__substitute__(new_2rule, matched, valued)
+
+        for buff in slotvals:
+            mod_attr_val = {}
+            if slotvals[buff]:
+                for elem in slotvals[buff]:
+                    varval = utilities.make_chunkparts_with_new_vars(slotvals[buff][elem], matched, valued)
+                    mod_attr_val[elem] = chunks.Chunk(utilities.VARVAL, **varval)
+                slotvals[buff] = mod_attr_val
+        
+        new_rule = self.__collapse__(new_1rule, new_2rule, slotvals, retrieval)
+        
+        idx = 0
+        re_created = "CREATED"
+        while True:
+            if idx > 0:
+                new_name = " ".join([str(rule_name1), "and", str(rule_name2), str(idx)])
+            else:
+                new_name = " ".join([str(rule_name1), "and", str(rule_name2)])
+            if self.get(new_name):
+                pr1 = self[new_name]["rule"]()
+                pr2 = new_rule["rule"]()
+                if next(pr1) == next(pr2) and next(pr1) == next(pr2):
+                    re_created = "RE-CREATED"
+                    if model_parameters["utility_learning"]:
+                        self[new_name]["utility"] = round(self[new_name]["utility"] + model_parameters["utility_alpha"]*(self[rule_name1]["utility"]-self[new_name]["utility"]), 4)
+                    break
+                else:
+                    idx += 1
+            else:
+                self[new_name] = new_rule
+                break
+
+        return new_name, re_created
 
 class ProductionRules(object):
     """
@@ -92,12 +471,18 @@ class ProductionRules(object):
     _LHSCONVENTIONS = utilities._LHSCONVENTIONS
     _INTERRUPTIBLE = utilities._INTERRUPTIBLE
 
-    def __init__(self, rules, buffers, dm, model_parameters = None):
+    def __init__(self, rules, buffers, dm, model_parameters):
         self.__actrvariables = {} #variables in a fired rule
         self.rules = rules #dict of production rules
-        
+
+        self.last_rule = None #used for production compilation
+        self.last_rule_slotvals = {key: None for key in buffers} #slot-values after a production; used for production compilation
+        self.current_slotvals = {key: None for key in buffers} #slot-values after a production; used for production compilation
+        self.compile = [] #information for compilation
+
         self.buffers = buffers #dict of buffers
 
+        
         self.procs = [] #list of active processes
 
         self.extra_tests = {}
@@ -107,7 +492,6 @@ class ProductionRules(object):
         self.env_interaction = set() #set interacting with environment (pressed keys)
 
         self.model_parameters = model_parameters
-
 
     def procedural_process(self, start_time=0):
         """
@@ -123,6 +507,8 @@ class ProductionRules(object):
         max_utility = float("-inf")
         used_rulename = None
         self.used_rulename = None
+        
+        self.last_rule_slotvals = self.current_slotvals.copy()
 
         for rulename in self.rules:
             self.used_rulename = rulename
@@ -134,7 +520,7 @@ class ProductionRules(object):
             if self.model_parameters["subsymbolic"]:
                 inst_noise = utilities.calculate_instantanoues_noise(self.model_parameters["utility_noise"])
                 utility += inst_noise
-            if self.LHStest(pro) and max_utility <= utility:
+            if self.LHStest(pro, self.__actrvariables.copy()) and max_utility <= utility:
                 max_utility = utility
                 used_rulename = rulename
         if used_rulename:
@@ -148,18 +534,37 @@ class ProductionRules(object):
 
             pro = next(production)
 
-            if self.model_parameters["utility_learning"] and self.rules[used_rulename]["reward"] != None:
-                utilities.modify_utilities(time, self.rules[used_rulename]["reward"], self.rules, self.model_parameters)
-            
-            if not self.LHStest(pro):
+            if not self.LHStest(pro, self.__actrvariables.copy(), True):
                 yield Event(roundtime(time), self._PROCEDURAL, 'RULE STOPPED FROM FIRING: %s' % used_rulename)
             else:
+                if self.model_parameters["utility_learning"] and self.rules[used_rulename]["reward"] != None:
+                    utilities.modify_utilities(time, self.rules[used_rulename]["reward"], self.rules, self.model_parameters)
+                compiled_rulename, re_created = self.compile_rules()
+                self.compile = []
+                if re_created:
+                    yield Event(roundtime(time), self._PROCEDURAL, 'RULE %s: %s' % (re_created, compiled_rulename))
+                self.current_slotvals = {key: None for key in self.buffers}
                 yield Event(roundtime(time), self._PROCEDURAL, 'RULE FIRED: %s' % used_rulename)
                 yield from self.update(next(production), time)
+                if self.last_rule and self.last_rule != used_rulename:
+                    self.compile = [self.last_rule, used_rulename, self.last_rule_slotvals.copy()]
+                    self.last_rule_slotvals = {key: None for key in self.buffers}
+
+                self.last_rule = used_rulename
         else:
             self.procs.remove(self._PROCEDURAL,)
             yield Event(roundtime(time), self._PROCEDURAL, 'NO RULE FOUND')
         return self.procs #returns processes activated by PROCEDURAL
+
+    def compile_rules(self):
+        """
+        Compiles two rules.
+        """
+        if self.model_parameters["production_compilation"] and self.compile:
+            compiled_rulename, re_created = self.rules.compile_rules(self.compile[0], self.compile[1], self.compile[2], self.buffers, self.model_parameters)
+            return compiled_rulename, re_created
+        else:
+            return None, None
 
     def update(self, RHSdictionary, time):
         """
@@ -227,7 +632,6 @@ class ProductionRules(object):
         if freeing:
             cleared.state = cleared._FREE
 
-
     def execute(self, name, executed, executecommand, temp_actrvariables, time):
         """
         Executes a command.
@@ -245,6 +649,19 @@ class ProductionRules(object):
         Modifies a buffer chunk.
         """
         modified.state = modified._BUSY
+        if self.model_parameters['production_compilation']:
+            RHSdict = otherchunk._asdict()
+            RHSdict = {item[0]: item[1] for item in RHSdict.items() if item[1] != chunks.Chunk.EmptyValue()} #delete None values, they will be copied from LHSdict
+            production = self.rules[self.used_rulename]["rule"]()
+            code = utilities._LHSCONVENTIONS_REVERSED["test"]
+            try:
+                slotvaldict = next(production)[code+name]._asdict()
+            except KeyError:
+                slotvaldict = {}
+            finally:
+                slotvaldict.update(RHSdict)
+            self.current_slotvals[name] = slotvaldict
+
         modified.modify(otherchunk, temp_actrvariables) #time variable is currently not used - needed if modification would cost time
         modified.state = modified._FREE
         yield Event(roundtime(time), name, "MODIFIED")
@@ -257,6 +674,19 @@ class ProductionRules(object):
         extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
+        if self.model_parameters['production_compilation']:
+            RHSdict = otherchunk._asdict()
+            RHSdict = {item[0]: item[1] for item in RHSdict.items() if item[1] != chunks.Chunk.EmptyValue()} #delete None values, they will be copied from LHSdict
+            production = self.rules[self.used_rulename]["rule"]()
+            code = utilities._LHSCONVENTIONS_REVERSED["test"]
+            try:
+                slotvaldict = next(production)[code+name]._asdict()
+            except KeyError:
+                slotvaldict = {}
+            finally:
+                slotvaldict.update(RHSdict)
+            self.current_slotvals[name] = slotvaldict
+
         modified.modify(otherchunk, temp_actrvariables)
         modified.state = modifed._FREE
         yield Event(roundtime(time), name, "MODIFIED")
@@ -269,6 +699,11 @@ class ProductionRules(object):
         extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
+        if self.model_parameters['production_compilation']:
+            RHSdict = otherchunk._asdict()
+            RHSdict = {item[0]: item[1] for item in RHSdict.items()} 
+            self.current_slotvals[name] = RHSdict
+
         updated.create(otherchunk, list(self.dm.values())[0], temp_actrvariables)
         created_elem = list(updated)[0]
         updated.state = updated._FREE
@@ -295,6 +730,11 @@ class ProductionRules(object):
             extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
             time += extra_time
             yield Event(roundtime(time), name, self._UNKNOWN)
+            if self.model_parameters['production_compilation']:
+                RHSdict = otherchunk._asdict()
+                RHSdict = {item[0]: str(item[1]) if item[1] == None else item[1] for item in RHSdict.items()}
+                self.current_slotvals[name] = RHSdict
+
             updated.create(otherchunk, list(self.dm.values())[0], temp_actrvariables)
             created_elem = list(updated)[0]
             updated.state = updated._FREE
@@ -335,6 +775,12 @@ class ProductionRules(object):
             yield Event(roundtime(time), name, 'CLEARED')
         else:
             retrieval.state = retrieval._ERROR
+
+        if self.model_parameters['production_compilation']:
+            RHSdict = otherchunk._asdict()
+            RHSdict = {item[0]: item[1] for item in RHSdict.items() if item[1] != chunks.Chunk.EmptyValue()} #delete None values
+            self.current_slotvals[name] = [RHSdict, retrieved_elem]
+
         yield Event(roundtime(time), name, 'RETRIEVED: %s' % retrieved_elem)
 
     def automatic_search(self, name, visualbuffer, stim, time):
@@ -503,22 +949,22 @@ class ProductionRules(object):
         motorbuffer.execution = motorbuffer._FREE
         motorbuffer.last_key[1] = 0
 
-    def LHStest(self, dictionary):
+    def LHStest(self, dictionary, actrvariables, update=False):
         """
-        Tests rules in LHS of production rules.
+        Tests rules in LHS of production rules. update specifies whether actrvariables should be updated (this does not happen when rules are tested, only when they are fired)
         """
-        temp_actrvariables = dict(self.__actrvariables)
         for key in dictionary:
             submodule_name = key[1:] #this is the module
             code = key[0] #this is what the module should do; standardly, query, i.e., ?, or test, =
             if code not in self._LHSCONVENTIONS:
                 raise ACTRError("The LHS rule '%s' is invalid; every condition in LHS rules must start with one of these signs: %s" % (self.used_rulename, list(self._LHSCONVENTIONS.keys())))
-            result = getattr(self, self._LHSCONVENTIONS[code])(submodule_name, self.buffers.get(submodule_name), dictionary[key], temp_actrvariables)
+            result = getattr(self, self._LHSCONVENTIONS[code])(submodule_name, self.buffers.get(submodule_name), dictionary[key], actrvariables)
             if not result[0]:
                 return False
             else:
-                temp_actrvariables.update(result[1])
-        self.__actrvariables = temp_actrvariables
+                actrvariables.update(result[1])
+        if update:
+            self.__actrvariables = actrvariables
         return True
 
     def test(self, submodule_name, tested, testchunk, temp_actrvariables):
@@ -550,4 +996,5 @@ class ProductionRules(object):
                 return False, dict(temp_actrvariables)
 
         return True, dict(temp_actrvariables)
+
 

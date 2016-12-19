@@ -5,8 +5,11 @@ Helper functions used by ACT-R modules.
 import collections
 import re
 import math
+import random
+
 import numpy as np
 import pyparsing as pp
+
 
 #for querying buffers
 
@@ -65,7 +68,11 @@ _ENV = "ENVIRONMENT"
 
 _RHSCONVENTIONS = {"?": "extra_test", "=": "modify", "+": "retrieveorset",\
         "!": "execute", "~": "clear", "@": "overwrite", "*": "modify_request"}
+_RHSCONVENTIONS_REVERSED = {v: k for k, v in _RHSCONVENTIONS.items()}
+
 _LHSCONVENTIONS = {"=": "test", "?": "query"}
+_LHSCONVENTIONS_REVERSED = {v: k for k, v in _LHSCONVENTIONS.items()}
+
 _INTERRUPTIBLE = {"retrieveorset", "modify_request"}
 
 def roundtime(time):
@@ -83,6 +90,23 @@ class ACTRError(Exception):
 
 #############utilities for chunks######################################
 
+def stringsplitting(info, empty=True):
+    """
+    Splitting info into variables, negative variables, values and negative values. Used in chunks. Info is a string, e.g., '=x~=y!2'. This is a depreciated approach.
+    """
+    varval = {"variables": set(), "values": set(), "negvariables": set(), "negvalues": set()}
+    #assume it's a string
+    varval["variables"] = set(re.findall("".join(["(?<=", "(?<!", ACTRNEGR, ")", ACTRVARIABLER, ").*?(?=$|", ACTRNEGR, "|", ACTRVALUER, "|", ACTRVARIABLER, ")"]), info))
+    varval["values"] = set(re.findall("".join(["(?<=", "(?<!", ACTRNEGR, ")", ACTRVALUER, ").*?(?=$|", ACTRNEGR, "|", ACTRVALUER, "|", ACTRVARIABLER, ")"]), info))
+    varval["negvariables"] = set(re.findall("".join(["(?<=", ACTRNEGR, ACTRVARIABLER, ").*?(?=$|", ACTRNEGR, "|", ACTRVALUER, "|", ACTRVARIABLER, ")"]), info))
+    varval["negvalues"] = set(re.findall("".join(["(?<=", ACTRNEGR,  ACTRVALUER, ").*?(?=$|", ACTRNEGR, "|", ACTRVALUER, "|", ACTRVARIABLER, ")"]), info))
+    if not any(varval.values()):
+        varval["values"] = set([info]) #varval empty -> only values present
+
+    assert len(set(varval["values"])) <= 1, "Any attribute must have at most one value"
+
+    return varval
+
 def splitting(info, empty=True):
     """
     Splitting info into variables, negative variables, values and negative values. Used in chunks.
@@ -90,30 +114,26 @@ def splitting(info, empty=True):
     Info could either be a string, e.g., '=x~=y!2', or a special chunk 'variablesvalues', e.g., Chunk('_variablesvalues', variables='x', negvariables='y', values=2). Alternatively, info could consist only of a value.
     """
     varval = {"variables": set(), "values": set(), "negvariables": set(), "negvalues": set()}
-    try: #assume it's a string
-        varval["variables"] = set(re.findall("(?<="+"(?<!"+ACTRNEGR+")"+ ACTRVARIABLER+").*?(?=$|"+ACTRNEGR+"|"+ACTRVALUER+"|"+ACTRVARIABLER+")", info))
-        varval["values"] = set(re.findall("(?<="+"(?<!"+ACTRNEGR+")"+ ACTRVALUER+").*?(?=$|"+ACTRNEGR+"|"+ACTRVALUER+"|"+ACTRVARIABLER+")", info))
-        varval["negvariables"] = set(re.findall("(?<="+ACTRNEGR+ ACTRVARIABLER+").*?(?=$|"+ACTRNEGR+"|"+ACTRVALUER+"|"+ACTRVARIABLER+")", info))
-        varval["negvalues"] = set(re.findall("(?<="+ACTRNEGR+ ACTRVALUER+").*?(?=$|"+ACTRNEGR+"|"+ACTRVALUER+"|"+ACTRVARIABLER+")", info))
-    except TypeError:
-        try: #assume it's a attr-val chunk
-            if info.typename == "_variablesvalues":
-                if empty:
-                    subpart = info.removeempty()
-                else:
-                    subpart = info.removeunused()
-                for x in subpart:
-                    if isinstance(x[1], tuple) or isinstance(x[1], set):
-                        varval[x[0]] = set(x[1]) #tuples and sets are iterated over and added to the set
-                    else:
-                        varval[x[0]] = set([x[1]]) #other elements (strings, chunks) are added as a whole
+    try: #assume it's a attr-val chunk
+        if info.typename == "_variablesvalues":
+            if empty:
+                subpart = info.removeempty()
             else:
-                varval["values"] = set([info]) #varval empty -> only a chunk present
-        except AttributeError: #it's just values
-            pass
-    else:
-        if not any(varval.values()):
-            varval["values"] = set([info]) #varval empty -> only values present
+                subpart = info.removeunused()
+            for x in subpart:
+                if isinstance(x[1], tuple):
+                    varval[x[0]] = set(x[1]) #tuples are iterated over and added to the set
+                else:
+                    varval[x[0]] = set([x[1]]) #other elements (strings, chunks) are added as a whole
+        else:
+            varval["values"] = set([info]) #not varval -> only a chunk present
+    except AttributeError: #it's just values; this could happen for None, which lacks any structure
+        if empty:
+            if info != 'None' and info != None:
+                varval["values"] = set([info])
+        else:
+            if info != None:
+                varval["values"] = set([info])
 
     assert len(set(varval["values"])) <= 1, "Any attribute must have at most one value"
 
@@ -130,15 +150,106 @@ def getchunk():
     """
     Using pyparsing, create chunk reader for chunk strings.
     """
-    slot = pp.Word(pp.alphas + "_", pp.alphanums + "_")
-    special_value = pp.Group(pp.oneOf([ACTRVARIABLE, ACTRNEG + ACTRVARIABLE, ACTRNEG, VISIONGREATER, VISIONSMALLER, VISIONGREATER + ACTRVARIABLE, VISIONSMALLER + ACTRVARIABLE])\
-            + pp.Word(pp.alphanums + "_" + '"' + "'"))
+    slot = pp.Word("".join([pp.alphas, "_"]), "".join([pp.alphanums, "_"]))
+    special_value = pp.Group(pp.oneOf([ACTRVARIABLE, "".join([ACTRNEG, ACTRVARIABLE]), ACTRNEG, VISIONGREATER, VISIONSMALLER, "".join([VISIONGREATER, ACTRVARIABLE]), "".join([VISIONSMALLER, ACTRVARIABLE])])\
+            + pp.Word("".join([pp.alphanums, "_", '"', "'"])))
     strvalue = pp.QuotedString('"', unquoteResults=False)
     strvalue2 = pp.QuotedString("'", unquoteResults=False)
-    varvalue = pp.Word(pp.alphanums + "_")
+    varvalue = pp.Word("".join([pp.alphanums, "_"]))
     value = varvalue | special_value | strvalue | strvalue2
     chunk_reader = pp.OneOrMore(pp.Group(slot + value))
     return chunk_reader
+
+def make_chunkparts_without_varconflicts(chunkpart, rule_name, variables):
+    """
+    Makes a chunk avoiding any variable names used in actrvariables. Uses new_name for naming, if possible.
+    """
+    varval = splitting(chunkpart, empty=False)
+    temp_var = set()
+    for x in varval['variables']:
+        new_name = "".join([str(x), "__rule__", rule_name])
+        if "".join(["=", new_name]) in variables:
+            raise ACTRError("A name clash appeared when trying to compile two rules. Try to rename variables in the rule '%s'" %rule_name)
+        else:
+            temp_var.add(new_name)
+    temp_negvar = set()
+    for x in varval['negvariables']:
+        new_name = "".join([str(x), "__rule__", rule_name])
+        if "".join(["=", "new_name"]) in variables:
+            raise ACTRError("A name clash appeared when trying to compile two rules. Try to rename variables in the rule '%s'" %rule_name)
+        else:
+            temp_negvar.add(new_name)
+    varval['negvariables'] = temp_negvar
+    varval['variables'] = temp_var
+    new_varval = {key: varval[key] for key in varval if varval[key]}
+
+    for key in new_varval:
+        if len(new_varval[key]) == 1:
+            new_varval[key] = new_varval[key].pop()
+        else:
+            new_varval[key] = tuple(new_varval[key])
+
+    return new_varval
+
+def make_chunkparts_with_new_vars(chunkpart, variable_dict, val_dict):
+    """
+    Makes a chunk changing variable names according to variable_dict.
+    """
+    varval = splitting(chunkpart, empty=False)
+    temp_set = set()
+    for x in varval["variables"]:
+        if x not in val_dict:
+            temp_set.add(variable_dict.setdefault(x, x))
+        else:
+            varval["values"].add(val_dict[x])
+    varval["variables"] = temp_set
+    temp_set = set()
+    for x in varval["negvariables"]:
+        if x not in val_dict:
+            temp_set.add(variable_dict.setdefault(x, x))
+        else:
+            varval["negvalues"].add(val_dict[x])
+    varval["negvariables"] = temp_set
+
+    new_varval = {key: varval[key] for key in varval if varval[key]}
+
+    for key in new_varval:
+        if len(new_varval[key]) == 1:
+            new_varval[key] = new_varval[key].pop()
+        else:
+            new_varval[key] = tuple(new_varval[key])
+
+    return new_varval
+
+
+def merge_chunkparts(chunkpart1, chunkpart2):
+    """
+    Chunkparts are merged as follows: chunkpart1 is used; info in chunkpart2 is added to chunkpart1
+    """
+    varval1 = splitting(chunkpart1, empty=False)
+    varval2 = splitting(chunkpart2, empty=False)
+    for key in varval1:
+        if varval1[key]:
+            break
+    else:
+        varval1 = varval2
+
+    new_varval = {key: varval1[key] for key in varval1 if varval1[key]}
+
+    #for key in varval1:
+    #    if varval2[key] and not varval1[key]:
+    #        varval1[key] = varval2[key]
+
+    #new_varval = {key: varval1[key] for key in varval1 if varval1[key]}
+
+    for key in new_varval:
+        if len(new_varval[key]) == 1:
+            new_varval[key] = new_varval[key].pop()
+        else:
+            new_varval[key] = tuple(new_varval[key])
+
+    return new_varval
+
 
 #############utilities for rules######################################
 
@@ -147,7 +258,7 @@ def getrule():
     Using pyparsing, get rule out of a string.
     """
     arrow = pp.Literal("==>")
-    buff = pp.Word(pp.alphas, pp.alphanums + "_")
+    buff = pp.Word(pp.alphas, "".join([pp.alphanums, "_"]))
     special_valueLHS = pp.oneOf([x for x in _LHSCONVENTIONS.keys()])
     end_buffer = pp.Literal(">")
     special_valueRHS = pp.oneOf([x for x in _RHSCONVENTIONS.keys()])
@@ -165,7 +276,7 @@ def check_bound_vars(actrvariables, elem):
         for _ in range(len(varval[x])):
             if x == "variables":
                 var = str(varval[x].pop())
-                var = ACTRVARIABLE + var
+                var = "".join([ACTRVARIABLE, var])
                 try:
                     temp_result = actrvariables[var]
                 except KeyError:
@@ -179,6 +290,90 @@ def check_bound_vars(actrvariables, elem):
             else:
                 result = temp_result
     return result
+
+def match(dict2, slotvals, name1, name2):
+    """
+    Matches variables that happen to be tied to the same slots. This function is used in production compilation. dict2 is the LHS of the second rule, slotvals is the dictionary based on the output of the first rule.
+    """
+    def temp_func(temp_set, temp_val):
+        """
+        temp_func gets a set of variables and a value (possibly, None), and it returns two dicts.
+        matched stores which variables will be substituted by which variable, valued stores which variables will be substituted by a value (if temp_val not empy).
+        """
+        if temp_val:
+            valued.update({x: temp_val for x in temp_set})
+        else:
+            try:
+                temp_var = sorted(temp_set, key=lambda x:len(x))[0]
+            except IndexError:
+                pass
+            else:
+                matched.update({x: temp_var for x in temp_set})
+        return matched, valued
+    matched = {}
+    valued = {}
+    temp_slotvals = slotvals.copy()
+    for key in dict2:
+
+        code = key[0]
+        buff = key[1:]
+
+        chunkdict2 = {}
+                    
+        renaming_set = set(_LHSCONVENTIONS.keys())
+        renaming_set.update(_RHSCONVENTIONS.keys())
+        renaming_set.difference_update({_RHSCONVENTIONS_REVERSED["execute"], _RHSCONVENTIONS_REVERSED["clear"], _RHSCONVENTIONS_REVERSED["extra_test"], _LHSCONVENTIONS_REVERSED["query"]}) #only renaming_set is kept; execute etc. cannot carry a variable, so no variable matching is needed
+
+        if code in renaming_set:
+            chunkdict2 = dict2.get(key)._asdict()
+            try:
+                chunkdict3 = temp_slotvals.pop(buff)
+            except KeyError:
+                chunkdict3 = chunkdict2
+
+            if isinstance(chunkdict3, collections.MutableSequence): #this is retrieval, it consists of mutable sequence -- 0=chunk description in the 1st rule; 1=retrieved chunk
+                for elem in chunkdict2:
+                    chunkpart2 = splitting(chunkdict2[elem], empty=False)
+                    try:
+                        chunkpart3 = splitting(chunkdict3[0][elem], empty=False)
+                    except KeyError:
+                        chunkpart3 = splitting(None)
+                    try:
+                        temp_val = getattr(chunkdict3[1], elem).values
+                    except AttributeError:
+                        temp_val = None
+                    temp_set = set()
+                    temp_set.update(chunkpart2["variables"])
+                    temp_set.update(chunkpart3["variables"])
+                    matched, valued = temp_func(temp_set, temp_val)
+                slotvals.pop(buff) #info about retrieved element has been fully used, it can be discarded now
+            else: #anything else but retrieval is here
+                for elem in chunkdict2:
+                    chunkpart2 = splitting(chunkdict2[elem], empty=False)
+                    try:
+                        chunkpart3 = splitting(chunkdict3[elem], empty=False)
+                    except KeyError:
+                        chunkpart3 = splitting(None)
+
+                    temp_set = set()
+                    temp_set.update(chunkpart2["variables"])
+                    temp_set.update(chunkpart3["variables"])
+                    temp_val, val2, val3 = None, None, None
+                    if chunkpart2["values"]:
+                        val2 = chunkpart2["values"].pop()
+                    if chunkpart3["values"]:
+                        val3 = chunkpart3["values"].pop()
+
+                    if val2 and val3 and val2 != val3:
+                        raise ACTRError("The values in rules '%s' and '%s' do not match, production compilation failed" % (name1, name2))
+            
+                    temp_val = val2 or val3
+
+                    matched, valued = temp_func(temp_set, temp_val)
+
+    return matched, valued
+            
+
 
 def modify_utilities(time, reward, rules, model_parameters):
     """
@@ -237,9 +432,18 @@ def weigh_buffer(chunk, weight_k):
 
 def find_chunks(chunk):
     """
-    Find chunks as values in slots in the chunk chunk.
+    Find chunks as values in slots in the chunk 'chunk'.
     """
-    return (x[1] for x in chunk if x[1] != None and not isinstance(x[1], str))
+    chunk_list = []
+    for x in chunk:
+        try:
+            val = splitting(x[1])['values'].pop()
+        except KeyError:
+            pass
+        else:
+            if val != 'None' and not isinstance(val, str):
+                chunk_list.append(val)
+    return chunk_list
 
 def calculate_strength_association(chunk, otherchunk, dm, strength_of_association):
     """

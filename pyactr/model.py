@@ -2,10 +2,10 @@
 ACT-R Model.
 """
 
-
 import warnings
 
 import simpy
+import pyparsing
 
 import pyactr.chunks as chunks
 import pyactr.goals as goals
@@ -38,6 +38,7 @@ class ACTRModel(object):
                 "utility_alpha": 0.2,
                 "motor_prepared": False,
                 "strict_harvesting": False,
+                "production_compilation": False,
                 "automatic_visual_search": True,
                 "emma": True,
                 "emma_noise": True,
@@ -49,7 +50,6 @@ class ACTRModel(object):
 
         self.chunktype = chunks.chunktype
         self.DecMem = declarative.DecMem
-        self.Chunk = chunks.Chunk
         self.chunkstring = chunks.chunkstring
 
         self.__buffers = {}
@@ -111,7 +111,10 @@ class ACTRModel(object):
         temp_dictRHS = {v: k for k, v in utilities._RHSCONVENTIONS.items()}
         temp_dictLHS = {v: k for k, v in utilities._LHSCONVENTIONS.items()}
         rule_reader = utilities.getrule()
-        rule = rule_reader.parseString(string, parseAll=True)
+        try:
+            rule = rule_reader.parseString(string, parseAll=True)
+        except pyparsing.ParseException as e:
+            raise(utilities.ACTRError("The rule '%s' could not be parsed. The following error was observed: %s" %(name, e)))
         lhs, rhs = {}, {}
         def func():
             for each in rule[0]:
@@ -133,7 +136,7 @@ class ACTRModel(object):
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield rhs
         self.__productions.update({name: {"rule": func, "utility": utility, "reward": reward}})
-        return None
+        return self.__productions[name]
 
     def set_similarities(self, chunk, otherchunk, value):
         """

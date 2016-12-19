@@ -1,5 +1,5 @@
 """
-Testing utilities of production rules and changes in utilities. It corresponds to 'testing_simple' in Lisp ACT-R, unit 6.
+Testing utilities of production rules and changes in utilities.
 """
 
 import warnings

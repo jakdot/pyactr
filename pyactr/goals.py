@@ -45,12 +45,19 @@ class Goal(buffers.Buffer):
             harvest = self.dm
         copy_goal = Goal(self._data.copy(), harvest)
         return copy_goal
+    
+    def test(self, state, inquiry):
+        """
+        Is current state busy/free/error?
+        """
+        return getattr(self, state) == inquiry
 
     def retrieve(self, otherchunk, actrvariables=None):
         """
-        Retrieve a chunk does not work in goal buffer.
+        Retrieve a chunk. This is not possible in goal buffer, so an error is raised.
         """
         raise utilities.ACTRError("An attempt to retrieve from goal in the chunk '%s'; retrieving from goal is not possible" % otherchunk)
+
 
     def create(self, otherchunk, harvest=None, actrvariables=None):
         """

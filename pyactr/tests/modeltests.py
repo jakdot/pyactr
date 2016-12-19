@@ -11,7 +11,7 @@ class Counting(object):
 
         #Each chunk type should be defined first.
         self.model.chunktype("countOrder", ("first", "second"))
-        #Chunk type is defined as (name, attributes)
+        #makechunk type is defined as (name, attributes)
 
         #Attributes are written as an iterable (above) or as a string, separated by comma:
         self.model.chunktype("countOrder", "first, second")
@@ -20,7 +20,7 @@ class Counting(object):
         #this creates declarative memory
 
         for i in range(1, 6):
-            self.dm.add(self.model.Chunk("countOrder", first=i, second=i+1))
+            self.dm.add(actr.chunks.makechunk("", "countOrder", first=i, second=i+1))
             #adding chunks to declarative memory
 
         self.retrieval = self.model.dmBuffer("retrieval", self.dm)
@@ -30,23 +30,23 @@ class Counting(object):
         #creating goal buffer
 
         self.model.chunktype("countFrom", ("start", "end", "count"))
-        self.g.add(self.model.Chunk("countFrom", start=2, end=4))
+        self.g.add(actr.chunks.makechunk("01", "countFrom", start=2, end=4))
         #adding stuff to goal buffer
 
         #production rules follow; they are methods that create generators: first yield yields buffer tests, the second yield yields buffer changes;
     def start(self):
-        yield {"=g":self.model.Chunk("countFrom", start="=x", count=None)}
-        yield {"=g":self.model.Chunk("countFrom", count="=x"),
-                "+retrieval": self.model.Chunk("countOrder", first="=x")}
+        yield {"=g":actr.chunks.makechunk("01", "countFrom", start="=x", count=None)}
+        yield {"=g":actr.chunks.makechunk("01", "countFrom", count="=x"),
+                "+retrieval": actr.chunks.makechunk("01", "countOrder", first="=x")}
 
     def increment(self):
-        yield {"=g":self.model.Chunk("countFrom", count="=x", end="~=x"),
-                "=retrieval": self.model.Chunk("countOrder", first="=x", second="=y")}
-        yield {"=g":self.model.Chunk("countFrom", count="=y"),
-                "+retrieval": self.model.Chunk("countOrder", first="=y")}
+        yield {"=g":actr.chunks.makechunk("01", "countFrom", count="=x", end="~=x"),
+                "=retrieval": actr.chunks.makechunk("01", "countOrder", first="=x", second="=y")}
+        yield {"=g":actr.chunks.makechunk("01", "countFrom", count="=y"),
+                "+retrieval": actr.chunks.makechunk("01", "countOrder", first="=y")}
 
     def stop(self):
-        yield {"=g":self.model.Chunk("countFrom", count="=x", end="=x")}
+        yield {"=g":actr.chunks.makechunk("01", "countFrom", count="=x", end="=x")}
         yield {"!g": ("clear", (0, self.model.DecMem()))}
 
 class Counting_stringversion(object):
@@ -136,29 +136,72 @@ class Addition(object):
         dm = self.model.DecMem()
 
         for i in range(0, 11):
-            dm.add(self.model.Chunk("countOrder", first=i, second=i+1))
+            dm.add(actr.makechunk("chunk"+str(i), "countOrder", first=i, second=i+1))
 
         retrieval = self.model.dmBuffer("retrieval", dm)
     
         g = self.model.goal("g")
 
-        g.add(self.model.Chunk("add", arg1=5, arg2=2))
+        g.add(actr.makechunk("", "add", arg1=5, arg2=2))
 
-    def initAddition(self):
-        yield {"=g":self.model.Chunk("add", arg1="=num1", arg2="=num2", sum=None)}
-        yield {"=g":self.model.Chunk("add", sum="=num1", count=0), "+retrieval": self.model.Chunk("countOrder", first="=num1")}
+        self.model.productionstring(name="initAddition", string="""
+        =g>
+        isa     add
+        arg1    =num1
+        arg2    =num2
+        sum     None
+        ==>
+        =g>
+        isa     add
+        sum     =num1
+        count   0
+        +retrieval>
+        isa     countOrder
+       first   =num1""")
 
-    def terminateAddition(self):
-        yield {"=g":self.model.Chunk("add", count="=num", arg2="=num", sum="=answer")}
-        yield {"!g": ("clear", (0, self.model.DecMem()))}
+        self.model.productionstring(name="terminateAddition", string="""
+        =g>
+        isa     add
+        count   =num
+        arg2    =num
+        sum     =answer
+        ==>
+        ~g>""")
 
-    def incrementCount(self):
-        yield {"=g":self.model.Chunk("add", count="=count", sum="=sum"), "=retrieval":self.model.Chunk("countOrder", first="=count", second="=newcount")}
-        yield {"=g":self.model.Chunk("add", count="=newcount"), "+retrieval": self.model.Chunk("countOrder", first="=sum")}
+        self.model.productionstring(name="incrementCount", string="""
+        =g>
+        isa     add
+        count   =count
+        sum     =sum
+        =retrieval>
+        isa     countOrder
+        first   =count
+        second  =newcount
+        ==>
+        =g>
+        isa     add
+        count   =newcount
+        +retrieval>
+        isa     countOrder
+        first   =sum""")
 
-    def incrementSum(self):
-        yield {"=g":self.model.Chunk("add", count="=count", arg2="~=count", sum="=sum"), "=retrieval":self.model.Chunk("countOrder", first="=sum", second="=newsum")}
-        yield {"=g":self.model.Chunk("add", sum="=newsum"), "+retrieval": self.model.Chunk("countOrder", first="=count")}
+        self.model.productionstring(name="incrementSum", string="""
+        =g>
+        isa     add
+        count   =count
+        arg2    ~=count
+        sum     =sum
+        =retrieval>
+        isa     countOrder
+        first   =sum
+        second  =newsum
+        ==>
+        =g>
+        isa     add
+        sum     =newsum
+        +retrieval>
+        isa     countOrder
+        first   =count""")
 
 class Model1(object):
 
@@ -170,53 +213,82 @@ class Model1(object):
         dm = self.model.DecMem()
 
         for i in range(1, 6):
-            dm.add(self.model.Chunk("countOrder", first=i, second=i+1))
+            dm.add(actr.makechunk("", "countOrder", first=i, second=i+1))
     
         retrieval = self.model.dmBuffer("retrieval", dm)
     
         g = self.model.goal("g")
 
         self.model.chunktype("countFrom", ("start", "end", "count"))
-        g.add(self.model.Chunk("countFrom", start=2, end=4))
+        g.add(actr.makechunk("", "countFrom", start=2, end=4))
 
-    def start(self):
-        yield {"=g":self.model.Chunk("countFrom", start="=x", count=None), "?retrieval": {"state":"free"}}
-        yield {"=g":self.model.Chunk("countFrom", count="=x"),
-                "+retrieval": self.model.Chunk("countOrder", first="=x")}
+        self.model.productionstring(name="start", string="""
+        =g>
+        isa     countFrom
+        start   =x
+        count   None
+        ?retrieval>
+        state   free
+        ==>
+        =g>
+        isa     countFrom
+        count   =x
+        +retrieval>
+        isa     countOrder
+        first   =x""")
 
-    def increment(self):
-        yield {"=g":self.model.Chunk("countFrom", count="=x", end="~=x"), "=retrieval": self.model.Chunk("countOrder", first="=x", second="=y")}
-        yield {"=g":self.model.Chunk("countFrom", count="=y"), "+retrieval": self.model.Chunk("countOrder", first="=y")}
-
-    def stop(self):
-        yield {"=g":self.model.Chunk("countFrom", count="=x", end="=x"), "?retrieval": {"state":"free"}}
-        yield {"!g": ("clear", (0, self.model.DecMem()))}
+        self.model.productionstring(name="increment", string="""
+        =g>
+        isa     countFrom
+        count   =x
+        end     ~=x
+        =retrieval>
+        isa     countOrder
+        first   =x
+        second  =y
+        ==>
+        =g>
+        isa     countFrom
+        count   =y
+        +retrieval>
+        isa     countOrder
+        first   =y""")
+        
+        self.model.productionstring(name="stop", string="""
+        =g>
+        isa     countFrom
+        count   =x
+        end     =x
+        ?retrieval>
+        state   free
+        ==>
+        ~g>""")
 
 class Model2(object):
     
     def __init__(self, **kwargs):
         self.model = actr.ACTRModel(**kwargs)
 
-        self.model.chunktype("twoVars", ("x", "y"))
+        actr.chunktype("twoVars", ("x", "y"))
+        actr.chunktype("reverse", ("x", "y"))
 
         self.dm = self.model.DecMem()
 
-        self.dm.add(self.model.Chunk("twoVars", x=10, y=20))
+        self.dm.add(actr.makechunk("", "twoVars", x=10, y=20))
     
         retrieval = self.model.dmBuffer("retrieval", self.dm)
     
         g = self.model.goal("g")
 
-        self.model.chunktype("reverse", ("x", "y"))
-        g.add(self.model.Chunk("reverse", x=10))
+        g.add(actr.makechunk("", "reverse", x=10))
 
     def start(self):
-        yield {"=g": self.model.Chunk("reverse", x="=num", y="~=num")}
-        yield {"+retrieval": self.model.Chunk("twoVars", x="=num"), "=g": self.model.Chunk("reverse", x="=num", y="=num")}
+        yield {"=g": actr.makechunk("", "reverse", x="=num", y="~=num")}
+        yield {"+retrieval": actr.makechunk("", "twoVars", x="=num"), "=g": actr.makechunk("", "reverse", x="=num", y="=num")}
     
     def switch(self):
-        yield {"=retrieval": self.model.Chunk("twoVars", x="=num", y="=num2"), "=g": self.model.Chunk("reverse", y="=num")}
-        yield {"=retrieval": self.model.Chunk("twoVars", x="=num2", y="=num")}
+        yield {"=retrieval": actr.makechunk("", "twoVars", x="=num", y="=num2"), "=g": actr.makechunk("", "reverse", y="=num")}
+        yield {"=retrieval": actr.makechunk("", "twoVars", x="=num2", y="=num")}
 
     def clear(self):
         yield {"?retrieval": {"buffer": "full"}, "?g": {"buffer": "empty"}}
@@ -227,26 +299,26 @@ class Model3(object):
     def __init__(self, **kwargs):
         self.model = actr.ACTRModel(**kwargs)
 
-        self.model.chunktype("twoVars", ("x", "y"))
+        actr.chunktype("twoVars", ("x", "y"))
 
         self.dm = self.model.DecMem()
 
-        self.dm.add(self.model.Chunk("twoVars", x=10, y=20))
+        self.dm.add(actr.makechunk("","twoVars", x=10, y=20))
     
         retrieval = self.model.dmBuffer("retrieval", self.dm)
     
         g = self.model.goal("g", None, self.dm) #default harvest is optional since only one harvest; but testing that it works
 
-        self.model.chunktype("reverse", ("x", "y"))
-        g.add(self.model.Chunk("reverse", x=10))
+        actr.chunktype("reverse", ("x", "y"))
+        g.add(actr.makechunk("","reverse", x=10))
 
     def start(self):
-        yield {"=g": self.model.Chunk("reverse", x="=num", y="~=num")}
-        yield {"+retrieval": self.model.Chunk("twoVars", x="=num"), "=g": self.model.Chunk("reverse", x="=num", y="=num")}
+        yield {"=g": actr.makechunk("","reverse", x="=num", y="~=num")}
+        yield {"+retrieval": actr.makechunk("","twoVars", x="=num"), "=g": actr.makechunk("","reverse", x="=num", y="=num")}
     
     def switch(self):
-        yield {"=retrieval": self.model.Chunk("twoVars", x="=num", y="=num2"), "=g": self.model.Chunk("reverse", y="=num")}
-        yield {"=retrieval": self.model.Chunk("twoVars", x="=num2", y="=num")}
+        yield {"=retrieval": actr.makechunk("","twoVars", x="=num", y="=num2"), "=g": actr.makechunk("","reverse", y="=num")}
+        yield {"=retrieval": actr.makechunk("","twoVars", x="=num2", y="=num")}
 
     def clear(self):
         yield {"?retrieval": {"buffer": "full"}, "?g": {"buffer": "empty"}}
@@ -260,19 +332,19 @@ class MotorModel(actr.ACTRModel):
         g = self.model.goal("g")
 
         self.model.chunktype("press", "key")
-        g.add(self.model.Chunk("press", key="a"))
+        g.add(actr.makechunk("","press", key="a"))
 
     def start(self):
-        yield {"=g": self.model.Chunk("press", key="=k!a")}
-        yield {"+manual": self.model.Chunk("_manual", cmd="press_key", key="=k"), "=g": self.model.Chunk("press", key="b")}
+        yield {"=g": actr.makechunk("","press", key="=k!a")}
+        yield {"+manual": actr.makechunk("","_manual", cmd="press_key", key="=k"), "=g": actr.makechunk("","press", key="b")}
 
     def go_on(self):
-        yield {"=g": self.model.Chunk("press", key="=k!b")}
-        yield {"+manual": self.model.Chunk("_manual", cmd="press_key", key="=k"), "=g": self.model.Chunk("press", key="c")}
+        yield {"=g": actr.makechunk("","press", key="=k!b")}
+        yield {"+manual": actr.makechunk("","_manual", cmd="press_key", key="=k"), "=g": actr.makechunk("","press", key="c")}
     
     def finish(self):
-        yield {"=g": self.model.Chunk("press", key="=k!c"), "?manual": {"preparation": "free"}}
-        yield {"+manual": self.model.Chunk("_manual", cmd="press_key", key="=k"), "=g": self.model.Chunk("press", key="d")}
+        yield {"=g": actr.makechunk("","press", key="=k!c"), "?manual": {"preparation": "free"}}
+        yield {"+manual": actr.makechunk("","_manual", cmd="press_key", key="=k"), "=g": actr.makechunk("","press", key="d")}
 
 """
 Demo - pressing a key by ACT-R model. Tutorial 2 of Lisp ACT-R.
@@ -290,7 +362,8 @@ class Paired(object):
         self.m = actr.ACTRModel(environment=env, **kwargs)
 
         actr.chunktype("pair", "probe answer")
-        
+        actr.chunktype("goal", "state")
+        actr.chunktype("chunk", "value")
         actr.chunktype("goal", "state")
 
         self.dm = self.m.DecMem()
@@ -306,7 +379,7 @@ class Paired(object):
         actr.makechunk(nameofchunk="study", typename="chunk", value="study")
         actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
-        g.add(actr.makechunk(typename="read", state=start))
+        g.add(actr.makechunk("read", typename="goal", state=start))
 
         self.m.productionstring(name="find_probe", string="""
         =g>
@@ -357,7 +430,7 @@ class Paired(object):
         isa     pair
         probe   =word
         =visual>
-        isa     visual
+        isa     _visual
         +retrieval>
         isa     pair
         probe   =word""")
@@ -421,7 +494,7 @@ class Paired(object):
 
 class Utilities(object):
     """
-    Model pressing the right key.
+    Model testing utilities.
     """
 
     def __init__(self, **kwargs):
@@ -431,24 +504,501 @@ class Utilities(object):
 
         self.m.dmBuffer("retrieval", self.dm)
 
+        actr.chunktype("phase", "state")
+
         g = self.m.goal("g")
-        g.add(self.m.Chunk("start", state="start"))
+        g.add(actr.makechunk("start", "phase", state="start"))
 
     def one(self, utility=1):
-        yield {"=g": self.m.Chunk("start", state="start")}
-        yield {"=g": self.m.Chunk("change", state="change")}
+        yield {"=g": actr.makechunk("start", "phase", state="start")}
+        yield {"=g": actr.makechunk("change", "phase", state="change")}
 
     def two(self, utility=5):
-        yield {"=g": self.m.Chunk("start", state="start")}
-        yield {"=g": self.m.Chunk("dontchange", state="start")}
+        yield {"=g": actr.makechunk("start", "phase", state="start")}
+        yield {"=g": actr.makechunk("dontchange", "phase", state="start")}
     
     def three(self, reward=10):
-        yield {"=g": self.m.Chunk("change", state="change")}
+        yield {"=g": actr.makechunk("change", "phase", state="change")}
         yield {"~g": None}
 
-if __name__ == "__main__":
-    mm = MotorModel()
-    t = mm.model
-    t.productions(mm.start, mm.go_on, mm.finish)
-    sim = t.simulation(trace=True)
-    sim.run()
+class Compilation1(object):
+    """
+    Model testing compilation -- basic cases. Modification.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("state", "starting ending")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     state
+            starting =x
+            ending ~=x
+            ==>
+            =g>
+            isa     state
+            ending =x""")
+
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     state
+            starting =x
+            ending  =x
+            ==>
+            =g>
+            isa     state
+            starting 4""")
+        
+class Compilation2(object):
+    """
+    Model testing compilation -- basic cases. Modification.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("state", "starting ending")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=1))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     state
+            starting =x
+            ending  =x
+            ==>
+            =g>
+            isa     state
+            ending  =x
+            starting 4""")
+        
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     state
+            starting =x
+            ending ~=x
+            ==>
+            =g>
+            isa     state
+            ending =x""")
+
+class Compilation3(object):
+    """
+    Model testing compilation -- basic cases. Modification.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("goal", "arg1 arg2 arg3 arg4")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     goal
+            arg1    =v1
+            arg2    =v2
+            arg3    =v2
+            arg4    =v3
+            ==>
+            =g>
+            isa     goal
+            arg1    =v2
+            arg2    =v3
+            arg3    =v1""")
+        
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     goal
+            arg1    =v0
+            arg2    =v1
+            arg3    3
+            ==>
+            =g>
+            isa     goal
+            arg3    =v1
+            arg4    =v0""")
+
+class Compilation4(object):
+    """
+    Model testing compilation -- basic cases. Query.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("goal", "arg1 arg2 arg3 arg4")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g", default_harvest=self.dm)
+        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg4=10))
+
+        self.m.productionstring(name="one", string="""
+            ?g>
+            state   free
+            =g>
+            isa     goal
+            arg1    1
+            ==>
+            =g>
+            isa     goal
+            arg1    2""")
+        
+        self.m.productionstring(name="two", string="""
+            ?g>
+            buffer  full
+            =g>
+            isa     goal
+            arg1    2
+            arg2    None
+            arg3    None
+            ==>
+            =g>
+            isa     goal
+            arg1    3""")
+
+class Compilation5(object):
+    """
+    Model testing compilation -- basic cases. Setting a chunk.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("state", "starting ending position")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g", default_harvest=self.dm)
+        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     state
+            starting =x
+            ending ~=x
+            position 'start'
+            ==>
+            +g>
+            isa     state
+            position 'end'
+            ending =x""")
+
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     state
+            starting None
+            position 'end'
+            ==>
+            =g>
+            isa     state
+            starting 4""")
+        
+class Compilation6(object):
+    """
+    Model testing compilation. Modification and retrieval.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("goal", "arg1 arg2 arg3 arg4")
+        actr.chunktype("fact", "arg1 arg2 arg3 arg4")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     goal
+            arg1    =v1
+            arg2    =v2
+            arg3    =v2
+            arg4    =v3
+            ==>
+            +retrieval>
+            isa     fact
+            arg1    3
+            arg2    =v1
+            =g>
+            isa     goal
+            arg1    =v2
+            arg2    =v3
+            arg3    =v1""")
+        
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     goal
+            arg1    =v0
+            arg2    =v1
+            arg3    3
+            =retrieval>
+            isa     fact
+            arg3    =v2
+            ==>
+            =g>
+            isa     goal
+            arg2    =v2
+            arg3    =v1
+            arg4    =v0""")
+
+class Compilation7(object):
+    """
+    Model testing compilation. Modification and retrieval.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("goal", "arg1 arg2 arg3 arg4")
+        actr.chunktype("fact", "arg1 arg2 arg3 arg4")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     goal
+            arg1    =v1
+            arg2    =v2
+            arg3    =v2
+            arg4    =v3
+            ==>
+            +retrieval>
+            isa     fact
+            arg1    3
+            arg2    =v1
+            =g>
+            isa     goal
+            arg1    =v2
+            arg2    =v3
+            arg3    =v1""")
+        
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     goal
+            arg1    =v0
+            arg2    =v1
+            arg3    3
+            =retrieval>
+            isa     fact
+            arg3    =v2
+            ==>
+            ~retrieval>
+            =g>
+            isa     goal
+            arg2    =v2
+            arg3    =v1
+            arg4    =v0""")
+
+class Compilation8(actr.ACTRModel):
+    """
+    Motor model for production compilation.
+    """
+
+    def __init__(self, **kwargs):
+        self.m = actr.ACTRModel(**kwargs)
+
+        g = self.m.goal("g")
+
+        self.m.chunktype("press", "key")
+        g.add(actr.makechunk("","press", key="a"))
+
+    def start(self):
+        yield {"=g": actr.makechunk("","press", key="=k!a")}
+        yield {"+manual": actr.makechunk("","_manual", cmd="press_key", key="=k"), "=g": actr.makechunk("","press", key="b")}
+
+    def go_on(self):
+        yield {"=g": actr.makechunk("","press", key="=k!b")}
+        yield {"+manual": actr.makechunk("","_manual", cmd="press_key", key="=k"), "=g": actr.makechunk("","press", key="c")}
+    
+    def still_go_on(self):
+        yield {"=g": actr.makechunk("","press", key="=k!c"), "?manual": {"state": "busy"}}
+        yield {"=g": actr.makechunk("","press", key="d")}
+    
+    def finish(self):
+        yield {"=g": actr.makechunk("","press", key="=k!d"), "?manual": {"state": "free"}}
+        yield {"=g": actr.makechunk("","press", key="e")}
+
+class Compilation9(object):
+    """
+    Model testing compilation. Modification and retrieval.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("goal", "arg1 arg2 arg3 arg4")
+        actr.chunktype("fact", "arg1 arg2 arg3 arg4")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     goal
+            arg1    =v1
+            arg2    =v2
+            arg3    =v2
+            arg4    =v3
+            ==>
+            +retrieval>
+            isa     fact
+            arg1    3
+            arg2    =v1
+            +g>
+            isa     goal
+            arg1    =v2
+            arg2    =v3
+            arg3    =v1""")
+        
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     goal
+            arg1    =v0
+            arg2    =v1
+            arg3    3
+            =retrieval>
+            isa     fact
+            arg3    =v2
+            ==>
+            ~retrieval>
+            +g>
+            isa     goal
+            arg2    =v2
+            arg3    =v1
+            arg4    =v0""")
+
+class Compilation10(object):
+    """
+    Model testing compilation. Modification and retrieval.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("goal", "arg1 arg2 arg3 arg4")
+        actr.chunktype("fact", "arg1 arg2 arg3 arg4")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     goal
+            arg1    =v1
+            arg2    =v2
+            arg3    =v2
+            arg4    =v3
+            ==>
+            +retrieval>
+            isa     fact
+            arg1    3
+            arg2    =v1
+            +g>
+            isa     goal
+            arg1    =v2
+            arg2    =v3
+            arg3    =v1""")
+        
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     goal
+            arg1    =v0
+            arg2    =v1
+            arg3    3
+            =retrieval>
+            isa     fact
+            arg3    =v2
+            ==>
+            =g>
+            isa     goal
+            arg2    =v2
+            arg3    =v1
+            arg4    =v0""")
+
+class Compilation11(object):
+    """
+    Model testing compilation -- compilation + utilities.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("state", "starting ending")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.DecMem()
+
+        self.m.dmBuffer("retrieval", self.dm)
+
+        self.g = self.m.goal("g")
+        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=2))
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     state
+            starting 1
+            ending 2
+            ==>
+            =g>
+            isa     state
+            ending 1""", utility=10)
+
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     state
+            starting 1
+            ending 1
+            ==>
+            =g>
+            isa   state
+            ending 2""")

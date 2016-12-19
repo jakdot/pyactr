@@ -1,7 +1,9 @@
 """
 ACT-R simulations.
 """
+
 import warnings
+import math
 
 try:
     import tkinter as tk
@@ -205,7 +207,7 @@ class Simulation(object):
     
     def __printenv__(self, event):
         """
-        Prints environment event. Right now, nothing is printed (there is very little information there, anyway, since environment itself ensures printing the crucial bits of information). Could be changed later if necessary.
+        Prints environment event.
         """
         if event.action != self.__pr._UNKNOWN:
             self.current_event = event
@@ -246,6 +248,8 @@ class Simulation(object):
             self.__simulation.run(max_time)
         else:
             self.__runGUI__()
+        if self.__simulation.peek() == math.inf:
+            self.__pr.compile_rules() #at the end of the simulation, run compilation (the last two rules are not yet compiled)
     
     def show_time(self):
         """
@@ -260,13 +264,25 @@ class Simulation(object):
 
     def step(self):
         """
-        Steps through simulation.
+        Makes one step through simulation.
         """
         while True:
             self.__simulation.step()
             if self.current_event and self.current_event.action != self._UNKNOWN and self.current_event != self.__last_event:
                 self.__last_event = self.current_event
                 break
+            if self.__simulation.peek() == math.inf:
+                self.__pr.compile_rules() #at the end of the simulation, run compilation (the last two rules are not yet compiled)
+
+
+    def steps(self, count):
+        """
+        Makes several one or more steps through simulation. The number of steps is given in count.
+        """
+        count = int(count)
+        assert count > 0, "the 'count' argument in 'steps' must be a positive number"
+        for _ in range(count):
+            self.step()
 
     def __runGUI__(self):
         """

@@ -149,16 +149,34 @@ class Chunk(collections.Sequence):
         for x, y in self:
             try:
                 if y.typename == utilities.VARVAL:
-                    temp = y.removeempty()
-                    if len(temp) == 1 and temp[0][0] == "values":
-                        y = temp[0][1]
+                    temp = y.removeunused()
+                    y = ""
+                    for elem in temp:
+                        if elem[0] == "values":
+                            y = "".join([y, str(elem[1])])
+                        elif elem[0] == "negvalues":
+                            if not isinstance(elem[1], str):
+                                for each in elem[1]:
+                                    y = "".join([y, "~", str(each)])
+                            else:
+                                y = "".join([y, "~", str(elem[1])])
+                        elif elem[0] == "variables":
+                            y = "".join([y, "=", str(elem[1])])
+                        elif elem[0] == "negvariables":
+                            if not isinstance(elem[1], str):
+                                for each in elem[1]:
+                                    y = "".join([y, "~=", str(each)])
+                            else:
+                                y = "".join([y, "~=", str(elem[1])])
             except AttributeError:
+                if y == None:
+                    y = ""
                 pass
             if reprtxt:
-                reprtxt = ", ".join([reprtxt, '%s=%s' % (x, y)])
+                reprtxt = ", ".join([reprtxt, '%s= %s' % (x, y)])
             else:
-                reprtxt = '%s=%s' % (x, y)
-        return self.typename + "(" + reprtxt + ")"
+                reprtxt = '%s= %s' % (x, y)
+        return "".join([self.typename, "(", reprtxt, ")"])
 
     def __lt__(self, otherchunk):
         """
@@ -207,8 +225,8 @@ class Chunk(collections.Sequence):
 
             #checking variables, e.g., =x
             if varval["variables"] != self.__emptyvalue and varval["variables"]:
-                if matching_val == self.__emptyvalue:
-                    similarity -= 1
+                #if matching_val == self.__emptyvalue:
+                #    similarity -= 1 #these two lines would require that variables are matched only to existing values; uncomment if you want that
                 for var in varval["variables"]:
                     for each in self.boundvars.get("~=" + var, set()):
                         if each == matching_val:
@@ -239,7 +257,7 @@ class Chunk(collections.Sequence):
             if varval["negvalues"]:
                 for negval in varval["negvalues"]:
                     if negval == matching_val:
-                       similarity += utilities.get_similarity(self._similarities, negval, matching_val) 
+                       similarity += utilities.get_similarity(self._similarities, negval, matching_val)
         return similarity
 
     def removeempty(self):
@@ -285,24 +303,55 @@ def createchunkdict(chunk):
     chunk_dict = {}
     for elem in chunk:
         temp_dict = chunk_dict.get(elem[0], Chunk(utilities.VARVAL))._asdict()
+
+        if not temp_dict['negvalues'] or temp_dict['negvalues'] == Chunk.EmptyValue():
+            temp_dict['negvalues'] = set()
+        else:
+            temp_dict["negvalues"] = set(temp_dict["negvalues"])
+        if not temp_dict['negvariables'] or temp_dict['negvariables'] == Chunk.EmptyValue():
+            temp_dict['negvariables'] = set() #these two can carry multiple values
+        else:
+            temp_dict["negvariables"] = set(temp_dict["negvariables"])
         for idx in range(1, len(elem)):
             try:
                 if elem[idx][0] == utilities.VISIONGREATER or elem[idx][0] == utilities.VISIONSMALLER: #this checks special visual conditions on greater/smaller than
-                    temp_dict.update({"values": elem[idx][0] + elem[idx][1]})
+                    updating = 'values'
+                    update_val = elem[idx][0] + elem[idx][1]
                 elif elem[idx][1][0] == "'" or elem[idx][1][0] == '"':
-                    temp_dict.update({sp_dict[elem[idx][0]]: elem[idx][1][1:-1]})
+                    updating = sp_dict[elem[idx][0]]
+                    update_val = elem[idx][1][1:-1]
                 else:
-                    temp_dict.update({sp_dict[elem[idx][0]]: elem[idx][1]})
+                    updating = sp_dict[elem[idx][0]]
+                    update_val = elem[idx][1]
+
             except (KeyError, IndexError): #indexerror --> only a string is present; keyerror: the first element in elem[idx] is not a special symbol given above
                 if elem[idx][0] == "'" or elem[idx][0] == '"':
-                    temp_dict.update({"values": elem[idx][1:-1]})
+                    update_val = elem[idx][1:-1]
+                    updating = 'values'
+                    temp_dict[updating] = update_val
                 else:
+                    updating = 'values'
                     try:
-                        temp_dict.update({"values": Chunk._chunks[elem[idx]]})
+                        update_val = Chunk._chunks[elem[idx]]
                     except KeyError:
-                        temp_dict.update({"values": elem[idx]})
+                        update_val = elem[idx]
+            finally:
+                if updating == "negvariables" or updating == "negvalues":
+                    temp_dict[updating].add(update_val)
+                else:
+                    temp_dict[updating] = update_val
+        
+        if temp_dict["negvalues"]:
+            temp_dict["negvalues"] = tuple(temp_dict["negvalues"])
+        else:
+            temp_dict["negvalues"] = None
+        if temp_dict["negvariables"]:
+            temp_dict["negvariables"] = tuple(temp_dict["negvariables"])
+        else:
+            temp_dict["negvariables"] = None
+
         temp_dict = {k: v for k, v in temp_dict.items() if v != None}
-        chunk_dict[elem[0]] = Chunk("_variablesvalues", **temp_dict)
+        chunk_dict[elem[0]] = Chunk(utilities.VARVAL, **temp_dict)
     type_chunk = ""
     try:
         type_chunk = chunk_dict.pop("isa").values #change this - any combination of capital/small letters
@@ -321,6 +370,22 @@ def makechunk(nameofchunk="", typename="", **dictionary):
     if not typename:
         typename = "undefined" + str(Chunk._undefinedchunktypecounter)
         Chunk._undefinedchunktypecounter += 1
+    for key in dictionary:
+        #create varval if not created explicitly, i.e., if this chunk itself is not a varval
+        if typename != utilities.VARVAL and not isinstance(dictionary[key], Chunk):
+            temp_dict = utilities.stringsplitting(str(dictionary[key]))
+            loop_dict = temp_dict.copy()
+            for x in loop_dict:
+                if loop_dict[x]:
+                    if x == "negvariables" or x == "negvalues":
+                        val = tuple(temp_dict[x])
+                    else:
+                        val = temp_dict[x].pop()
+                    temp_dict[x] = val
+                else:
+                    temp_dict.pop(x) 
+            dictionary[key] = Chunk(utilities.VARVAL, **temp_dict)
+
     created_chunk = Chunk(typename, **dictionary)
     created_chunk._chunks[nameofchunk] = created_chunk
     return created_chunk
