@@ -16,10 +16,10 @@ dm.add(actr.chunkstring(string="isa word form 'likes' cat 'V'"))
 
 retrieval = parser.dmBuffer(name="retrieval", declarative_memory=dm)
 
-g = parser.goal(name="g")
-g2 = parser.goal(name="g2", set_delay=0.2)
-g.add(actr.chunkstring(string="isa parsing  task parse stack_top 'S'"))
-g2.add(actr.chunkstring(string="isa sentence word1 'Mary' word2 'likes' word3 'Bill'"))
+parser.goal.add(actr.chunkstring(string="isa parsing  task parse stack_top 'S'"))
+parser.goal = "g2"
+parser.goals["g2"].delay = 0.2
+parser.goals["g2"].add(actr.chunkstring(string="isa sentence word1 'Mary' word2 'likes' word3 'Bill'"))
 
 parser.productionstring(name="expand: S->NP VP", string="""
         =g>

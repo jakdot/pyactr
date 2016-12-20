@@ -38,7 +38,7 @@ chunk_dict['yellow'] = actr.makechunk(nameofchunk='yellow', typename="elem", ele
 chunk_dict['true'] = actr.makechunk(nameofchunk='true', typename="tv", value="true")
 chunk_dict['false'] = actr.makechunk(nameofchunk='false', typename="tv", value="false")
     
-dm = semantic.DecMem()
+dm = semantic.decmem
 
 dm.add(set(chunk_dict.values()))
 
@@ -63,15 +63,11 @@ dm.add(actr.makechunk(typename="property", object=chunk_dict['bird'], attribute=
 dm.add(actr.makechunk(typename="property", object=chunk_dict['bird'], attribute=chunk_dict['locomotion'], value=chunk_dict['flying']))
 dm.add(actr.makechunk(typename="property", object=chunk_dict['bird'], attribute=chunk_dict['category'], value=chunk_dict['animal']))
 
-retrieval = semantic.dmBuffer("retrieval", dm)
-    
-g = semantic.goal("g")
-
 actr.chunktype("isMember", ("object", "category", "judgment"))
 
 #you can vary what will appear in goal buffer
 
-g.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['bird']))
+semantic.goal.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['bird']))
 #g.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['animal']))
 #g.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['fish']))
 

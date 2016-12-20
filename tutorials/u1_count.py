@@ -13,7 +13,7 @@ actr.chunktype("countOrder", ("first", "second"))
 #Attributes are written as an iterable (above) or as a string, separated by comma:
 actr.chunktype("countOrder", "first, second")
 
-dm = actr.DecMem()
+dm = counting.decmem
 #this creates declarative memory
 
 dm.add(actr.chunkstring(string="\
@@ -33,12 +33,7 @@ dm.add(actr.chunkstring(string="\
     first 4\
     second 5"))
 
-#creating buffer for dm
-retrieval = counting.dmBuffer(name="retrieval", declarative_memory=dm)
-
 #creating goal buffer
-g = counting.goal(name="g")
-
 actr.chunktype("countFrom", ("start", "end", "count"))
 
 #production rules follow; using productionstring, they are similar to Lisp ACT-R
@@ -82,7 +77,7 @@ counting.productionstring(name="stop", string="""
     ~g>""")
 
 #adding stuff to goal buffer
-g.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
+counting.goal.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
 
 if __name__ == "__main__":
     x = counting.simulation()

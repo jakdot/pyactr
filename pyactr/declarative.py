@@ -66,17 +66,44 @@ class DecMem(collections.MutableMapping):
         dm = DecMem(self._data.copy())
         return dm
 
-
 class DecMemBuffer(buffers.Buffer):
     """
     Declarative memory buffer.
     """
 
-    def __init__(self, dm, data=None, finst=0):
-        buffers.Buffer.__init__(self, dm, data)
+    def __init__(self, decmem=None, data=None, finst=0):
+        buffers.Buffer.__init__(self, decmem, data)
         self.recent = collections.deque()
         self.finst = finst
         self.activation = None #activation of the last retrieved element
+
+    @property
+    def finst(self):
+        """
+        Finst - how many chunks are 'remembered' in declarative memory buffer.
+        """
+        return self.__finst
+
+    @finst.setter
+    def finst(self, value):
+        if value >= 0:
+            self.__finst = value
+        else:
+            raise ValueError('Finst in the dm buffer must be >= 0')
+
+    @property
+    def decmem(self):
+        """
+        Default harvest of goal buffer.
+        """
+        return self.dm
+
+    @decmem.setter
+    def decmem(self, value):
+        try:
+            self.dm = value
+        except ValueError:
+            raise ACTRError('The default harvest set in a goal buffer is not a possible declarative memory')
 
     def add(self, elem, time=0):
         """

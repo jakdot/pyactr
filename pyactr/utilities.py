@@ -391,7 +391,7 @@ def calculate_setting_time(updated, model_parameters):
     Calculates time to set a chunk in a buffer.
     """
     try:
-        val = updated.set_delay
+        val = updated.delay
     except AttributeError:
         val = 0
     return val

@@ -40,18 +40,16 @@ class Model(object):
             dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["earl"], arg2=dict_dm[word])
         dict_dm[13] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["lawyer"], arg2=dict_dm["store"])
 
-        self.dm = self.model.DecMem(set(dict_dm.values()))
+        self.model.decmem = set(dict_dm.values())
+        self.dm = self.model.decmem
         
-        self.retrieval = self.model.dmBuffer("retrieval", self.dm)
-
         self.harvest_person = actr.makechunk(nameofchunk="harvest_person", typename="chunk", value="harvest_person")
         self.harvest_location = actr.makechunk(nameofchunk="harvest_location", typename="chunk", value="harvest_location")
         self.test = actr.makechunk(nameofchunk="test", typename="chunk", value="test")
         self.get_retrieval = actr.makechunk(nameofchunk="get_retrieval", typename="chunk", value="get_retrieval")
 
         actr.chunktype("sentence_goal", "arg1 arg2 state")
-        g = self.model.goal("g")
-        g.add(actr.makechunk(typename="sentence_goal", arg1=person, arg2=location, state=self.test))
+        self.model.goal.add(actr.makechunk(typename="sentence_goal", arg1=person, arg2=location, state=self.test))
 
         self.model.productionstring(name="start", string="""
         =g>

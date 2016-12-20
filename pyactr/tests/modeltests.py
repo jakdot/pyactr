@@ -16,21 +16,17 @@ class Counting(object):
         #Attributes are written as an iterable (above) or as a string, separated by comma:
         self.model.chunktype("countOrder", "first, second")
 
-        self.dm = self.model.DecMem()
+        self.dm = self.model.decmem
         #this creates declarative memory
 
         for i in range(1, 6):
             self.dm.add(actr.chunks.makechunk("", "countOrder", first=i, second=i+1))
             #adding chunks to declarative memory
 
-        self.retrieval = self.model.dmBuffer("retrieval", self.dm)
-        #creating buffer for dm
     
-        self.g = self.model.goal("g", default_harvest=self.dm)
-        #creating goal buffer
 
         self.model.chunktype("countFrom", ("start", "end", "count"))
-        self.g.add(actr.chunks.makechunk("01", "countFrom", start=2, end=4))
+        self.model.goal.add(actr.chunks.makechunk("01", "countFrom", start=2, end=4))
         #adding stuff to goal buffer
 
         #production rules follow; they are methods that create generators: first yield yields buffer tests, the second yield yields buffer changes;
@@ -47,7 +43,7 @@ class Counting(object):
 
     def stop(self):
         yield {"=g":actr.chunks.makechunk("01", "countFrom", count="=x", end="=x")}
-        yield {"!g": ("clear", (0, self.model.DecMem()))}
+        yield {"!g": ("clear", (0, self.model.decmem))}
 
 class Counting_stringversion(object):
 
@@ -56,7 +52,7 @@ class Counting_stringversion(object):
 
         self.model.chunktype("countOrder", "first, second")
 
-        self.dm = self.model.DecMem()
+        self.dm = self.model.decmem
 
         self.dm.add(self.model.chunkstring(string="\
                 isa countOrder\
@@ -75,14 +71,10 @@ class Counting_stringversion(object):
                 first 4\
                 second 5"))
 
-        self.retrieval = self.model.dmBuffer("retrieval", self.dm)
-        #creating buffer for dm
     
-        self.g = self.model.goal("g", default_harvest=self.dm)
-        #creating goal buffer
 
         self.model.chunktype("countFrom", ("start", "end", "count"))
-        self.g.add(self.model.chunkstring(string="\
+        self.model.goal.add(self.model.chunkstring(string="\
                 isa countFrom\
                 start   2\
                 end 4"))
@@ -133,16 +125,12 @@ class Addition(object):
 
         self.model.chunktype("add", ("arg1", "arg2", "sum", "count"))
 
-        dm = self.model.DecMem()
+        dm = self.model.decmem
 
         for i in range(0, 11):
             dm.add(actr.makechunk("chunk"+str(i), "countOrder", first=i, second=i+1))
 
-        retrieval = self.model.dmBuffer("retrieval", dm)
-    
-        g = self.model.goal("g")
-
-        g.add(actr.makechunk("", "add", arg1=5, arg2=2))
+        self.model.goal.add(actr.makechunk("", "add", arg1=5, arg2=2))
 
         self.model.productionstring(name="initAddition", string="""
         =g>
@@ -210,17 +198,13 @@ class Model1(object):
 
         self.model.chunktype("countOrder", ("first", "second"))
 
-        dm = self.model.DecMem()
+        dm = self.model.decmem
 
         for i in range(1, 6):
             dm.add(actr.makechunk("", "countOrder", first=i, second=i+1))
     
-        retrieval = self.model.dmBuffer("retrieval", dm)
-    
-        g = self.model.goal("g")
-
         self.model.chunktype("countFrom", ("start", "end", "count"))
-        g.add(actr.makechunk("", "countFrom", start=2, end=4))
+        self.model.goal.add(actr.makechunk("", "countFrom", start=2, end=4))
 
         self.model.productionstring(name="start", string="""
         =g>
@@ -272,15 +256,11 @@ class Model2(object):
         actr.chunktype("twoVars", ("x", "y"))
         actr.chunktype("reverse", ("x", "y"))
 
-        self.dm = self.model.DecMem()
+        self.dm = self.model.decmem
 
         self.dm.add(actr.makechunk("", "twoVars", x=10, y=20))
     
-        retrieval = self.model.dmBuffer("retrieval", self.dm)
-    
-        g = self.model.goal("g")
-
-        g.add(actr.makechunk("", "reverse", x=10))
+        self.model.goal.add(actr.makechunk("", "reverse", x=10))
 
     def start(self):
         yield {"=g": actr.makechunk("", "reverse", x="=num", y="~=num")}
@@ -301,16 +281,14 @@ class Model3(object):
 
         actr.chunktype("twoVars", ("x", "y"))
 
-        self.dm = self.model.DecMem()
+        self.dm = self.model.decmem
 
         self.dm.add(actr.makechunk("","twoVars", x=10, y=20))
     
-        retrieval = self.model.dmBuffer("retrieval", self.dm)
-    
-        g = self.model.goal("g", None, self.dm) #default harvest is optional since only one harvest; but testing that it works
+        self.model.goal.default_harvest = self.dm #default harvest is optional since only one harvest; but testing that it works
 
         actr.chunktype("reverse", ("x", "y"))
-        g.add(actr.makechunk("","reverse", x=10))
+        self.model.goal.add(actr.makechunk("","reverse", x=10))
 
     def start(self):
         yield {"=g": actr.makechunk("","reverse", x="=num", y="~=num")}
@@ -329,10 +307,8 @@ class MotorModel(actr.ACTRModel):
     def __init__(self):
         self.model = actr.ACTRModel(motor_prepared=False)
 
-        g = self.model.goal("g")
-
         self.model.chunktype("press", "key")
-        g.add(actr.makechunk("","press", key="a"))
+        self.model.goal.add(actr.makechunk("","press", key="a"))
 
     def start(self):
         yield {"=g": actr.makechunk("","press", key="=k!a")}
@@ -366,12 +342,8 @@ class Paired(object):
         actr.chunktype("chunk", "value")
         actr.chunktype("goal", "state")
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        retrieval = self.m.dmBuffer("retrieval", self.dm)
-
-        g = self.m.goal("g")
-        self.m.goal("g2", set_delay=0.2)
         start = actr.makechunk(nameofchunk="start", typename="chunk", value="start")
         actr.makechunk(nameofchunk="attending", typename="chunk", value="attending")
         actr.makechunk(nameofchunk="testing", typename="chunk", value="testing")
@@ -379,7 +351,9 @@ class Paired(object):
         actr.makechunk(nameofchunk="study", typename="chunk", value="study")
         actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
-        g.add(actr.makechunk("read", typename="goal", state=start))
+        self.m.goal.add(actr.makechunk("read", typename="goal", state=start))
+        self.m.goal = "g2"
+        self.m.goal.delay=0.2
 
         self.m.productionstring(name="find_probe", string="""
         =g>
@@ -500,14 +474,11 @@ class Utilities(object):
     def __init__(self, **kwargs):
         self.m = actr.ACTRModel(**kwargs)
 
-        self.dm = self.m.DecMem()
-
-        self.m.dmBuffer("retrieval", self.dm)
+        self.dm = self.m.decmem
 
         actr.chunktype("phase", "state")
 
-        g = self.m.goal("g")
-        g.add(actr.makechunk("start", "phase", state="start"))
+        self.m.goal.add(actr.makechunk("start", "phase", state="start"))
 
     def one(self, utility=1):
         yield {"=g": actr.makechunk("start", "phase", state="start")}
@@ -531,12 +502,9 @@ class Compilation1(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -567,13 +535,9 @@ class Compilation2(object):
         actr.chunktype("state", "starting ending")
         self.m = actr.ACTRModel(**kwargs)
 
+        self.dm = self.m.decmem
 
-        self.dm = self.m.DecMem()
-
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=1))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=1))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -606,12 +570,9 @@ class Compilation3(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -649,12 +610,10 @@ class Compilation4(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g", default_harvest=self.dm)
-        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg4=10))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg4=10))
+        self.m.goal.default_harvest = self.dm
 
         self.m.productionstring(name="one", string="""
             ?g>
@@ -690,12 +649,10 @@ class Compilation5(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g", default_harvest=self.dm)
-        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
+        self.m.goal.default_harvest = self.dm
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -730,14 +687,11 @@ class Compilation6(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
         self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -784,14 +738,11 @@ class Compilation7(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
         self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -836,10 +787,8 @@ class Compilation8(actr.ACTRModel):
     def __init__(self, **kwargs):
         self.m = actr.ACTRModel(**kwargs)
 
-        g = self.m.goal("g")
-
         self.m.chunktype("press", "key")
-        g.add(actr.makechunk("","press", key="a"))
+        self.m.goal.add(actr.makechunk("","press", key="a"))
 
     def start(self):
         yield {"=g": actr.makechunk("","press", key="=k!a")}
@@ -868,14 +817,11 @@ class Compilation9(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
         self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -923,14 +869,11 @@ class Compilation10(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
         self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
         self.m.productionstring(name="one", string="""
             =g>
@@ -976,12 +919,9 @@ class Compilation11(object):
         self.m = actr.ACTRModel(**kwargs)
 
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=2))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=2))
 
         self.m.productionstring(name="one", string="""
             =g>

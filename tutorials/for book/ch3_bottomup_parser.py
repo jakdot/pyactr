@@ -12,19 +12,18 @@ actr.chunktype("word", "form cat")
 
 parser = actr.ACTRModel(environment)
 
-dm = parser.DecMem()
+dm = parser.decmem
 dm.add(actr.chunkstring(string="isa word form 'Mary' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'Bill' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'likes' cat 'V'"))
-retrieval = parser.dmBuffer(name="retrieval", declarative_memory=dm)
 
-g = parser.goal(name="g")
-g2 = parser.goal(name="g2", set_delay=0.2)
-g.add(actr.chunkstring(string="""
+parser.goal.add(actr.chunkstring(string="""
         isa     read
         state   start
         goal_cat 'S'"""))
-g2.add(actr.chunkstring(string="""
+parser.goal ="g2"
+parser.goal.delay = 0.2
+parser.goal.add(actr.chunkstring(string="""
         isa     parsing"""))
 
 

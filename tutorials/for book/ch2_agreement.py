@@ -11,13 +11,10 @@ car = actr.makechunk(nameofchunk="car",\
 
 agreement = actr.ACTRModel()
 
-dm = agreement.DecMem()
+dm = agreement.decmem
 dm.add(car)
 
-retrieval = agreement.dmBuffer(name="retrieval", declarative_memory=dm)
-
-g = agreement.goal(name="g")
-g.add(actr.chunkstring(string="isa word task agree category 'verb'"))
+agreement.goal.add(actr.chunkstring(string="isa word task agree category 'verb'"))
 
 agreement.productionstring(name="agree", string="""
     =g>

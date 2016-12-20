@@ -15,8 +15,6 @@ environ = actr.Environment(focus_position=(100,100))
 
 m = actr.ACTRModel(environment=environ, motor_prepared=True)
 
-g = m.goal("g")
-g2 = m.goal("g2", set_delay=0.2)
 actr.chunktype("chunk", "value")
 actr.chunktype("read", "state")
 actr.chunktype("image", "img")
@@ -25,9 +23,11 @@ actr.makechunk(nameofchunk="start", typename="chunk", value="start")
 actr.makechunk(nameofchunk="attend_let", typename="chunk", value="attend_let")
 actr.makechunk(nameofchunk="response", typename="chunk", value="response")
 actr.makechunk(nameofchunk="done", typename="chunk", value="done")
-g.add(actr.chunkstring(name="reading", string="""
+m.goal.add(actr.chunkstring(name="reading", string="""
         isa     read
         state   start"""))
+m.goal = "g2"
+m.goal.delay = 0.2
 
 t2 = m.productionstring(name="encode_letter", string="""
         =g>

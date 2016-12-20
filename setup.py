@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = '0.1.7'
+VERSION = '0.1.9'
 
 setup(name='pyactr',
       version=VERSION,
@@ -8,7 +8,7 @@ setup(name='pyactr',
       url='https://github.com/jakdot/pyactr',
       author='jakdot',
       author_email='j.dotlacil@gmail.com',
-      packages=['pyactr'],
+      packages=['pyactr', 'pyactr/tests'],
       license='GPL',
       install_requires=['numpy', 'simpy', 'pyparsing'],
       classifiers=['Programming Language :: Python :: 3', 'License :: OSI Approved :: GNU General Public License v3 (GPLv3)', 'Operating System :: OS Independent', 'Development Status :: 3 - Alpha', 'Topic :: Scientific/Engineering'],

@@ -1282,10 +1282,10 @@ class TestCompilation4(unittest.TestCase):
         
         self.model._ACTRModel__productions.pop("one")
 
-        g_noncompiled = self.test.g.copy()
+        g_noncompiled = self.model.goal.copy()
         self.sim = self.model.simulation(trace=False)
 
-        self.test.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg4=10))
+        self.model.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg4=10))
         
         while True:
             self.sim.step()
@@ -1297,13 +1297,13 @@ class TestCompilation4(unittest.TestCase):
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
 
-        g_compiled = self.test.g.copy()
+        g_compiled = self.model.goal.copy()
 
         self.assertEqual(g_noncompiled, g_compiled)
 
         self.sim = self.model.simulation(trace=False)
 
-        self.test.g.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg3=7, arg4=10))
+        self.model.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=1, arg2=None, arg3=7, arg4=10))
         
         self.sim.step()
         self.assertEqual(self.sim.current_event.action, "CONFLICT RESOLUTION")
@@ -1356,9 +1356,9 @@ class TestCompilation5(unittest.TestCase):
         
         self.model._ACTRModel__productions.pop("one")
 
-        g_noncompiled = self.test.g.copy()
+        g_noncompiled = self.model.goal.copy()
 
-        self.test.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
+        self.model.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
 
         self.sim = self.model.simulation(trace=False)
 
@@ -1372,7 +1372,7 @@ class TestCompilation5(unittest.TestCase):
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
 
-        g_compiled = self.test.g.copy()
+        g_compiled = self.model.goal.copy()
 
         self.assertEqual(g_noncompiled, g_compiled)
 

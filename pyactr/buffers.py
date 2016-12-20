@@ -25,6 +25,20 @@ class Buffer(collections.MutableSet):
             self._data = data
         assert len(self) <= 1, "Buffer can carry at most one element"
 
+    @property
+    def dm(self):
+        """
+        Default harvest of goal buffer.
+        """
+        return self.__dm
+
+    @dm.setter
+    def dm(self, value):
+        if isinstance(value, collections.MutableMapping) or not value:
+            self.__dm = value
+        else:
+            raise ValueError('The attempted dm value cannot be set; it is not a possible declarative memory')
+
     def __contains__(self, elem):
         return elem in self._data
 

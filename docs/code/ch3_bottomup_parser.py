@@ -4,74 +4,61 @@ A bottom-up parser.
 
 import pyactr as actr
 
-class Environment(actr.Environment): #subclass Environment
-    """
-    Environment, putting a random letter on screen.
-    """
-
-    def __init__(self):
-        self.text = ['Bill', 'likes', 'Mary']
-        self.run_time = 2
-
-    def environment_process(self, start_time):
-        """
-        Environment process. Random letter appears, model has to press the key corresponding to the letter.
-        """
-        time = start_time
-        yield self.Event(time, self._ENV, "STARTING ENVIRONMENT") 
-        for idx in range(len(self.text)):
-            word = self.text[idx]
-            self.output(word, trigger='a') #output on environment
-            time = time + self.run_time
-            yield self.Event(time, self._ENV, "PRINTED WORD %s" % word)
-
-
-environ = Environment()
+environment = actr.Environment(focus_position=(320, 180))
 
 actr.chunktype("read", "state word goal_cat")
 actr.chunktype("parsing", "cat mother")
+actr.chunktype("word", "form cat")
 
-parser = actr.ACTRModel(environ)
+parser = actr.ACTRModel(environment)
 
-dm = parser.DecMem()
+dm = parser.decmem
 dm.add(actr.chunkstring(string="isa word form 'Mary' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'Bill' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'likes' cat 'V'"))
-retrieval = parser.dmBuffer(name="retrieval", declarative_memory=dm)
 
-g = parser.goal(name="g")
-g2 = parser.goal(name="g2", set_delay=0.2)
-g.add(actr.chunkstring(string="""
+parser.goal.add(actr.chunkstring(string="""
         isa     read
         state   start
         goal_cat 'S'"""))
-g2.add(actr.chunkstring(string="""
+parser.goal ="g2"
+parser.goal.delay = 0.2
+parser.goal.add(actr.chunkstring(string="""
         isa     parsing"""))
 
-parser.productionstring(name="find_unattended_word", string="""
+
+parser.productionstring(name="attend_word", string="""
         =g>
         isa     read
         state   start
+        =visual_location>
+        isa    _visuallocation
         ?visual>
-        state   auto_buffering
+        state   free
+        buffer  empty
         ==>
         =g>
         isa     read
-        state   attend_let
-        +visual>""")
+        state   start
+        +visual>
+        isa     _visual
+        cmd     move_attention
+        screen_pos =visual_location
+        ~visual_location>""")
 
 parser.productionstring(name="encode_word", string="""
         =g>
         isa     read
-        state   attend_let
+        state   start
         =visual>
         isa     _visual
-        object  =word
+        value   =val
         ==>
         =g>
         isa     read
         state   analyze
-        word    =word""")
+        word    =val
+        ~visual>""")
 
 parser.productionstring(name="retrieve category", string="""
         =g>
@@ -81,7 +68,7 @@ parser.productionstring(name="retrieve category", string="""
         ==>
         =g>
         isa         read
-        state        retrieving
+        state       retrieving
         +retrieval>
         isa         word
         form        =w""")
@@ -99,7 +86,7 @@ parser.productionstring(name="project word", string="""
         ==>
         =g>
         isa         read
-        state        syntax
+        state       syntax
         =g2>
         isa         parsing
         cat         =y""")
@@ -302,8 +289,8 @@ parser.productionstring(name="press a key", string="""
         state   start
         +manual>
         isa     _manual
-        cmd     'presskey'
-        key     'a'""")
+        cmd     'press_key'
+        key     A""")
 
 parser.productionstring(name="finished", string="""
         =g>
@@ -321,7 +308,8 @@ parser.productionstring(name="finished", string="""
         ~g>""")
 
 if __name__ == "__main__":
-    sim = parser.simulation(realtime=True, environment_process=environ.environment_process, start_time=0)
+    stimuli = [{1: {'text': 'Mary', 'position': (320, 180)}}, {1: {'text': 'likes', 'position': (320, 180)}}, {1: {'text': 'Bill', 'position': (320, 180)}}]
+    sim = parser.simulation(realtime=True, environment_process=environment.environment_process, stimuli=stimuli, triggers='A', times=10)
     sim.run()
     print(dm)
 

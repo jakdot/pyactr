@@ -49,11 +49,22 @@ class ACTRModel(object):
     def __init__(self, environment=None, **kwargs):
 
         self.chunktype = chunks.chunktype
-        self.DecMem = declarative.DecMem
         self.chunkstring = chunks.chunkstring
 
         self.__buffers = {}
-        self._visbuffers = {}
+        
+        self.visbuffers = {}
+
+        self.goals = {}
+        self.goal = 'g'
+
+        self.retrievals = {}
+        self.retrieval = 'retrieval'
+
+        self.__decmemcount = 0
+        
+        self.decmems = {}
+        self.decmem = None #if no dm created, create it now
 
         self.__productions = productions.Productions()
         self.__similarities = {}
@@ -68,22 +79,51 @@ class ACTRModel(object):
 
         self.__env = environment
     
-    def dmBuffer(self, name, declarative_memory, data=None, finst=0):
+    @property
+    def retrieval(self):
         """
-        Creates and returns declarative memory buffer for ACTRModel.
+        Retrieval in the model.
         """
-        dmb = declarative.DecMemBuffer(declarative_memory, data, finst)
-        self.__buffers[name] = dmb
-        return dmb
+        return self.__retrieval
 
-    def goal(self, name, data=None, default_harvest=None, set_delay=0):
+    @retrieval.setter
+    def retrieval(self, name):
+        dmb = declarative.DecMemBuffer()
+        self.__buffers[name] = dmb
+        self.__retrieval = dmb
+        self.retrievals[name] = dmb
+
+    @property
+    def decmem(self):
         """
-        Creates and returns goal buffer for ACTRModel.
+        Declarative memory in the model.
         """
-        g = goals.Goal(data, default_harvest, set_delay)
+        return self.__decmem
+
+    @decmem.setter
+    def decmem(self, data):
+        dm = declarative.DecMem(data)
+        self.__decmem = dm
+        if self.__decmemcount > 0:
+            self.decmems["".join(["decmem", str(self.__decmemcount)])] = dm
+        else:
+            self.decmems["decmem"] = dm
+        self.__decmemcount += 1
+
+    @property
+    def goal(self):
+        """
+        Goal buffer in the model.
+        """
+        return self.__goal
+
+    @goal.setter
+    def goal(self, name):
+        g = goals.Goal()
         self.__buffers[name] = g
-        return g
-    
+        self.__goal = g
+        self.goals[name] = g
+
     def visualBuffer(self, name_visual, name_visual_location, default_harvest=None, finst=4):
         """
         Creates and returns visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned. Finst is relevant only for the visual location buffer.
@@ -151,19 +191,25 @@ class ACTRModel(object):
         """
         Returns a simulation that has to be run with simulation.run(max_time) command.
         """
-        decmem = {name: self.__buffers[name].dm for name in self.__buffers\
-                if self.__buffers[name].dm != None} #dict of declarative memories used
 
-        if not decmem:
-            decmem = {"default_dm": self.DecMem()}
+        if len(self.decmems) == 1:
+            for key in self.__buffers:
+                self.__buffers[key].dm = self.decmem #if only one dm, let all buffers use it
+        elif len([x for x in self.decmems.values() if x]) == 1:
+            for key in self.__buffers:
+                if not self.__buffers[key].dm:
+                    self.__buffers[key].dm = self.decmem #if only one non-trivial dm, let buffers use it that do not have a dm specified
+
+        decmem = {name: self.__buffers[name].dm for name in self.__buffers\
+                if self.__buffers[name].dm != None} #dict of declarative memories used; more than 1 decmem might appear here
 
         self.__buffers["manual"] = motor.Motor() #adding motor buffer
 
         if self.__env:
-            if self._visbuffers:
-                self.__buffers.update(self._visbuffers)
+            if self.visbuffers:
+                self.__buffers.update(self.visbuffers)
             else:
-                dm = next(iter(decmem.values()))
+                dm = list(decmem.values())[0]
                 self.__buffers["visual"] = vision.Visual(self.__env, dm) #adding vision buffers
                 self.__buffers["visual_location"] = vision.VisualLocation(self.__env, dm) #adding vision buffers
 

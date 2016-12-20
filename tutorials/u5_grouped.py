@@ -27,7 +27,8 @@ class Model(object):
         group2 = actr.makechunk(nameofchunk="group2", typename="group", parent=li, position=self.dictchunks[2], id="group2")
         group3 = actr.makechunk(nameofchunk="group3", typename="group", parent=li, position=self.dictchunks[3], id="group3")
 
-        self.dm = self.model.DecMem(set(self.dictchunks.values()))
+        self.model.decmem =  set(self.dictchunks.values())
+        self.dm = self.model.decmem
         self.dm.add(set([group1, group2, group3]))
         self.dm.add(li)
 
@@ -43,10 +44,9 @@ class Model(object):
         for n in range(7,10):
             self.dm.add(actr.makechunk(typename="item", name=n, group=group3, position=self.dictchunks[(n+1)%7]))
 
-        self.retrieval = self.model.dmBuffer("retrieval", self.dm, finst=15)
+        self.model.retrieval.finst = 15
 
-        g = self.model.goal("g")
-        g.add(actr.makechunk(typename="recall_list", list=li))
+        self.model.goal.add(actr.makechunk(typename="recall_list", list=li))
 
         self.model.productionstring(name="recall_first_group", string="""
         =g>

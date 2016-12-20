@@ -11,12 +11,7 @@ class Model(object):
     def __init__(self, **kwargs):
         self.m = actr.ACTRModel(**kwargs)
 
-        self.dm = self.m.DecMem()
-
-        self.m.dmBuffer("retrieval", self.dm)
-
-        g = self.m.goal("g")
-        g.add(actr.makechunk(typename="start", state="start"))
+        self.m.goal.add(actr.makechunk(typename="start", state="start"))
 
         self.m.productionstring(name="one", string="""
         =g>
@@ -51,5 +46,5 @@ if __name__ == "__main__":
     print(m.m._ACTRModel__productions)
     sim.run(1)
     print(m.m._ACTRModel__productions)
-    print(m.dm)
+    print(m.m.decmem)
 

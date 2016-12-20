@@ -3,7 +3,6 @@ ACT-R simulations.
 """
 
 import warnings
-import math
 
 try:
     import tkinter as tk
@@ -248,7 +247,7 @@ class Simulation(object):
             self.__simulation.run(max_time)
         else:
             self.__runGUI__()
-        if self.__simulation.peek() == math.inf:
+        if self.__simulation.peek() == float("inf"):
             self.__pr.compile_rules() #at the end of the simulation, run compilation (the last two rules are not yet compiled)
     
     def show_time(self):
@@ -271,7 +270,7 @@ class Simulation(object):
             if self.current_event and self.current_event.action != self._UNKNOWN and self.current_event != self.__last_event:
                 self.__last_event = self.current_event
                 break
-            if self.__simulation.peek() == math.inf:
+            if self.__simulation.peek() == float("inf"):
                 self.__pr.compile_rules() #at the end of the simulation, run compilation (the last two rules are not yet compiled)
 
 

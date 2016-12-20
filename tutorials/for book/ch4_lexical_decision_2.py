@@ -110,13 +110,14 @@ if __name__ == "__main__":
     for lemma in FREQ:
         print(lemma)
         for _ in range(10):
-            dm = model.DecMem()
+            model.decmems = {}
+            model.decmem = None
+            dm = model.decmem
             for _ in range(int(FREQ[lemma])):
                 dm.add(actr.makechunk(typename="word", form=lemma), time=random.randint(-SEC_IN_TIME, 0))
             word = {1: {'text': lemma, 'position': (320, 180)}}
-            retrieval = model.dmBuffer("retrieval", dm)
-            g = model.goal("g", default_harvest=dm)
-            g.add(actr.makechunk(nameofchunk='start', typename="goal", state='start'))
+            retrieval = model.retrieval
+            model.goal.add(actr.makechunk(nameofchunk='start', typename="goal", state='start'))
             environment.current_focus = [320,180]
             sim = model.simulation(realtime=False, gui=True, trace=False, environment_process=environment.environment_process, stimuli=word, triggers='', times=2)
             while True:

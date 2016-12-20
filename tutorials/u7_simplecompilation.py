@@ -15,13 +15,7 @@ class Compilation1(object):
         actr.chunktype("state", "starting ending")
         self.m = actr.ACTRModel(**kwargs)
 
-
-        self.dm = self.m.DecMem()
-
-        self.m.dmBuffer("retrieval", self.dm)
-
-        self.g = self.m.goal("g")
-        self.g.add(actr.makechunk(nameofchunk="start", typename="state", starting=1))
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1))
 
         self.m.productionstring(name="one", string="""
             =g>

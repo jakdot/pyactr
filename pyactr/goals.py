@@ -14,9 +14,37 @@ class Goal(buffers.Buffer):
     Goal buffer module.
     """
 
-    def __init__(self, data=None, default_harvest=None, set_delay=0.05):
+    def __init__(self, data=None, default_harvest=None, delay=0):
         buffers.Buffer.__init__(self, default_harvest, data)
-        self.set_delay = set_delay
+        self.delay = delay
+
+    @property
+    def delay(self):
+        """
+        Delay (in s) to create chunks in the goal buffer.
+        """
+        return self.__delay
+
+    @delay.setter
+    def delay(self, value):
+        if value >= 0:
+            self.__delay = value
+        else:
+            raise ValueError('Delay in the goal buffer must be >= 0')
+
+    @property
+    def default_harvest(self):
+        """
+        Default harvest of goal buffer.
+        """
+        return self.dm
+
+    @default_harvest.setter
+    def default_harvest(self, value):
+        try:
+            self.dm = value
+        except ValueError:
+            raise ACTRError('The default harvest set in a goal buffer is not a possible declarative memory')
 
     def add(self, elem, time=0, harvest=None):
         """

@@ -21,12 +21,8 @@ class Model(object):
         
         actr.chunktype("goal", "state")
 
-        self.dm = self.m.DecMem()
+        self.dm = self.m.decmem
 
-        retrieval = self.m.dmBuffer("retrieval", self.dm)
-
-        g = self.m.goal("g")
-        self.m.goal("g2", set_delay=0.2)
         start = actr.makechunk(nameofchunk="start", typename="chunk", value="start")
         actr.makechunk(nameofchunk="attending", typename="chunk", value="attending")
         actr.makechunk(nameofchunk="testing", typename="chunk", value="testing")
@@ -34,7 +30,9 @@ class Model(object):
         actr.makechunk(nameofchunk="study", typename="chunk", value="study")
         actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
-        g.add(actr.makechunk(typename="read", state=start))
+        self.m.goal.add(actr.makechunk(typename="read", state=start))
+        self.m.goal = "g2"
+        self.m.goals["g2"].delay=0.2
 
         self.m.productionstring(name="find_probe", string="""
         =g>

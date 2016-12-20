@@ -10,16 +10,12 @@ actr.chunktype("countOrder", ("first", "second"))
 
 actr.chunktype("add", ("arg1", "arg2", "sum", "count"))
 
-dm = addition.DecMem()
+dm = addition.decmem
 
 for i in range(0, 11):
     dm.add(actr.makechunk("chunk"+str(i), "countOrder", first=i, second=i+1))
 
-retrieval = addition.dmBuffer("retrieval", dm)
-    
-g = addition.goal("g")
-
-g.add(actr.makechunk("", "add", arg1=5, arg2=2))
+addition.goal.add(actr.makechunk("", "add", arg1=5, arg2=2))
 
 addition.productionstring(name="init_addition", string="""
         =g>
