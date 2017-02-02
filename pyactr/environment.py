@@ -37,6 +37,20 @@ class Environment(object):
         self.simulated_screen_size = simulated_screen_size
         self.viewing_distance = viewing_distance
 
+    @property
+    def current_focus(self):
+        """
+        Current focus of the vision module in the environment.
+        """
+        return self.__current_focus
+
+    @current_focus.setter
+    def current_focus(self, value):
+        if isinstance(value, collections.Iterable) and len(value) == 2:
+            self.__current_focus = list(value)
+        else:
+            raise ValueError('Current focus in the environment not defined properly. It must be a tuple.')
+
     def roundtime(self, time):
         """
         Returns rounded time.

@@ -14,7 +14,7 @@ dm = model.decmem
 for i in {"elephant", "dog", "crocodile"}:
     dm.add(actr.makechunk(typename="word", form=i))
 
-model.g.add(actr.makechunk(nameofchunk='start', typename="goal", state='start'))
+model.goal.add(actr.makechunk(nameofchunk='start', typename="goal", state='start'))
 
 model.productionstring(name="find_word", string="""
     =g>

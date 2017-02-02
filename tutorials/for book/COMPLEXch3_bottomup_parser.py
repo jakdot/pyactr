@@ -21,8 +21,9 @@ parser.goal.add(actr.chunkstring(string="""
         isa     read
         state   start
         goal_cat 'S'"""))
-parser.goal = "g2"
-parser.goals["g2"].add(actr.chunkstring(string="""
+parser.goal ="g2"
+parser.goal.delay = 0.2
+parser.goal.add(actr.chunkstring(string="""
         isa     parsing"""))
 
 

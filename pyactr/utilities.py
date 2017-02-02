@@ -54,6 +54,7 @@ VISIONGREATER = ">" #
 VISIONLOWEST = "lowest" #
 VISIONHIGHEST = "highest" #
 VISIONCLOSEST = "closest" #
+VISIONONEWAYCLOSEST = "onewayclosest" #
 
 #for Events
 
@@ -375,16 +376,14 @@ def match(dict2, slotvals, name1, name2):
             
 
 
-def modify_utilities(time, reward, rules, model_parameters):
+def modify_utilities(time, reward, rulenames, rules, model_parameters):
     """
-    Returns a new dict of rules, updated with newly calculated utilites for rules whose firing led to reward.
+    Updates rules with newly calculated utilites for rules whose firing led to reward.
     """
-    for rulename in rules:
-        if rules[rulename]["selecting_time"] != []:
-            for t in rules[rulename]["selecting_time"]:
-                utility_time = time-t
-                rules[rulename]["utility"] = round(rules[rulename]["utility"] + model_parameters["utility_alpha"]*(reward-utility_time-rules[rulename]["utility"]), 4)
-            rules[rulename]["selecting_time"] = []
+    for rulename in rulenames:
+        for t in rulenames[rulename]:
+            utility_time = time-t
+            rules[rulename]["utility"] = round(rules[rulename]["utility"] + model_parameters["utility_alpha"]*(reward-utility_time-rules[rulename]["utility"]), 4)
 
 def calculate_setting_time(updated, model_parameters):
     """
@@ -449,15 +448,19 @@ def calculate_strength_association(chunk, otherchunk, dm, strength_of_associatio
     """
     Calculates S_{ji} = S - ln((1+slots_j)/slots_ij), where j=chunk, i=otherchunk
     """
-    if chunk != otherchunk and chunk not in otherchunk._asdict().values():
+    if otherchunk.typename == VARVAL:
+        otherchunk = splitting(x[1])['values'].pop()
+    slotvalues = find_chunks(otherchunk)
+    if chunk != otherchunk and chunk not in slotvalues:
         return 0
     else:
-        slots_j = 0
+        slots_j = 1
         for each in dm:
-            if chunk in set(x[1] for x in each):
-                slots_j += list(x[1] for x in each).count(chunk)
-    slots_ij = list(otherchunk._asdict().values()).count(chunk)
-    return strength_of_association - math.log((1 + slots_j)/max(1, slots_ij))
+            for x in each:
+                if chunk == splitting(x[1])['values'].pop():
+                    slots_j += 1
+    slots_ij = slotvalues.count(chunk)
+    return strength_of_association - math.log(slots_j/max(1, slots_ij))
 
 def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, strength):
     """
@@ -509,7 +512,7 @@ def calculate_visual_angle(start_position, final_position, screen_size, simulate
     distance = math.sqrt(distance_sqrd) #distance in pxs
     pxpercm = float(screen_size[0])/float(simulated_screen_size[0])
     distance = distance / pxpercm #distance in cm
-    return math.atan2(distance, viewing_distance) #50 cm distance
+    return math.atan2(distance, viewing_distance) 
 
 def calculate_distance(angle_degree, screen_size, simulated_screen_size, viewing_distance):
     """
@@ -532,6 +535,21 @@ def calculate_pythagorian_distance(x, y):
 
     dist_sqrd = (x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2
     return math.sqrt(dist_sqrd)
+
+def calculate_onedimensional_distance(x, y, horizontal=True):
+    """
+    x and y are 2D positions. horizontal checks whether we measure horizontal or vertical distance.
+    """
+    x = list(x)
+    y = list(y)
+    x[0] = float(x[0])
+    x[1] = float(x[1])
+    y[0] = float(y[0])
+    y[1] = float(y[1])
+    if horizontal:
+        return abs(x[0] - y[0])
+    else:
+        return abs(x[1] - y[1])
 
 def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, frequency=None):
     """

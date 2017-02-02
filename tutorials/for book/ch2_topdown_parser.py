@@ -9,7 +9,7 @@ actr.chunktype("sentence", "word1 word2 word3")
 
 parser = actr.ACTRModel()
 
-dm = parser.DecMem()
+dm = parser.decmem
 dm.add(actr.chunkstring(string="isa word form 'Mary' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'Bill' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'likes' cat 'V'"))
@@ -102,13 +102,13 @@ parser.productionstring(name="scan: string", string="""
         isa         parsing
         task        print
         stack_top   =x
-        stack_bottom empty
+        stack_bottom None
         parsed_word =w1
         =g2>
         isa         sentence
         word1       =w2
         word2       =w3
-        word3       empty
+        word3       None
     """)
 
 parser.productionstring(name="expand: VP -> V NP", string="""
@@ -129,7 +129,7 @@ parser.productionstring(name="print parsed word", string="""
         task        print
         =g2>
         isa         sentence
-        word1      ~empty
+        word1      ~None
         ==>
         =g2>
         isa         sentence
@@ -146,7 +146,7 @@ parser.productionstring(name="done", string="""
         task        print
         =g2>
         isa         sentence
-        word1       empty
+        word1       None
         ==>
         !g>
         show        parsed_word

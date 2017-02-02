@@ -71,8 +71,6 @@ class Counting_stringversion(object):
                 first 4\
                 second 5"))
 
-    
-
         self.model.chunktype("countFrom", ("start", "end", "count"))
         self.model.goal.add(self.model.chunkstring(string="\
                 isa countFrom\
@@ -917,7 +915,6 @@ class Compilation11(object):
     def __init__(self, **kwargs):
         actr.chunktype("state", "starting ending")
         self.m = actr.ACTRModel(**kwargs)
-
 
         self.dm = self.m.decmem
 

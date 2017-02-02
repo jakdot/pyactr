@@ -132,9 +132,16 @@ class Chunk(collections.Sequence):
                             try:
                                 varval[idx+1][1].add(self.boundvars[utilities.ACTRVARIABLE + value]) #add value based on a variable
                             except KeyError:
-                                yield tuple([x[0], tuple([varval[idx][0], hash(value)])]) #get hash of variable if it is not bound
+                                if x[0]:
+                                    yield tuple([x[0], tuple([varval[idx][0], hash(value)])]) #get hash of variable if it is not bound
+                                else:
+                                    yield tuple([varval[idx][0], hash(value)])
                         else:
-                            yield tuple([x[0], tuple([varval[idx][0], hash(value)])]) #values get their hash directly
+                            if x[0]:
+                                yield tuple([x[0], tuple([varval[idx][0], hash(value)])]) #values get their hash directly
+                            else:
+                                yield tuple([varval[idx][0], hash(value)])
+
         return hash(tuple(func()))
 
     def __iter__(self):
@@ -146,7 +153,11 @@ class Chunk(collections.Sequence):
 
     def __repr__(self):
         reprtxt = ""
-        for x, y in self:
+        if self.typename == utilities.VARVAL:
+            printed_chunk = [["", self]] #change varval into a primitive pair; this ensures that if the chunk itself is varval, it is printed in the user-friendly form, see the following loop
+        else:
+            printed_chunk = self
+        for x, y in printed_chunk:
             try:
                 if y.typename == utilities.VARVAL:
                     temp = y.removeunused()
@@ -171,12 +182,16 @@ class Chunk(collections.Sequence):
             except AttributeError:
                 if y == None:
                     y = ""
-                pass
             if reprtxt:
                 reprtxt = ", ".join([reprtxt, '%s= %s' % (x, y)])
-            else:
+            elif x:
                 reprtxt = '%s= %s' % (x, y)
-        return "".join([self.typename, "(", reprtxt, ")"])
+            else:
+                reprtxt = '%s' % y
+        if self.typename != utilities.VARVAL:
+            return "".join([self.typename, "(", reprtxt, ")"])
+        else:
+            return reprtxt
 
     def __lt__(self, otherchunk):
         """
@@ -185,11 +200,8 @@ class Chunk(collections.Sequence):
         if self == otherchunk:
             return False
         else:
-            final_val = self.match(otherchunk)
-        if final_val < 0:
-            return False
-        else:
-            return True
+            final_val = self.match(otherchunk, partialmatching=False)
+            return final_val
 
     def __le__(self, otherchunk):
         """
@@ -200,7 +212,7 @@ class Chunk(collections.Sequence):
         else:
             return self < otherchunk
 
-    def match(self, otherchunk):
+    def match(self, otherchunk, partialmatching):
         """
         Checks partial match (given bound variables in boundvars).
         """
@@ -230,10 +242,16 @@ class Chunk(collections.Sequence):
                 for var in varval["variables"]:
                     for each in self.boundvars.get("~=" + var, set()):
                         if each == matching_val:
-                            similarity += utilities.get_similarity(self._similarities, each, matching_val) #False if otherchunk's value among the values of ~=x
+                            if partialmatching:
+                                similarity += utilities.get_similarity(self._similarities, each, matching_val) #False if otherchunk's value among the values of ~=x
+                            else:
+                                return False
                     try:
                         if self.boundvars["=" + var] != matching_val:
-                            similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val) #False if =x does not match otherchunks' value
+                            if partialmatching:
+                                similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val) #False if =x does not match otherchunks' value
+                            else:
+                                return False
                     except KeyError:
                         self.boundvars.update({"=" + var: matching_val}) #if boundvars lack =x, update and proceed
 
@@ -242,7 +260,10 @@ class Chunk(collections.Sequence):
                 for var in varval["negvariables"]:
                     try:
                         if self.boundvars["=" + var] == matching_val:
-                            similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val) #False if =x does not match otherchunks' value
+                            if partialmatching:
+                                similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val) #False if =x does not match otherchunks' value
+                            else:
+                                return False
                     except KeyError:
                         pass
                     self.boundvars.setdefault("~=" + var, set([])).add(matching_val)
@@ -252,13 +273,22 @@ class Chunk(collections.Sequence):
             if varval["values"]:
                 val = varval["values"].pop()
                 if val != None and val != matching_val: #None is the misssing value of the attribute
-                    similarity += utilities.get_similarity(self._similarities, val, matching_val) 
+                    if partialmatching:
+                        similarity += utilities.get_similarity(self._similarities, val, matching_val) 
+                    else:
+                        return False
             #checking negvalues, e.g., ~!10
             if varval["negvalues"]:
                 for negval in varval["negvalues"]:
                     if negval == matching_val:
-                       similarity += utilities.get_similarity(self._similarities, negval, matching_val)
-        return similarity
+                        if partialmatching:
+                            similarity += utilities.get_similarity(self._similarities, negval, matching_val)
+                        else:
+                            return False
+        if partialmatching:
+            return similarity
+        else:
+            return True
 
     def removeempty(self):
         """

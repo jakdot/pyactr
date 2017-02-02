@@ -94,7 +94,7 @@ class DecMemBuffer(buffers.Buffer):
     @property
     def decmem(self):
         """
-        Default harvest of goal buffer.
+        Default harvest of retrieval buffer.
         """
         return self.dm
 
@@ -103,7 +103,7 @@ class DecMemBuffer(buffers.Buffer):
         try:
             self.dm = value
         except ValueError:
-            raise ACTRError('The default harvest set in a goal buffer is not a possible declarative memory')
+            raise ACTRError('The default harvest set in the retrieval buffer is not a possible declarative memory')
 
     def add(self, elem, time=0):
         """
@@ -164,7 +164,7 @@ class DecMemBuffer(buffers.Buffer):
             if model_parameters["subsymbolic"]: #if subsymbolic, check activation
                 A_pm = 0
                 if model_parameters["partial_matching"]:
-                    A_pm = chunk_tobe_matched.match(chunk)
+                    A_pm = chunk_tobe_matched.match(chunk, partialmatching=True)
                 else:
                     if not chunk_tobe_matched <= chunk:
                         continue

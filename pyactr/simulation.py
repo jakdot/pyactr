@@ -7,7 +7,7 @@ import warnings
 try:
     import tkinter as tk
 except ImportError:
-    warnings.warn("Simulation cannot start a new window because tkinter is not installed. You will have no GUI for environment. If you want to change that, install tkinter.")
+    warnings.warn("Simulation cannot start a new window because tkinter is not installed. This does not affect ACT-R models in any way, but you will see no separate window for environment. If you want to change that, install tkinter.")
     warnings.warn("Simulation GUI is set to False.")
     GUI = False
 else:
@@ -17,11 +17,13 @@ if GUI:
     import threading
     import queue
     import time
+    import textwrap
 
 import simpy
 
 import pyactr.utilities as utilities
 import pyactr.vision as vision
+import pyactr.chunks as chunks
 
 class Simulation(object):
     """
@@ -79,6 +81,7 @@ class Simulation(object):
         #here below -- simulation values, accesible by user
         self.current_event = None
         self.now = self.__simulation.now
+        self.textwrap = 0
 
     def __activate__(self, event):
         """
@@ -202,7 +205,10 @@ class Simulation(object):
         if event.action != self.__pr._UNKNOWN:
             self.current_event = event
             if self.__trace and not self.gui:
-                print(event[0:3])
+                if self.textwrap:
+                    print(textwrap.TextWrapper(subsequent_indent="    ", width=self.textwrap).fill(str(event[0:3])))
+                else:
+                    print(event[0:3])
     
     def __printenv__(self, event):
         """
@@ -339,7 +345,10 @@ class Simulation(object):
                 old_time = self.current_event.time
                 if self.__trace:
                     if self.current_event.proc != utilities._ENV:
-                        print(self.current_event[0:3])
+                        if self.textwrap:
+                            print(textwrap.TextWrapper(subsequent_indent="    ", width=self.textwrap).fill(str(self.current_event[0:3])))
+                        else:
+                            print(self.current_event[0:3])
             if self.__env.stimulus and old_stimulus != self.__env.stimulus:
                 old_stimulus = self.__env.stimulus
                 self.__queue.put({"stim": self.__env.stimulus})

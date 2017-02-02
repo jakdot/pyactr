@@ -10,7 +10,7 @@ actr.chunktype("read", "state word goal_cat")
 actr.chunktype("parsing", "top middle bottom")
 actr.chunktype("word", "form cat")
 
-parser = actr.ACTRModel(environment, motor_prepared=True)
+parser = actr.ACTRModel(environment, motor_prepared=True, subsymbolic=True)
 
 parser.decmem.add(actr.chunkstring(string="isa word form 'Mary' cat 'ProperN'"))
 parser.decmem.add(actr.chunkstring(string="isa word form 'Bill' cat 'ProperN'"))
@@ -20,9 +20,8 @@ parser.goal.add(actr.chunkstring(string="""
         isa     read
         state   start
         goal_cat 'S'"""))
-parser.goal ="g2"
-parser.goal.delay = 0.2
-parser.goal.add(actr.chunkstring(string="""
+parser.goal = "g2"
+parser.goals["g2"].add(actr.chunkstring(string="""
         isa     parsing"""))
 parser.goals["g2"].delay = 0.2
 
@@ -52,7 +51,7 @@ parser.productionstring(name="retrieve category", string="""
         +retrieval>
         isa         word
         form        =w""")
-            
+             
 parser.productionstring(name="shift word and project it", string="""
         =g>
         isa         read
@@ -60,7 +59,6 @@ parser.productionstring(name="shift word and project it", string="""
         =retrieval>
         isa         word
         cat         =y
-        cat         ~'V'
         =g2>
         isa         parsing
         ==>
@@ -70,24 +68,6 @@ parser.productionstring(name="shift word and project it", string="""
         =g2>
         isa         parsing
         top         =y
-        ~retrieval>""")
-
-parser.productionstring(name="shift V and project it", string="""
-        =g>
-        isa         read
-        state       retrieving
-        =retrieval>
-        isa         word
-        cat         'V'
-        =g2>
-        isa         parsing
-        ==>
-        =g>
-        isa         read
-        state       clean
-        =g2>
-        isa         parsing
-        top         'V'
         ~retrieval>""")
 
 parser.productionstring(name="reduce: NP -> ProperN", string="""
@@ -105,19 +85,6 @@ parser.productionstring(name="reduce: NP -> ProperN", string="""
         isa         read
         state       syntax""")
 
-parser.productionstring(name="prepare cleaning", string="""
-        =g>
-        isa         read
-        state       syntax
-        =g2>
-        isa         parsing
-        top         'NP'
-        middle      None
-        ==>
-        =g>
-        isa         read
-        state       clean""")
-
 parser.productionstring(name="reduce: VP -> V NP", string="""
         =g>
         isa         read
@@ -133,25 +100,6 @@ parser.productionstring(name="reduce: VP -> V NP", string="""
         =g>
         isa         read
         state       syntax""")
-
-parser.productionstring(name="clean stack", string="""
-        =g>
-        isa         read
-        state       clean
-        =g2>
-        isa         parsing
-        top         =t
-        middle      =m
-        bottom      =b
-        ==>
-        ~g2>
-        =g>
-        isa         read
-        state       done
-        +g2>
-        isa         parsing
-        middle      =t
-        bottom      =m""")
 
 parser.productionstring(name="reduce: S->NP VP", string="""
         =g>
@@ -170,6 +118,25 @@ parser.productionstring(name="reduce: S->NP VP", string="""
         isa         read
         state       done
     """)
+
+parser.productionstring(name="clean stack", string="""
+        =g>
+        isa         read
+        state       syntax
+        =g2>
+        isa         parsing
+        top         =t
+        middle      =m
+        bottom      =b
+        ==>
+        ~g2>
+        =g>
+        isa         read
+        state       done
+        +g2>
+        isa         parsing
+        middle      =t
+        bottom      =m""", utility=-10)
 
 
 parser.productionstring(name="press a key", string="""
@@ -201,6 +168,6 @@ parser.productionstring(name="finished", string="""
 
 if __name__ == "__main__":
     stimuli = [{1: {'text': 'Mary', 'position': (320, 180)}}, {1: {'text': 'likes', 'position': (320, 180)}}, {1: {'text': 'Bill', 'position': (320, 180)}}]
-    sim = parser.simulation(realtime=True, gui=True, environment_process=environment.environment_process, stimuli=stimuli, triggers='A', times=10)
+    sim = parser.simulation(realtime=True, gui=False, environment_process=environment.environment_process, stimuli=stimuli, triggers='A', times=10)
     sim.run(2)
     print(parser.decmem)

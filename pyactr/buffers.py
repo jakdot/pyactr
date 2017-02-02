@@ -75,7 +75,12 @@ class Buffer(collections.MutableSet):
         """
         if self._data:
             chunk = self._data.copy().pop()
-        print(getattr(chunk, attr))
+        else:
+            chunk = None
+        try:
+            print(" ".join([str(attr), str(getattr(chunk, attr))]))
+        except AttributeError:
+            print(attr)
 
     def test_buffer(self, inquiry):
         """

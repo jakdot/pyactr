@@ -986,6 +986,10 @@ class TestSourceActivation(unittest.TestCase):
         self.nineth = chunks.makechunk("","first", x=chunks.makechunk("","t2", x=10), y=chunks.makechunk("","abc"))
         self.tenth = chunks.makechunk("","first", x=chunks.makechunk("","t2", x=10), y=chunks.makechunk("","abc"), z=chunks.makechunk("","d"))
         self.eleventh = chunks.makechunk("","nnn", x=chunks.makechunk("","t2", x=10), y=chunks.makechunk("","abc"), z=chunks.makechunk("","d"))
+        self.twelve = chunks.chunkstring("","isa first x 2 y None")
+        self.thirteenth = chunks.chunkstring("aaaa","isa first x 2 y 5")
+        self.fourteenth = chunks.chunkstring("","isa first x aaaa y 5")
+        self.fiveteenth = chunks.chunkstring("","isa first x =x x aaaa y 5")
 
     def test_chunks(self):
         self.assertEqual(util.weigh_buffer(self.first, 1), 0)
@@ -1001,6 +1005,10 @@ class TestSourceActivation(unittest.TestCase):
         self.assertEqual(util.weigh_buffer(self.eleventh, 6), 2)
         self.assertEqual(round(util.weigh_buffer(self.tenth, 1), 5), 0.33333)
         self.assertEqual(round(util.weigh_buffer(self.eleventh, 1), 5), 0.33333)
+        self.assertEqual(util.weigh_buffer(self.twelve, 1), 0)
+        self.assertEqual(util.weigh_buffer(self.thirteenth, 1), 0)
+        self.assertEqual(util.weigh_buffer(self.fourteenth, 1), 1)
+        self.assertEqual(util.weigh_buffer(self.fiveteenth, 1), 1)
 
 class TestSourceActivation2(unittest.TestCase):
     """
@@ -1062,6 +1070,101 @@ class TestSourceActivation3(unittest.TestCase):
         self.ch4 = chunks.makechunk("","three", x=chunks.makechunk("","pres", pres="bush"), xx=chunks.makechunk("","pres", pres="bush"))
         self.dm.add(self.ch4)
         self.assertEqual(round(util.spreading_activation(self.ch4, self.buffers, self.dm, {"g2": 1}, 2), 6), 1.083709)
+
+class TestSourceActivation4(unittest.TestCase):
+    """
+    Testing strength association using chunkstring.
+    """
+
+    def setUp(self):
+        actr.chunktype("pres", "pres")
+        actr.chunktype("finding_pres", "person")
+        actr.chunktype("presidency_years", "value")
+        self.dm = declarative.DecMem({chunks.makechunk("","one", x=chunks.makechunk("","pres", pres="obama")): 0, chunks.makechunk("","one", x=chunks.makechunk("","pres", pres="bush")): 0, chunks.makechunk("","two", y=chunks.makechunk("","presidency_years", value=8), z=chunks.makechunk("","pres", pres="bush")): 0})
+        self.p = chunks.chunkstring(name="", string="isa pres pres obama")
+        self.p2 = chunks.chunkstring(name="", string="isa pres pres bush")
+        self.ret1 = chunks.chunkstring(name="", string="isa pres pres clinton")
+        self.ret2 = chunks.chunkstring(name="", string="isa pres pres bush")
+        self.ret3 = chunks.chunkstring(name="", string="isa pres pres obama")
+
+    def test_chunks(self):
+        self.assertEqual(util.calculate_strength_association(self.p, self.ret1, self.dm, 4), 0)
+        self.assertEqual(util.calculate_strength_association(self.p, self.ret2, self.dm, 4), 0)
+        self.assertEqual(round(util.calculate_strength_association(self.p2, self.ret2, self.dm, 4), 6), 2.901388)
+        self.assertEqual(round(util.calculate_strength_association(self.p, self.ret3, self.dm, 4), 6), 3.306853)
+
+class TestSourceActivation5(unittest.TestCase):
+    """
+    Testing strength association using chunkstring.
+    """
+
+    def setUp(self):
+        actr.chunktype("pres", "pres")
+        actr.chunktype("finding_pres", "person")
+        actr.chunktype("presidency_years", "value")
+        self.proob = chunks.makechunk("proob","pres", pres="obama")
+        self.proob2 = chunks.makechunk("proob2","pres", pres="clinton")
+        self.dm = declarative.DecMem({chunks.chunkstring("","isa one x proob"): 0, chunks.makechunk("","one", x=chunks.chunkstring("","isa pres pres bush")): 0, chunks.makechunk("","two", y=chunks.makechunk("","presidency_years", value=8), z=chunks.makechunk("","pres", pres="bush")): 0, chunks.makechunk("", "two", y=self.proob2, z=self.proob2): 0})
+        self.p = chunks.chunkstring(name="", string="isa pres pres obama")
+        self.p2 = chunks.chunkstring(name="", string="isa pres pres bush")
+        self.ret1 = chunks.chunkstring(name="", string="isa pres pres clinton")
+        self.ret2 = chunks.chunkstring(name="", string="isa pres pres bush")
+        self.ret3 = chunks.chunkstring(name="", string="isa pres pres obama")
+
+    def test_chunks(self):
+        self.assertEqual(util.calculate_strength_association(self.p, self.ret1, self.dm, 4), 0)
+        self.assertEqual(util.calculate_strength_association(self.p, self.ret2, self.dm, 4), 0)
+        self.assertEqual(round(util.calculate_strength_association(self.p2, self.ret2, self.dm, 4), 6), 2.901388)
+        self.assertEqual(round(util.calculate_strength_association(self.p, self.ret3, self.dm, 4), 6), 3.306853)
+        self.assertEqual(round(util.calculate_strength_association(self.proob2, self.ret1, self.dm, 4), 6), 2.901388)
+
+class TestSourceActivation6(unittest.TestCase):
+    """
+    Testing spreading activation using chunkstring.
+    """
+
+    def setUp(self):
+        actr.chunktype("pres", "pres")
+        actr.chunktype("finding_pres", "person, years")
+        actr.chunktype("presidency_years", "value")
+        actr.chunktype("one", "x")
+        actr.chunktype("two", "y, z")
+        chunks.chunkstring("proob", "isa pres pres obama")
+        self.ch1 = chunks.chunkstring("", "isa one x proob")
+        self.ch2 = chunks.makechunk("", "one", x=chunks.chunkstring("", "isa pres pres bush"))
+        self.ch3d = chunks.makechunk("", "two", y=chunks.makechunk("", "presidency_years", value=8), z=chunks.makechunk("","pres", pres="bush"))
+        self.ch5 = chunks.chunkstring("", "isa pres pres clinton")
+        chunks.makechunk("val8", "presidency_years", value=8)
+        chunks.makechunk("presbush","pres", pres="bush")
+        self.ch3 = chunks.chunkstring("", "isa two y val8 z presbush")
+        self.dm = declarative.DecMem({self.ch1: 0, self.ch2: 0, self.ch3d: 0, self.ch5: 0})
+        self.g = goals.Goal()
+        self.g.add(chunks.makechunk("","finding_pres", person=chunks.makechunk("","pres", pres="obama"), years="unknown"))
+        self.g2 = goals.Goal()
+        self.g2.add(chunks.chunkstring("","isa finding_pres person presbush years unknown"))
+        self.g3 = goals.Goal()
+        self.g3.add(chunks.makechunk("","finding_pres", person=chunks.makechunk("","pres", pres="bush"), years=chunks.makechunk("","presidency_years", value=8)))
+        self.g4 = goals.Goal()
+        self.g4.add(chunks.makechunk("","finding_pres", person=chunks.makechunk("","pres", pres="bush"), years=chunks.makechunk("","presidency_years", value=5)))
+        self.g5 = goals.Goal()
+        self.g5.add(chunks.chunkstring("","isa pres pres clinton"))
+        self.buffers = {"g": self.g, "g2": self.g2, "g3": self.g3, "g4": self.g4, "g5": self.g5}
+
+    def test_chunks(self):
+        self.assertEqual(round(util.spreading_activation(self.ch1, self.buffers, self.dm, {"g": 1}, 2), 6), 1.306853)
+        self.assertEqual(round(util.spreading_activation(self.ch2, self.buffers, self.dm, {"g": 1}, 2), 6), 0)
+        self.assertEqual(round(util.spreading_activation(self.ch1, self.buffers, self.dm, {"g2": 1}, 2), 6), 0)
+        self.assertEqual(round(util.spreading_activation(self.ch2, self.buffers, self.dm, {"g2": 1}, 2), 6), 0.901388)
+        self.assertEqual(round(util.spreading_activation(self.ch3, self.buffers, self.dm, {"g2": 1}, 2), 6), 0.901388)
+        self.assertEqual(round(util.spreading_activation(self.ch1, self.buffers, self.dm, {"g3": 1}, 2), 6), 0)
+        self.assertEqual(round(util.spreading_activation(self.ch2, self.buffers, self.dm, {"g3": 1}, 2), 6), 0.450694)
+        self.assertEqual(round(util.spreading_activation(self.ch3, self.buffers, self.dm, {"g3": 1}, 2), 6), 1.10412)
+        self.assertEqual(round(util.spreading_activation(self.ch3, self.buffers, self.dm, {"g2": 1, "g3": 1}, 2), 6), 2.005508)
+        self.assertEqual(round(util.spreading_activation(self.ch5, self.buffers, self.dm, {"g5": 1}, 2), 6), 0)
+        self.ch4 = chunks.makechunk("","three", x=chunks.makechunk("","pres", pres="bush"), xx=chunks.makechunk("","pres", pres="bush"))
+        self.dm.add(self.ch4)
+        self.assertEqual(round(util.spreading_activation(self.ch4, self.buffers, self.dm, {"g2": 1}, 2), 6), 1.083709)
+
 
 class TestProductionUtilities(unittest.TestCase):
     """
@@ -1598,7 +1701,7 @@ class TestCompilation11(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RULE RE-CREATED: one and two":
                 break
-        u2 = u1 + 0.2*(10-u1)
+        u2 = u1 + 0.2*(10 - u1)
         self.model._ACTRModel__productions.pop("two and one")
         self.assertEqual(new_rule["utility"], u2)
 

@@ -24,6 +24,34 @@ class VisualLocation(buffers.Buffer):
         self.recent = collections.deque()
         self.finst = finst
 
+    @property
+    def finst(self):
+        """
+        Finst - how many chunks are 'remembered' in declarative memory buffer.
+        """
+        return self.__finst
+
+    @finst.setter
+    def finst(self, value):
+        if value >= 0:
+            self.__finst = value
+        else:
+            raise ValueError('Finst in the dm buffer must be >= 0')
+
+    @property
+    def default_harvest(self):
+        """
+        Default harvest of visuallocation buffer.
+        """
+        return self.dm
+
+    @default_harvest.setter
+    def default_harvest(self, value):
+        try:
+            self.dm = value
+        except ValueError:
+            raise ACTRError('The default harvest set in the visuallocation buffer is not a possible declarative memory')
+
     def add(self, elem, found_stim, time=0, harvest=None):
         """
         Clears current buffer (into a memory) and adds a new chunk. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified as the argument of harvest.
@@ -78,6 +106,8 @@ class VisualLocation(buffers.Buffer):
         found = None
         found_stim = None
         closest = float("inf")
+        x_closest = float("inf")
+        y_closest = float("inf")
         current_x = None
         current_y = None
         for each in self.environment.stimulus:
@@ -111,6 +141,18 @@ class VisualLocation(buffers.Buffer):
                     continue
             except TypeError:
                 pass
+            
+            try: #checks on onewayclosest
+                if (chunk_used_for_search.screen_x == utilities.VISIONONEWAYCLOSEST) and utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=True) > x_closest:
+                    continue
+            except TypeError:
+                pass
+
+            try: #checks on onewayclosest
+                if (chunk_used_for_search.screen_y == utilities.VISIONONEWAYCLOSEST) and utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=False) > y_closest:
+                    continue
+            except TypeError:
+                pass
 
             try:
                 if extra_tests["attended"] == False or extra_tests["attended"] == 'False':
@@ -132,6 +174,8 @@ class VisualLocation(buffers.Buffer):
                 current_x = position[0]
                 current_y = position[1]
                 closest = utilities.calculate_pythagorian_distance(self.environment.current_focus, position)
+                x_closest = utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=True)
+                y_closest = utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=False)
 
         return found, found_stim
 
@@ -180,6 +224,21 @@ class Visual(buffers.Buffer):
         self.processor = self._FREE
         self.execution = self._FREE
         self.last_mvt = 0
+
+    @property
+    def default_harvest(self):
+        """
+        Default harvest of visual buffer.
+        """
+        return self.dm
+
+    @default_harvest.setter
+    def default_harvest(self, value):
+        try:
+            self.dm = value
+        except ValueError:
+            raise ACTRError('The default harvest set in the visual buffer is not a possible declarative memory')
+
 
     def add(self, elem, time=0, harvest=None):
         """

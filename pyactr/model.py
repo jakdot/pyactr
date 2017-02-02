@@ -19,6 +19,32 @@ import pyactr.simulation as simulation
 class ACTRModel(object):
     """
     ACT-R model, running ACT-R simulations.
+
+    model_parameters and their default values are:
+    {"subsymbolic": False,
+    "rule_firing": 0.05,
+    "latency_factor": 0.1,
+    "latency_exponent": 1.0,
+    "decay": 0.5,
+    "baselevel_learning": True,
+    "instantaneous_noise" : 0,
+    "retrieval_threshold" : 0,
+    "buffer_spreading_activation" : {},
+    "strength_of_association": 0,
+    "partial_matching": False,
+    "activation_trace": False,
+    "utility_noise": 0,
+    "utility_learning": False,
+    "utility_alpha": 0.2,
+    "motor_prepared": False,
+    "strict_harvesting": False,
+    "production_compilation": False,
+    "automatic_visual_search": True,
+    "emma": True,
+    "emma_noise": True,
+    "eye_mvt_angle_parameter": 1,
+    "eye_mvt_scaling_parameter": 0.01
+    }
     """
 
     MODEL_PARAMETERS = {"subsymbolic": False,
@@ -46,7 +72,7 @@ class ACTRModel(object):
                 "eye_mvt_scaling_parameter": 0.01, #in LispACT-R: 0.01, but dft frequency -- 0.01 -- 0.05 would roughly correspond to their combination in EMMA
                 }
 
-    def __init__(self, environment=None, **kwargs):
+    def __init__(self, environment=None, **model_parameters):
 
         self.chunktype = chunks.chunktype
         self.chunkstring = chunks.chunkstring
@@ -72,8 +98,8 @@ class ACTRModel(object):
         self.model_parameters = self.MODEL_PARAMETERS.copy()
 
         try:
-            assert set(kwargs.keys()).issubset(set(self.MODEL_PARAMETERS.keys())), "Incorrect model parameter(s) %s. The only possible model parameters are: '%s'" % (set(kwargs.keys()).difference(set(self.MODEL_PARAMETERS.keys())), set(self.MODEL_PARAMETERS.keys()))
-            self.model_parameters.update(kwargs)
+            assert set(model_parameters.keys()).issubset(set(self.MODEL_PARAMETERS.keys())), "Incorrect model parameter(s) %s. The only possible model parameters are: '%s'" % (set(model_parameters.keys()).difference(set(self.MODEL_PARAMETERS.keys())), set(self.MODEL_PARAMETERS.keys()))
+            self.model_parameters.update(model_parameters)
         except TypeError:
             pass
 
@@ -130,8 +156,8 @@ class ACTRModel(object):
         """
         v1 = vision.Visual(self.__env, default_harvest)
         v2 = vision.VisualLocation(self.__env, default_harvest, finst)
-        self._visbuffers[name_visual] = v1
-        self._visbuffers[name_visual_location] = v2
+        self.visbuffers[name_visual] = v1
+        self.visbuffers[name_visual_location] = v2
         return v1, v2
 
     def productions(self, *rules):
@@ -170,7 +196,7 @@ class ACTRModel(object):
                 elif each[0] == temp_dictRHS["clear"]:
                     rhs[each[0]+each[1]] = None
                 elif each[0] == temp_dictRHS["execute"]:
-                    rhs[each[0]+each[1]] = each[3][0]
+                    rhs[each[0]+each[1]] = each[3]
                 else:
                     type_chunk, chunk_dict = chunks.createchunkdict(each[3])
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)

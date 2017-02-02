@@ -44,7 +44,7 @@ class Goal(buffers.Buffer):
         try:
             self.dm = value
         except ValueError:
-            raise ACTRError('The default harvest set in a goal buffer is not a possible declarative memory')
+            raise ACTRError('The default harvest set in the goal buffer is not a possible declarative memory')
 
     def add(self, elem, time=0, harvest=None):
         """

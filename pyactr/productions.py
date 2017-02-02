@@ -24,15 +24,11 @@ class Production(collections.UserDict):
     Production rule.
     """
 
-    def __init__(self, rule, utility, reward, selecting_time=None):
+    def __init__(self, rule, utility, reward):
         self.rule = {}
         self.rule['rule'] = rule
         self.rule['utility'] = utility
         self.rule['reward'] = reward
-        if not selecting_time:
-            self.rule['selecting_time'] = []
-        else:
-            self.rule['selecting_time'] = [selecting_time]
 
     def __contains__(self, elem):
         return elem in self.rule
@@ -63,9 +59,8 @@ class Production(collections.UserDict):
         return txt
 
     def __setitem__(self, key, value):
-        assert key in {"rule", "utility", "reward", "selecting_time"}, "The production can set only one of four values -- rule, utility, reward, selecting_time; you are using '%s'" %key
+        assert key in {"rule", "utility", "reward"}, "The production can set only one of four values -- rule, utility, reward; you are using '%s'" %key
         self.rule[key] = value
-
 
 class Productions(collections.UserDict):
     """
@@ -92,8 +87,9 @@ class Productions(collections.UserDict):
                 reward = self.__DFT_REWARD
             else:
                 reward = inspect.getargspec(rule).defaults[0-reward_position]
-            self.update({rule.__name__: {'rule': rule, 'utility': utility, 'reward': reward, 'selecting_time': []}})
-            #{"rule": rule, "utility": utility, "reward": reward}})
+            self.update({rule.__name__: {'rule': rule, 'utility': utility, 'reward': reward}})
+
+        self.used_rulenames = {} #the dictionary of used rulenames, needed for utility learning
 
     def __contains__(self, elem):
         return elem in self.rules
@@ -106,7 +102,7 @@ class Productions(collections.UserDict):
         return len(self.rules)
 
     def __getitem__(self, key):
-        return self.rules[key]
+        return self.rules.get(key)
     
     def __delitem__(self, key):
         del self.rules[key]
@@ -279,7 +275,6 @@ class Productions(collections.UserDict):
 
         return Production(rule=func, utility=self.__DFT_UTILITY, reward=self.__DFT_REWARD)
 
-
     def __rename__(self, name, variables):
         """
         Renames production, so that variable names do not clash. name is used to change the variable name to minimize clash. Returns the production with the new name.
@@ -305,8 +300,6 @@ class Productions(collections.UserDict):
 
                 yield pro
                 
-
-
         return Production(rule=func, utility=self.__DFT_UTILITY, reward=self.__DFT_REWARD) #Reward and utility are set at dft right now, simplified
 
     def __substitute__(self, rule, variable_dict, val_dict):
@@ -443,7 +436,7 @@ class Productions(collections.UserDict):
                 new_name = " ".join([str(rule_name1), "and", str(rule_name2), str(idx)])
             else:
                 new_name = " ".join([str(rule_name1), "and", str(rule_name2)])
-            if self.get(new_name):
+            if self.__getitem__(new_name):
                 pr1 = self[new_name]["rule"]()
                 pr2 = new_rule["rule"]()
                 if next(pr1) == next(pr2) and next(pr1) == next(pr2):
@@ -473,7 +466,8 @@ class ProductionRules(object):
 
     def __init__(self, rules, buffers, dm, model_parameters):
         self.__actrvariables = {} #variables in a fired rule
-        self.rules = rules #dict of production rules
+        self.rules = rules
+        self.ordered_rulenames = sorted(rules.keys(), key=lambda x: rules[x]['utility'], reverse=True) #rulenames ordered by utilities -- this speeds up rule selection when utilities are used
 
         self.last_rule = None #used for production compilation
         self.last_rule_slotvals = {key: None for key in buffers} #slot-values after a production; used for production compilation
@@ -482,7 +476,6 @@ class ProductionRules(object):
 
         self.buffers = buffers #dict of buffers
 
-        
         self.procs = [] #list of active processes
 
         self.extra_tests = {}
@@ -510,7 +503,7 @@ class ProductionRules(object):
         
         self.last_rule_slotvals = self.current_slotvals.copy()
 
-        for rulename in self.rules:
+        for rulename in self.ordered_rulenames:
             self.used_rulename = rulename
             production = self.rules[rulename]["rule"]()
             utility = self.rules[rulename]["utility"]
@@ -520,13 +513,15 @@ class ProductionRules(object):
             if self.model_parameters["subsymbolic"]:
                 inst_noise = utilities.calculate_instantanoues_noise(self.model_parameters["utility_noise"])
                 utility += inst_noise
-            if self.LHStest(pro, self.__actrvariables.copy()) and max_utility <= utility:
+            if max_utility <= utility and self.LHStest(pro, self.__actrvariables.copy()):
                 max_utility = utility
                 used_rulename = rulename
+                if not self.model_parameters["subsymbolic"] or not self.model_parameters["utility_noise"]:
+                    break #breaking after finding a rule, to speed up a process
         if used_rulename:
             self.used_rulename = used_rulename
             production = self.rules[used_rulename]["rule"]()
-            self.rules[used_rulename]["selecting_time"].append(time)
+            self.rules.used_rulenames.setdefault(used_rulename, []).append(time)
             
             yield Event(roundtime(time), self._PROCEDURAL, 'RULE SELECTED: %s' % used_rulename)
             time = time + self.model_parameters["rule_firing"]
@@ -538,7 +533,8 @@ class ProductionRules(object):
                 yield Event(roundtime(time), self._PROCEDURAL, 'RULE STOPPED FROM FIRING: %s' % used_rulename)
             else:
                 if self.model_parameters["utility_learning"] and self.rules[used_rulename]["reward"] != None:
-                    utilities.modify_utilities(time, self.rules[used_rulename]["reward"], self.rules, self.model_parameters)
+                    utilities.modify_utilities(time, self.rules[used_rulename]["reward"], self.rules.used_rulenames, self.rules, self.model_parameters)
+                    self.rules.used_rulenames = {}
                 compiled_rulename, re_created = self.compile_rules()
                 self.compile = []
                 if re_created:
@@ -562,6 +558,8 @@ class ProductionRules(object):
         """
         if self.model_parameters["production_compilation"] and self.compile:
             compiled_rulename, re_created = self.rules.compile_rules(self.compile[0], self.compile[1], self.compile[2], self.buffers, self.model_parameters)
+            if compiled_rulename:
+                self.ordered_rulenames.append(compiled_rulename)
             return compiled_rulename, re_created
         else:
             return None, None
@@ -637,10 +635,11 @@ class ProductionRules(object):
         Executes a command.
         """
         executed.state = executed._BUSY
-        try:
-            getattr(executed, executecommand[0])(*executecommand[1])
-        except TypeError:
-            getattr(executed, executecommand[0])(executecommand[1])
+        for each in executecommand:
+            try:
+                getattr(executed, each[0])(*each[1])
+            except TypeError:
+                getattr(executed, each[0])(each[1])
         executed.state = executed._FREE
         yield Event(roundtime(time), name, "EXECUTED")
 
