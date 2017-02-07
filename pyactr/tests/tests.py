@@ -9,6 +9,7 @@ import re
 import warnings
 
 import simpy
+import numpy as np
 
 import pyactr.chunks as chunks
 
@@ -769,13 +770,13 @@ class TestModel2(unittest.TestCase):
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "g":
                 break
         self.assertEqual(self.sim.show_time(), 0.15)
-        self.assertEqual(self.m2.dm, declarative.DecMem({chunks.makechunk("","twoVars", x=10, y=20): {0.0}, chunks.makechunk("","reverse", x=10, y=10): {0.15}}))
+        self.assertEqual(self.m2.dm, declarative.DecMem({chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])}))
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.show_time(), 0.2)
-        self.assertEqual(self.m2.dm, {chunks.makechunk("","twoVars", x=10, y=20): {0.0}, chunks.makechunk("","twoVars", x=20, y=10): {0.2}, chunks.makechunk("","reverse", x=10, y=10): {0.15}})
+        self.assertEqual(self.m2.dm, {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])})
 
 
 class TestModel3(unittest.TestCase):
@@ -807,8 +808,8 @@ class TestModel3(unittest.TestCase):
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.show_time(), 0.2)
-        self.assertEqual(self.sim._Simulation__pr.dm, {'retrieval': {chunks.makechunk("","twoVars", x=10, y=20): {0.0}, chunks.makechunk("","twoVars", x=20, y=10): {0.2}, chunks.makechunk("","reverse", x=10, y=10): {0.15}}, 'g': {chunks.makechunk("","twoVars", x=10, y=20): {0.0}, chunks.makechunk("","twoVars", x=20, y=10): {0.2}, chunks.makechunk("","reverse", x=10, y=10): {0.15}}})
-        self.assertEqual(self.m3.dm, {chunks.makechunk("","twoVars", x=10, y=20): {0.0}, chunks.makechunk("","twoVars", x=20, y=10): {0.2}, chunks.makechunk("","reverse", x=10, y=10): {0.15}})
+        self.assertEqual(self.sim._Simulation__pr.dm, {'retrieval': {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])}, 'g': {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])}})
+        self.assertEqual(self.m3.dm, {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])})
         self.assertTrue(self.sim._Simulation__pr.dm['retrieval'] is self.sim._Simulation__pr.dm['g'])
 
 class TestMotorModel(unittest.TestCase):
@@ -961,7 +962,7 @@ class TestBaseLevelLearningModel(unittest.TestCase):
         keyfinal_time = self.sim.show_time()
         self.assertEqual(round(keyfinal_time-keypressing_time, 3), 0.4)
         cleared_time2 = self.sim.show_time()
-        self.assertSetEqual({cleared_time, keypressing_time}, self.sim._Simulation__pr.dm['retrieval'][chunks.Chunk("pair", probe="bank", answer="0")]) #keypressing_time relevant because at that point retrieval is cleared
+        np.testing.assert_array_equal(np.array([cleared_time, keypressing_time]), self.sim._Simulation__pr.dm['retrieval'][chunks.Chunk("pair", probe="bank", answer="0")]) #keypressing_time relevant because at that point retrieval is cleared
 
 class TestSourceActivation(unittest.TestCase):
     """

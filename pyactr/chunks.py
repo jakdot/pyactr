@@ -26,7 +26,7 @@ def chunktype(cls_name, field_names, verbose=False):
         if each == "ISA" or each == "isa":
             raise ACTRError("You cannot use the attribute 'isa' in your chunk. That attribute is used to define chunktypes.")
     
-    Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, verbose)}) #chunktypes are not returned; they are stored as Chunk class attribute
+    Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, verbose=verbose)}) #chunktypes are not returned; they are stored as Chunk class attribute
 
 class Chunk(collections.Sequence):
     """

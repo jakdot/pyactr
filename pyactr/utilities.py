@@ -49,12 +49,12 @@ CMDMOVEATTENTION = "move_attention"
 
 #special character for visual chunks
 
-VISIONSMALLER = "<" # smaller than and 
-VISIONGREATER = ">" #
+VISIONSMALLER = "<" # smaller than
+VISIONGREATER = ">" # greater than
 VISIONLOWEST = "lowest" #
 VISIONHIGHEST = "highest" #
-VISIONCLOSEST = "closest" #
-VISIONONEWAYCLOSEST = "onewayclosest" #
+VISIONCLOSEST = "closest" # closest is absolute
+VISIONONEWAYCLOSEST = "onewayclosest" # onewayclosest is closest in one direction (x or y)
 
 #for Events
 
@@ -403,7 +403,8 @@ def baselevel_learning(current_time, times, bll, decay):
     """
     B = 0
     if bll:
-        B = math.log(sum((current_time - x) ** (-decay) for x in times))
+        B = math.log(np.sum((current_time - times) ** (-decay)))
+                #((current_time - x) ** (-decay) for x in times))
     return B
 
 def calculate_instantanoues_noise(instantaneous_noise):
@@ -551,12 +552,13 @@ def calculate_onedimensional_distance(x, y, horizontal=True):
     else:
         return abs(x[1] - y[1])
 
-def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, frequency=None):
+def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, vis_delay=None):
     """
-    Delay in visual attention using EMMA model: K*[-log frequency]*e^(k*distance). Distance is measured in degrees of visual angle.
+    Delay in visual attention using EMMA model. Original formula: K*[-log frequency]*e^(k*distance). Simplified as: K * vis_delay * e^(k*distance). The modeller herself can decide how frequency should be hooked to delay via the parameter vis_delay.
+    Distance is measured in degrees of visual angle.
     """
-    if frequency:
-        delay = K * (-math.log(float(frequency)))* math.exp(k*float(angle_distance))
+    if vis_delay:
+        delay = K * float(vis_delay)* math.exp(k*float(angle_distance))
     else:
         delay = K * math.exp(k*float(angle_distance))
     if emma_noise:

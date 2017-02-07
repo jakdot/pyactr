@@ -112,11 +112,27 @@ class VisualLocation(buffers.Buffer):
         current_y = None
         for each in self.environment.stimulus:
             position = (int(self.environment.stimulus[each]['position'][0]), int(self.environment.stimulus[each]['position'][1]))
-            try: #checks on x and y positions
+            
+            try: #checks absolute position
+                if chunk_used_for_search.screen_x and int(chunk_used_for_search.screen_x) != position[0]:
+                    continue
+            except (TypeError, ValueError):
+                pass
+            try: #checks absolute position
+                if chunk_used_for_search.screen_y and int(chunk_used_for_search.screen_y) != position[1]:
+                    continue
+            except (TypeError, ValueError):
+                pass
+
+            try: #checks on x and y relative positions
                 if chunk_used_for_search.screen_x[0] == utilities.VISIONSMALLER and int(chunk_used_for_search.screen_x[1:]) <= position[0]:
                     continue
                 elif chunk_used_for_search.screen_x[0] == utilities.VISIONGREATER and int(chunk_used_for_search.screen_x[1:]) >= position[0]:
                     continue
+            except (TypeError, IndexError):
+                pass
+
+            try: #checks on x and y relative positions
                 if chunk_used_for_search.screen_y[0] == utilities.VISIONSMALLER and int(chunk_used_for_search.screen_y[1:]) <= position[1]:
                     continue
                 elif chunk_used_for_search.screen_y[0] == utilities.VISIONGREATER and int(chunk_used_for_search.screen_y[1:]) >= position[1]:
@@ -124,16 +140,31 @@ class VisualLocation(buffers.Buffer):
             except (TypeError, IndexError):
                 pass
             
-            try: #checks on x and y positions
+            try: #checks on x and y absolute positions
                 if chunk_used_for_search.screen_x == utilities.VISIONLOWEST and current_x != None and position[0] > current_x:
                     continue
                 elif chunk_used_for_search.screen_x == utilities.VISIONHIGHEST and current_x != None and position[0] < current_x:
                     continue
+            except TypeError:
+                pass
+
+            try: #checks on x and y absolute positions
                 if chunk_used_for_search.screen_y == utilities.VISIONLOWEST and current_y != None and position[1] > current_y:
                     continue
                 elif chunk_used_for_search.screen_y == utilities.VISIONHIGHEST and current_y != None and position[1] < current_y:
                     continue
             except TypeError:
+                pass
+            
+            try:
+                if extra_tests["attended"] == False or extra_tests["attended"] == 'False':
+                    if self.finst and self.environment.stimulus[each] in self.recent:
+                        continue
+
+                else:
+                    if self.finst and self.environment.stimulus[each] not in self.recent:
+                        continue
+            except KeyError:
                 pass
             
             try: #checks on closest
@@ -154,19 +185,9 @@ class VisualLocation(buffers.Buffer):
             except TypeError:
                 pass
 
-            try:
-                if extra_tests["attended"] == False or extra_tests["attended"] == 'False':
-                    if self.finst and self.environment.stimulus[each] in self.recent:
-                        continue
-
-                else:
-                    if self.finst and self.environment.stimulus[each] not in self.recent:
-                        continue
-            except KeyError:
-                pass
             found_stim = self.environment.stimulus[each]
             
-            visible_chunk = chunks.makechunk(nameofchunk="vis1", typename="_visuallocation", **{key: each[key] for key in self.environment.stimulus[each] if key != 'position' and key != 'text'})
+            visible_chunk = chunks.makechunk(nameofchunk="vis1", typename="_visuallocation", **{key: each[key] for key in self.environment.stimulus[each] if key != 'position' and key != 'text' and key != 'vis_delay'})
             if visible_chunk <= chunk_used_for_search:
                 temp_dict = visible_chunk._asdict()
                 temp_dict.update({"screen_x":position[0], "screen_y":position[1]})
@@ -194,7 +215,7 @@ class VisualLocation(buffers.Buffer):
                         continue
                 except TypeError:
                     pass
-                temp_dict = {key: st[key]  for key in st if key != 'position' and key != 'text'}
+                temp_dict = {key: st[key]  for key in st if key != 'position' and key != 'text' and key != 'vis_delay'}
                 temp_dict.update({'screen_x': st['position'][0], 'screen_y': st['position'][1]})
                 closest = utilities.calculate_pythagorian_distance(self.environment.current_focus, position)
             new_chunk = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
@@ -262,13 +283,13 @@ class Visual(buffers.Buffer):
         """
         Automatically buffers.
         """
-        temp_dict = {key: stim[key] for key in stim if key != 'position' and key != 'text'}
+        temp_dict = {key: stim[key] for key in stim if key != 'position' and key != 'text' and key != 'vis_delay'}
         temp_dict.update({'screen_pos': chunks.Chunk(utilities.VISUALLOCATION, **{'screen_x': stim['position'][0], 'screen_y': stim['position'][1]}), 'value': stim['text']})
         new_chunk = chunks.Chunk(utilities.VISUAL, **temp_dict)
         
         if new_chunk:
             angle_distance = 2*utilities.calculate_visual_angle(self.current_focus, (stim['position'][0], stim['position'][1]), self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance) #the stimulus has to be within 2 degrees from the focus (foveal region)
-            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'])
+            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'], vis_delay=stim.get('vis_delay'))
         return new_chunk, encoding_time
 
     def modify(self, otherchunk, actrvariables=None):
@@ -290,10 +311,13 @@ class Visual(buffers.Buffer):
         except ACTRError as arg:
             raise ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
 
+        vis_delay = None
+
         for each in self.environment.stimulus:
             try:
                 if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].screen_x), float(mod_attr_val['screen_pos'].screen_y)):
                     mod_attr_val['value'] = self.environment.stimulus[each]['text']
+                    vis_delay = self.environment.stimulus[each].get('vis_delay')
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
 
@@ -304,7 +328,7 @@ class Visual(buffers.Buffer):
 
         if new_chunk.cmd == utilities.CMDMOVEATTENTION and model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.current_focus, [float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
-            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'])
+            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'], vis_delay=vis_delay)
             preparation_time = utilities.calculate_preparation_time(emma_noise=model_parameters['emma_noise'])
             execution_time = utilities.calculate_execution_time(angle_distance, emma_noise=model_parameters['emma_noise'])
             landing_site = utilities.calculate_landing_site([float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], angle_distance, emma_noise=model_parameters['emma_noise'])

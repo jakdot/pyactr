@@ -112,5 +112,10 @@ class Environment(object):
         #TODO - check that the new stimulus is different from the last one; do stuffing visuallocation
 
         if not self.gui:
-            print("****Environment:", self.stimulus)
+            printed_stimulus = self.stimulus.copy()
+            try:
+                printed_stimulus.pop('frequency')
+            except KeyError:
+                pass
+            print("****Environment:", printed_stimulus)
 

@@ -4,6 +4,8 @@ Declarative memory. Consists of the actual declarative memory, and its associate
 
 import collections
 
+import numpy as np
+
 import pyactr.chunks as chunks
 import pyactr.utilities as utilities
 import pyactr.buffers as buffers
@@ -42,22 +44,27 @@ class DecMem(collections.MutableMapping):
 
     def __setitem__(self, key, time):
         if isinstance(key, chunks.Chunk):
-            try:
-                self._data[key] = {round(float(time), 4)}
-            except TypeError:
-                self._data[key] = {round(float(x), 4) for x in time}
+            if isinstance(time, np.ndarray):
+                self._data[key] = time
+            else:
+                try:
+                    self._data[key] = np.array([round(float(time), 4)])
+                except TypeError:
+                    self._data[key] = np.array(list(time))
         else:
             raise utilities.ACTRError("Only chunks can be added as attributes to Declarative Memory; '%s' is not a chunk" % key)
 
     def add(self, key, time=0):
         """
-        Add an element to decl. mem. If it exists, add time to the existing element.
+        Add an element to decl. mem. Add time to the existing element.
         """
         try:
-            self._data.setdefault(key, set()).add(round(float(time), 4))
+            new = np.append(self._data.setdefault(key, np.array([])), round(float(time), 4))
+            self._data[key] = new
         except TypeError:
             for x in key:
-                self._data.setdefault(x, set()).add(round(float(time), 4))
+                new = np.append(self._data.setdefault(x, np.array([])), round(float(time), 4))
+                self._data[x] = new
 
     def copy(self):
         """

@@ -393,7 +393,7 @@ class GuiPart(object):
                             position = stimulus[each]['position']
                         except KeyError:
                             raise utilities.ACTRError("One of your stimuli for environment does not have a defined position; the element cannot be printed in environment; stimuli should look like this: [{'stimulus1-0time': {'text': 'hi', 'position': (0, 0)}, 'stimulus2-0time': {'text': 'you', 'position': (10, 10)}}, {'stimulus3-latertime': {'text': 'new', 'position': (0, 0)}}]")
-                        canvas_id = self.canvas.create_text(position, **{key: stimulus[each][key] for key in stimulus[each] if key != 'position'})
+                        canvas_id = self.canvas.create_text(position, **{key: stimulus[each][key] for key in stimulus[each] if key != 'position' and key != 'vis_delay'})
                         try:
                             self.canvas.itemconfig(canvas_id, text=stimulus[each]['text'], tags="t")
                         except KeyError:

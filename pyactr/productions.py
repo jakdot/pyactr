@@ -739,12 +739,12 @@ class ProductionRules(object):
             updated.state = updated._FREE
             yield Event(roundtime(time), name, "CREATED A CHUNK: %s" % created_elem)
         elif isinstance(updated, vision.VisualLocation):
-            yield from self.clear(name, updated, None, temp_actrvariables, time, freeing=False)
             extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
             time += extra_time #0 ms to create chunk in location (pop-up effect)
             yield Event(roundtime(time), name, self._UNKNOWN)
             chunk, stim = updated.find(otherchunk, actrvariables=temp_actrvariables, extra_tests=self.extra_tests.get(name, {})) #extra_time currently ignored
             if chunk:
+                yield from self.clear(name, updated, None, temp_actrvariables, time, freeing=False)
                 updated.add(chunk, stim, time)
                 updated.state = updated._FREE
             else:
@@ -769,9 +769,9 @@ class ProductionRules(object):
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
         if retrieved_elem:
+            yield Event(roundtime(time), name, 'CLEARED')
             retrieval.add(retrieved_elem, time)
             retrieval.state = retrieval._FREE
-            yield Event(roundtime(time), name, 'CLEARED')
         else:
             retrieval.state = retrieval._ERROR
 

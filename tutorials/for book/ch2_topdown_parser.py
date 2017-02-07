@@ -14,8 +14,6 @@ dm.add(actr.chunkstring(string="isa word form 'Mary' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'Bill' cat 'ProperN'"))
 dm.add(actr.chunkstring(string="isa word form 'likes' cat 'V'"))
 
-retrieval = parser.dmBuffer(name="retrieval", declarative_memory=dm)
-
 parser.goal.add(actr.chunkstring(string="isa parsing  task parse stack_top 'S'"))
 parser.goal = "g2"
 parser.goals["g2"].delay = 0.2
