@@ -17,6 +17,9 @@ class DecMem(collections.MutableMapping):
 
     def __init__(self, data=None):
         self._data = {}
+        self.restricted_number_chunks = collections.Counter() #counter for pairs of slot - value, used to calculate strength association
+        self.unrestricted_number_chunks = collections.Counter() # counter for chunks, used to calculate strength association
+        self.activations  = {}
         if data is not None:
             try:
                 self.update(data)
@@ -43,6 +46,14 @@ class DecMem(collections.MutableMapping):
         return repr(self._data)
 
     def __setitem__(self, key, time):
+        if self.unrestricted_number_chunks and key not in self:
+            for x in key:
+                if utilities.splitting(x[1])['values'] and utilities.splitting(x[1])['values'].pop() in self.unrestricted_number_chunks:
+                    self.unrestricted_number_chunks.update([utilities.splitting(x[1])['values'].pop()])
+        if self.restricted_number_chunks and key not in self:
+            for x in key:
+                if utilities.splitting(x[1])['values'] and (x[0], utilities.splitting(x[1])['values'].pop()) in self.restricted_number_chunks:
+                    self.restricted_number_chunks.update([(x[0], utilities.splitting(x[1])['values'].pop())])
         if isinstance(key, chunks.Chunk):
             if isinstance(time, np.ndarray):
                 self._data[key] = time
@@ -50,21 +61,43 @@ class DecMem(collections.MutableMapping):
                 try:
                     self._data[key] = np.array([round(float(time), 4)])
                 except TypeError:
-                    self._data[key] = np.array(list(time))
+                    self._data[key] = np.array(time)
         else:
             raise utilities.ACTRError("Only chunks can be added as attributes to Declarative Memory; '%s' is not a chunk" % key)
+    
+    def add_activation(self, element, activation):
+        """
+        Add activation of an element.
 
-    def add(self, key, time=0):
+        This raises an error if the element is not in the declarative memory
+        """
+        if element in self:
+            self.activations[element] = activation
+        else:
+            raise AttributeError("The chunk %s is not in the declarative memory." % key)
+
+    def add(self, element, time=0):
         """
         Add an element to decl. mem. Add time to the existing element.
+
+        element can be either one chunk, or an iterable of chunks.
         """
-        try:
-            new = np.append(self._data.setdefault(key, np.array([])), round(float(time), 4))
-            self._data[key] = new
-        except TypeError:
-            for x in key:
-                new = np.append(self._data.setdefault(x, np.array([])), round(float(time), 4))
-                self._data[x] = new
+        if isinstance(time, collections.Iterable):
+            try:
+                new = np.concatenate((self.setdefault(element, np.array([])), np.array(time)))
+                self[element] = new
+            except TypeError:
+                for x in element:
+                    new = np.concatenate((self.setdefault(x, np.array([])), np.array(time)))
+                    self[x] = new
+        else:
+            try:
+                new = np.append(self.setdefault(element, np.array([])), round(float(time), 4))
+                self[element] = new
+            except TypeError:
+                for x in element:
+                    new = np.append(self.setdefault(x, np.array([])), round(float(time), 4))
+                    self[x] = new
 
     def copy(self):
         """
@@ -81,8 +114,11 @@ class DecMemBuffer(buffers.Buffer):
     def __init__(self, decmem=None, data=None, finst=0):
         buffers.Buffer.__init__(self, decmem, data)
         self.recent = collections.deque()
-        self.finst = finst
+        self.__finst = finst
         self.activation = None #activation of the last retrieved element
+
+        #parameters
+        self.model_parameters = {}
 
     @property
     def finst(self):
@@ -114,21 +150,21 @@ class DecMemBuffer(buffers.Buffer):
 
     def add(self, elem, time=0):
         """
-        Clears current buffer and adds a new chunk.
+        Clear current buffer and adds a new chunk.
         """
         self.clear(time)
         super().add(elem)
 
     def clear(self, time=0):
         """
-        Clears buffer, adds cleared chunk into memory.
+        Clear buffer, add cleared chunk into memory.
         """
         if self._data:
             self.dm.add(self._data.pop(), time)
 
     def copy(self, dm=None):
         """
-        Copies buffer, along with its declarative memory, unless dm is specified. You need to specify new dm if 2 buffers share the same dm - only one of them should copy dm then.
+        Copy buffer, along with its declarative memory, unless dm is specified. You need to specify new dm if 2 buffers share the same dm - only one of them should copy dm then.
         """
         if dm == None:
             dm = self.dm 
@@ -141,7 +177,7 @@ class DecMemBuffer(buffers.Buffer):
         """
         return getattr(self, state) == inquiry
 
-    def retrieve(self, time, otherchunk, actrvariables, buffers, extra_tests, model_parameters):
+    def retrieve(self, time, otherchunk, actrvariables, buffers, extra_tests):
         """
         Retrieve a chunk from declarative memory that matches otherchunk.
         """
@@ -159,33 +195,37 @@ class DecMemBuffer(buffers.Buffer):
         for chunk in self.dm:
             try:
                 if extra_tests["recently_retrieved"] == False or extra_tests["recently_retrieved"] == 'False':
-                    if self.finst and chunk in self.recent:
+                    if self.__finst and chunk in self.recent:
                         continue
 
                 else:
-                    if self.finst and chunk not in self.recent:
+                    if self.__finst and chunk not in self.recent:
                         continue
             except KeyError:
                 pass
 
-            if model_parameters["subsymbolic"]: #if subsymbolic, check activation
+            if self.model_parameters["subsymbolic"]: #if subsymbolic, check activation
                 A_pm = 0
-                if model_parameters["partial_matching"]:
+                if self.model_parameters["partial_matching"]:
                     A_pm = chunk_tobe_matched.match(chunk, partialmatching=True)
                 else:
                     if not chunk_tobe_matched <= chunk:
                         continue
 
-                A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"]) #bll
-                inst_noise = utilities.calculate_instantanoues_noise(model_parameters["instantaneous_noise"])
-                A_sa = utilities.spreading_activation(chunk, buffers, self.dm, model_parameters["buffer_spreading_activation"], model_parameters["strength_of_association"])
-                A = A_bll + A_sa + A_pm + inst_noise
-                if utilities.retrieval_success(A, model_parameters["retrieval_threshold"]) and max_A < A:
+                if chunk in self.dm.activations:
+                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], self.model_parameters["baselevel_learning"], self.model_parameters["decay"], self.dm.activations[chunk], optimized_learning=self.model_parameters["optimized_learning"]) #bll
+                else:
+                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], self.model_parameters["baselevel_learning"], self.model_parameters["decay"], optimized_learning=self.model_parameters["optimized_learning"]) #bll
+                A_sa = utilities.spreading_activation(chunk, buffers, self.dm, self.model_parameters["buffer_spreading_activation"], self.model_parameters["strength_of_association"], self.model_parameters["spreading_activation_restricted"])
+                inst_noise = utilities.calculate_instantanoues_noise(self.model_parameters["instantaneous_noise"])
+                A = A_bll + A_sa + A_pm + inst_noise #chunk.activation is the manually specified activation, potentially used by the modeller
+
+                if utilities.retrieval_success(A, self.model_parameters["retrieval_threshold"]) and max_A < A:
                     max_A = A
                     retrieved = chunk
-                    extra_time = utilities.retrieval_latency(A, model_parameters["latency_factor"],  model_parameters["latency_exponent"])
+                    extra_time = utilities.retrieval_latency(A, self.model_parameters["latency_factor"],  self.model_parameters["latency_exponent"])
 
-                    if model_parameters["activation_trace"]:
+                    if self.model_parameters["activation_trace"]:
                         print("(Partially) matching chunk:", chunk)
                         print("Base level learning:", A_bll)
                         print("Spreading activation", A_sa)
@@ -193,20 +233,19 @@ class DecMemBuffer(buffers.Buffer):
                         print("Noise:", inst_noise)
                         print("Total activation", A)
                         print("Time to retrieve", extra_time)
-                    self.activation = A
             else: #otherwise, just standard time for rule firing
                 if chunk_tobe_matched <= chunk:
                     retrieved = chunk
-                    extra_time = model_parameters["rule_firing"]
+                    extra_time = self.model_parameters["rule_firing"]
 
         if not retrieved:
-            if model_parameters["subsymbolic"]:
-                extra_time = utilities.retrieval_latency(model_parameters["retrieval_threshold"], model_parameters["latency_factor"],  model_parameters["latency_exponent"])
+            if self.model_parameters["subsymbolic"]:
+                extra_time = utilities.retrieval_latency(self.model_parameters["retrieval_threshold"], self.model_parameters["latency_factor"],  self.model_parameters["latency_exponent"])
             else:
-                extra_time = model_parameters["rule_firing"]
-        if self.finst:
+                extra_time = self.model_parameters["rule_firing"]
+        if self.__finst:
             self.recent.append(retrieved)
-            if self.finst < len(self.recent):
+            if self.__finst < len(self.recent):
                 self.recent.popleft()
         return retrieved, extra_time
         

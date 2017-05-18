@@ -44,6 +44,8 @@ class TestChunks1(unittest.TestCase):
         self.assertFalse(self.chunk2 > self.chunk)
         self.assertTrue(self.chunk2 <= self.chunk)
         self.assertFalse(self.chunk2 >= self.chunk)
+        self.assertFalse(self.chunk <= self.chunk2)
+        self.assertTrue(self.chunk >= self.chunk2)
         self.assertTrue(self.chunk == self.chunk3)
         self.assertFalse(self.chunk == self.chunk2)
         self.assertFalse(self.chunk == self.chunk4)
@@ -64,12 +66,21 @@ class TestChunks2(unittest.TestCase):
         self.chunk = chunks.makechunk("01", "test", arg1="v1", arg2="v2")
         self.chunk2 = chunks.makechunk("01", "test", arg1="~!v1")
         self.chunk3 = chunks.makechunk("01", "test", arg1="~!v2")
+        chunks.chunktype("testnew", ("arg10", "arg20"))
+        self.chunk4 = chunks.makechunk("", "testnew")
+        self.chunk5 = chunks.makechunk("", "testnew", arg10="v5")
+        self.chunk6 = chunks.makechunk("", "testnew", arg10="~None")
 
     def test_chunks(self):
         self.assertFalse(self.chunk2 < self.chunk)
         self.assertFalse(self.chunk2 <= self.chunk)
         self.assertTrue(self.chunk3 < self.chunk)
         self.assertTrue(self.chunk3 <= self.chunk)
+        self.assertTrue(self.chunk4 <= self.chunk)
+        self.assertFalse(self.chunk5 <= self.chunk)
+        self.assertTrue(self.chunk4 <= self.chunk5)
+        self.assertTrue(self.chunk4 <= self.chunk6)
+        self.assertFalse(self.chunk6 <= self.chunk)
 
 class TestChunks3(unittest.TestCase):
     """
@@ -344,6 +355,10 @@ class Testchunkstring2(unittest.TestCase):
         self.chunk18 = chunks.chunkstring("c18", \
                 "isa countcount\
                 first 20")
+        self.chunk19 = chunks.chunkstring("c19", \
+                "isa countcount\
+                first =x\
+                first ~None")
         chunks.chunktype("testchunkstring2type1", "arg1, newarg")
         chunks.chunktype("testchunkstring2type3", "a1, a5")
         self.chunkc2 = chunks.makechunk("", "testchunkstring2type1", arg1=self.chunk, newarg=10)
@@ -389,6 +404,7 @@ class Testchunkstring2(unittest.TestCase):
         self.assertFalse(self.chunk17 <= self.chunk18)
         self.chunk17.boundvars = {"=x" : '20', "=z": '18', "=t": '14'}
         self.assertTrue(self.chunk17 <= self.chunk18)
+        self.assertFalse(self.chunk19 <= self.chunk7)
 
 
 class TestBuffers(unittest.TestCase):
@@ -413,8 +429,10 @@ class TestBuffers(unittest.TestCase):
         warnings.filterwarnings(action="ignore", category=UserWarning)
         self.b.add(chunks.makechunk("", "bufferchunk", x=10))
         self.assertEqual(self.dm.keys(), {chunks.makechunk("", "origo", x=1), chunks.makechunk("", "bufferchunk", y=10)})
+        self.g.clear(harvest=self.dm)
         self.g.add(chunks.makechunk("", "goalchunk", x=20), 0, self.dm)
         self.assertEqual(self.dm.keys(), {chunks.makechunk("", "origo", x=1), chunks.makechunk("", "bufferchunk", y=10), chunks.makechunk("", "goalchunk", z=10)})
+        self.g2.clear(harvest=self.dm)
         self.g2.add(chunks.makechunk("", "finalchunk", x=30))
         self.assertEqual(self.dm.keys(), {chunks.makechunk("", "origo", x=1), chunks.makechunk("", "bufferchunk", y=10), chunks.makechunk("", "goalchunk", z=10), chunks.makechunk("", "finalchunk", x=-5)})
 

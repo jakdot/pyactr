@@ -49,13 +49,14 @@ class Goal(buffers.Buffer):
     def add(self, elem, time=0, harvest=None):
         """
         If the buffer has a chunk, it clears current buffer (into the memory associated with the goal buffer). It adds a new chunk, specified as elem. Decl. memory is either specified as default_harvest, when Goal is initialized, or it can be specified as harvest.
+
+        Neither time nor harvest currently affect the behavior of the goal buffer.
         """
-        self.clear(time, harvest)
         super().add(elem)
         
     def clear(self, time=0, harvest=None):
         """
-        Clears buffer, adds cleared chunk into decl. memory. Decl. memory is either specified as default_harvest, when Goal is initialized, or it can be specified as harvest here.
+        Clear buffer, add the cleared chunk into decl. memory. Decl. memory is either specified as default_harvest, when Goal is initialized, or it can be specified as harvest here.
         """
         if harvest != None:
             if self._data:
@@ -67,7 +68,7 @@ class Goal(buffers.Buffer):
 
     def copy(self, harvest=None):
         """
-        Copies the buffer. Unlike other buffers, this one does not copy the memory that is used for its harvest. This is because goal buffer will always share the memory to which it harvests with another retrieval buffer. You have to specify harvest if you want clearing to work in the copied buffer.
+        Copy the buffer. Unlike other buffers, this one does not copy the memory that is used for its harvest. This is because goal buffer will always share the memory to which it harvests with another retrieval buffer. You have to specify harvest (that is, which declarative memory should harvest the buffer) if you want clearing to work in the copied buffer.
         """
         if harvest == None:
             harvest = self.dm
@@ -89,7 +90,7 @@ class Goal(buffers.Buffer):
 
     def create(self, otherchunk, harvest=None, actrvariables=None):
         """
-        Creates (aka sets) a chunk in goal buffer.
+        Create (aka set) a chunk in goal buffer.
         """
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
@@ -98,6 +99,6 @@ class Goal(buffers.Buffer):
 
         new_chunk = chunks.Chunk(otherchunk.typename, **mod_attr_val) #creates new chunk
 
-        self.add(new_chunk, harvest) #put chunk using add - i.e., clear first, then add
+        self.add(new_chunk, 0, harvest) #put chunk using add
 
 

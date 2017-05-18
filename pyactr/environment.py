@@ -10,7 +10,7 @@ import pyactr.chunks as chunks
 
 class Environment(object):
     """
-    Environment module for ACT-R. Shows whatever is seen on screen at the moment, allows interaction with ACT-R model (vision and motor modules).
+    Environment module for ACT-R. This shows whatever is seen on screen at the moment, allows interaction with ACT-R model (vision and motor modules).
     """
 
     Event = utilities.Event
@@ -37,6 +37,8 @@ class Environment(object):
         self.simulated_screen_size = simulated_screen_size
         self.viewing_distance = viewing_distance
 
+        self.initial_time = 0
+
     @property
     def current_focus(self):
         """
@@ -53,14 +55,18 @@ class Environment(object):
 
     def roundtime(self, time):
         """
-        Returns rounded time.
+        Return rounded time.
         """
         return utilities.roundtime(time)
 
     def environment_process(self, stimuli=None, triggers=None, times=1, start_time=0):
         """
         Example of environment process. Text appears, changes/disappers after run_time runs out.
+
+        This does not do anything on its own, it has to be embedded in the simulation of an ACT-R Model.
         """
+        #subtract start_time from initial_time
+        start_time = self.initial_time - start_time
         #make all arguments iterables if they are not yet
         if isinstance(stimuli, str) or isinstance(stimuli, collections.Mapping) or not isinstance(stimuli, collections.Iterable):
             stimuli = [stimuli]
@@ -105,7 +111,7 @@ class Environment(object):
 
     def output(self, stimulus):
         """
-        Outputs obj in environment.
+        Output obj in environment.
         """
         self.stimulus = stimulus
         #this part is visual re-encoding - encode new info in your current focus

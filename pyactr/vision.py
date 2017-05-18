@@ -15,7 +15,7 @@ import pyactr.buffers as buffers
 
 class VisualLocation(buffers.Buffer):
     """
-    Visual buffer. Sees positions.
+    Visual buffer. This buffer sees positions of objects in the environment.
     """
 
     def __init__(self, environment, default_harvest=None, finst=4):
@@ -54,7 +54,7 @@ class VisualLocation(buffers.Buffer):
 
     def add(self, elem, found_stim, time=0, harvest=None):
         """
-        Clears current buffer (into a memory) and adds a new chunk. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified as the argument of harvest.
+        Clear current buffer (into a memory) and adds a new chunk. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified as the argument of harvest.
         """
         self.clear(time, harvest)
 
@@ -67,7 +67,7 @@ class VisualLocation(buffers.Buffer):
 
     def modify(self, otherchunk, found_stim, actrvariables=None):
         """
-        Modifies the chunk in VisualLocation buffer according to otherchunk. found_stim keeps information about the actual stimulus and it is used to update the queue of the recently visited chunks.
+        Modify the chunk in VisualLocation buffer according to otherchunk. found_stim keeps information about the actual stimulus and it is used to update the queue of the recently visited chunks.
         """
 
         super().modify(otherchunk, actrvariables)
@@ -80,7 +80,7 @@ class VisualLocation(buffers.Buffer):
 
     def clear(self, time=0, harvest=None):
         """
-        Clears buffer, adds cleared chunk into decl. memory. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified here as harvest.
+        Clear buffer, adds cleared chunk into decl. memory. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified here as harvest.
         """
         if harvest != None:
             if self._data:
@@ -91,7 +91,7 @@ class VisualLocation(buffers.Buffer):
 
     def find(self, otherchunk, actrvariables=None, extra_tests=None):
         """
-        Sets a chunk in vision based on what is on the screen.
+        Set a chunk in vision based on what is on the screen.
         """
         if extra_tests == None:
             extra_tests = {}
@@ -202,7 +202,7 @@ class VisualLocation(buffers.Buffer):
 
     def automatic_search(self, stim):
         """
-        Automatically searches for a new stim in environment.
+        Automatically search for a new stim in environment.
         """
         new_chunk = None
         found = None
@@ -231,7 +231,7 @@ class VisualLocation(buffers.Buffer):
 
 class Visual(buffers.Buffer):
     """
-    Visual buffer. Sees objects.
+    Visual buffer. This sees objects in the environment.
     """
 
     _VISUAL = utilities.VISUAL
@@ -245,6 +245,9 @@ class Visual(buffers.Buffer):
         self.processor = self._FREE
         self.execution = self._FREE
         self.last_mvt = 0
+
+        #parameters
+        self.model_parameters = {}
 
     @property
     def default_harvest(self):
@@ -263,14 +266,14 @@ class Visual(buffers.Buffer):
 
     def add(self, elem, time=0, harvest=None):
         """
-        Clears current buffer (into a memory) and adds a new chunk. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified as the argument of harvest.
+        Clear current buffer (into a memory) and adds a new chunk. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified as the argument of harvest.
         """
         self.clear(time, harvest)
         super().add(elem)
 
     def clear(self, time=0, harvest=None):
         """
-        Clears buffer, adds cleared chunk into decl. memory. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified here as harvest.
+        Clear buffer, adds cleared chunk into decl. memory. Decl. memory is either specified as default_harvest, when Visual is initialized, or it can be specified here as harvest.
         """
         if harvest != None:
             if self._data:
@@ -279,9 +282,9 @@ class Visual(buffers.Buffer):
             if self._data:
                 self.dm.add(self._data.pop(), time)
 
-    def automatic_buffering(self, stim, model_parameters):
+    def automatic_buffering(self, stim):
         """
-        Automatically buffers.
+        Buffer visual object automatically.
         """
         temp_dict = {key: stim[key] for key in stim if key != 'position' and key != 'text' and key != 'vis_delay'}
         temp_dict.update({'screen_pos': chunks.Chunk(utilities.VISUALLOCATION, **{'screen_x': stim['position'][0], 'screen_y': stim['position'][1]}), 'value': stim['text']})
@@ -289,7 +292,7 @@ class Visual(buffers.Buffer):
         
         if new_chunk:
             angle_distance = 2*utilities.calculate_visual_angle(self.current_focus, (stim['position'][0], stim['position'][1]), self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance) #the stimulus has to be within 2 degrees from the focus (foveal region)
-            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'], vis_delay=stim.get('vis_delay'))
+            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=self.model_parameters["eye_mvt_scaling_parameter"], k=self.model_parameters['eye_mvt_angle_parameter'], emma_noise=self.model_parameters['emma_noise'], vis_delay=stim.get('vis_delay'))
         return new_chunk, encoding_time
 
     def modify(self, otherchunk, actrvariables=None):
@@ -298,12 +301,10 @@ class Visual(buffers.Buffer):
         """
         super().modify(otherchunk, actrvariables)
 
-    def shift(self, otherchunk, harvest=None, actrvariables=None, model_parameters=None):
+    def shift(self, otherchunk, harvest=None, actrvariables=None):
         """
-        Returns a chunk, time needed to attend and shift eye focus to the chunk, and the landing site of eye mvt.
+        Return a chunk, time needed to attend and shift eye focus to the chunk, and the landing site of eye mvt.
         """
-        if model_parameters == None:
-            model_parameters = {}
         if actrvariables == None:
             actrvariables = {}
         try:
@@ -326,13 +327,13 @@ class Visual(buffers.Buffer):
         if new_chunk.cmd not in utilities.CMDVISUAL:
             raise ACTRError("Visual module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd, utilities.CMDVISUAL))
 
-        if new_chunk.cmd == utilities.CMDMOVEATTENTION and model_parameters['emma']:
+        if new_chunk.cmd == utilities.CMDMOVEATTENTION and self.model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.current_focus, [float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
-            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'], vis_delay=vis_delay)
-            preparation_time = utilities.calculate_preparation_time(emma_noise=model_parameters['emma_noise'])
-            execution_time = utilities.calculate_execution_time(angle_distance, emma_noise=model_parameters['emma_noise'])
-            landing_site = utilities.calculate_landing_site([float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], angle_distance, emma_noise=model_parameters['emma_noise'])
-        elif new_chunk.cmd == utilities.CMDMOVEATTENTION and not model_parameters['emma']:
+            encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=self.model_parameters["eye_mvt_scaling_parameter"], k=self.model_parameters['eye_mvt_angle_parameter'], emma_noise=self.model_parameters['emma_noise'], vis_delay=vis_delay)
+            preparation_time = utilities.calculate_preparation_time(emma_noise=self.model_parameters['emma_noise'])
+            execution_time = utilities.calculate_execution_time(angle_distance, emma_noise=self.model_parameters['emma_noise'])
+            landing_site = utilities.calculate_landing_site([float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], angle_distance, emma_landing_site_noise=self.model_parameters['emma_landing_site_noise'])
+        elif new_chunk.cmd == utilities.CMDMOVEATTENTION and not self.model_parameters['emma']:
             encoding_time = 0.085
             preparation_time = 0
             execution_time = 0.085
@@ -343,7 +344,7 @@ class Visual(buffers.Buffer):
 
     def move_eye(self, position):
         """
-        Moves eye in environment to a new position.
+        Move eyes in environment to a new position.
         """
         self.current_focus[0] = int(position[0]) 
         self.current_focus[1] = int(position[1]) #current_focus is shared with environment

@@ -27,7 +27,7 @@ class Model(object):
         group2 = actr.makechunk(nameofchunk="group2", typename="group", parent=li, position=self.dictchunks[2], id="group2")
         group3 = actr.makechunk(nameofchunk="group3", typename="group", parent=li, position=self.dictchunks[3], id="group3")
 
-        self.model.decmem =  set(self.dictchunks.values())
+        self.model.set_decmem(set(self.dictchunks.values()))
         self.dm = self.model.decmem
         self.dm.add(set([group1, group2, group3]))
         self.dm.add(li)

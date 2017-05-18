@@ -31,7 +31,7 @@ class Model(object):
         actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
         self.m.goal.add(actr.makechunk(typename="read", state=start))
-        self.m.goal = "g2"
+        self.m.set_goal("g2")
         self.m.goals["g2"].delay=0.2
 
         self.m.productionstring(name="find_probe", string="""

@@ -54,7 +54,9 @@ class Buffer(collections.MutableSet):
 
     def add(self, elem):
         """
-        Adds a chunk into the buffer.
+        Add a chunk into the buffer.
+
+        elem must be a chunk.
         """
         self._data = set()
         
@@ -71,7 +73,7 @@ class Buffer(collections.MutableSet):
     
     def show(self, attr):
         """
-        Prints the content of the buffer.
+        Print the content of the buffer.
         """
         if self._data:
             chunk = self._data.copy().pop()

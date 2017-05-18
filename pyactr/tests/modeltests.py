@@ -350,8 +350,7 @@ class Paired(object):
         actr.makechunk(nameofchunk="attending_target", typename="chunk", value="attending_target")
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
         self.m.goal.add(actr.makechunk("read", typename="goal", state=start))
-        self.m.goal = "g2"
-        self.m.goal.delay=0.2
+        self.m.set_goal("g2", 0.2)
 
         self.m.productionstring(name="find_probe", string="""
         =g>

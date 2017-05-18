@@ -17,7 +17,6 @@ if GUI:
     import threading
     import queue
     import time
-    import textwrap
 
 import simpy
 
@@ -32,11 +31,11 @@ class Simulation(object):
 
     _UNKNOWN = utilities._UNKNOWN
     
-    def __init__(self, environment, realtime, trace, gui, buffers, used_productions, environment_process=None, **kwargs):
+    def __init__(self, environment, realtime, trace, gui, buffers, used_productions, initial_time=0, environment_process=None, **kwargs):
 
         self.gui = environment and gui and GUI
 
-        self.__simulation = simpy.Environment()
+        self.__simulation = simpy.Environment(initial_time=initial_time)
 
         self.__env = environment
         if self.__env:
@@ -81,7 +80,6 @@ class Simulation(object):
         #here below -- simulation values, accesible by user
         self.current_event = None
         self.now = self.__simulation.now
-        self.textwrap = 0
 
     def __activate__(self, event):
         """
@@ -205,10 +203,7 @@ class Simulation(object):
         if event.action != self.__pr._UNKNOWN:
             self.current_event = event
             if self.__trace and not self.gui:
-                if self.textwrap:
-                    print(textwrap.TextWrapper(subsequent_indent="    ", width=self.textwrap).fill(str(event[0:3])))
-                else:
-                    print(event[0:3])
+                print(event[0:3])
     
     def __printenv__(self, event):
         """
@@ -247,7 +242,7 @@ class Simulation(object):
 
     def run(self, max_time=1):
         """
-        Runs simulation for the number of seconds specified in max_time.
+        Run simulation for the number of seconds specified in max_time.
         """
         if not self.gui:
             self.__simulation.run(max_time)
@@ -258,7 +253,7 @@ class Simulation(object):
     
     def show_time(self):
         """
-        Returns current time in simulation.
+        Show current time in simulation.
         """
         try:
             t = self.__simulation.now
@@ -269,7 +264,7 @@ class Simulation(object):
 
     def step(self):
         """
-        Makes one step through simulation.
+        Make one step through simulation.
         """
         while True:
             self.__simulation.step()
@@ -282,7 +277,7 @@ class Simulation(object):
 
     def steps(self, count):
         """
-        Makes several one or more steps through simulation. The number of steps is given in count.
+        Make several one or more steps through simulation. The number of steps is given in count.
         """
         count = int(count)
         assert count > 0, "the 'count' argument in 'steps' must be a positive number"
@@ -345,10 +340,7 @@ class Simulation(object):
                 old_time = self.current_event.time
                 if self.__trace:
                     if self.current_event.proc != utilities._ENV:
-                        if self.textwrap:
-                            print(textwrap.TextWrapper(subsequent_indent="    ", width=self.textwrap).fill(str(self.current_event[0:3])))
-                        else:
-                            print(self.current_event[0:3])
+                        print(self.current_event[0:3])
             if self.__env.stimulus and old_stimulus != self.__env.stimulus:
                 old_stimulus = self.__env.stimulus
                 self.__queue.put({"stim": self.__env.stimulus})
@@ -375,7 +367,9 @@ class GuiPart(object):
         self.canvas.pack()
 
     def processIncoming(self):
-        """Handle all messages currently in the queue, if any."""
+        """
+        Handle all messages currently in the queue, if any.
+        """
         while self.queue.qsize( ):
             try:
                 stimulus = None

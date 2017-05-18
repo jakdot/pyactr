@@ -51,9 +51,9 @@ class Production(collections.UserDict):
         production = self["rule"]()
         utility = self["utility"]
         reward = self["reward"]
-        txt += '{}\n==>\n{}\n'.format(next(production), next(production))
+        txt += '{}\n==>\n{}'.format(next(production), next(production))
         if utility:
-            txt += "Utility: {}\n".format(utility)
+            txt += "\nUtility: {}\n".format(utility)
         if reward:
             txt += "Reward: {}\n".format(reward)
         return txt
@@ -331,7 +331,7 @@ class Productions(collections.UserDict):
 
     def __check_valid_compilation__(self, rule_name1, rule_name2, buffers):
         """
-        Checks that production compilation is valid. There are several cases in which compilation is blocked because it would result in an unsafe rule (a rule that might differ in its output compared to the original rule1 and rule2 firing one after the other). The function returns True if the production compilation is unsafe and should be stopped.
+        Check that production compilation is valid. There are several cases in which compilation is blocked because it would result in an unsafe rule (a rule that might differ in its output compared to the original rule1 and rule2 firing one after the other). The function returns True if the production compilation is unsafe and should be stopped.
         """
         production1 = self[rule_name1]['rule']()
 
@@ -517,7 +517,7 @@ class ProductionRules(object):
                 max_utility = utility
                 used_rulename = rulename
                 if not self.model_parameters["subsymbolic"] or not self.model_parameters["utility_noise"]:
-                    break #breaking after finding a rule, to speed up a process
+                    break #breaking after finding a rule, to speed up the process
         if used_rulename:
             self.used_rulename = used_rulename
             production = self.rules[used_rulename]["rule"]()
@@ -554,7 +554,7 @@ class ProductionRules(object):
 
     def compile_rules(self):
         """
-        Compiles two rules.
+        Compile two rules.
         """
         if self.model_parameters["production_compilation"] and self.compile:
             compiled_rulename, re_created = self.rules.compile_rules(self.compile[0], self.compile[1], self.compile[2], self.buffers, self.model_parameters)
@@ -566,7 +566,7 @@ class ProductionRules(object):
 
     def update(self, RHSdictionary, time):
         """
-        Updates buffers (RHS of production rules).
+        Update buffers (RHS of production rules).
         """
         temp_actrvariables = dict(self.__actrvariables)
         ordering_dict = {"!": 0, "?": 0, "=": 1, "@": 2, "*": 3, "+": 4, "~": 5}
@@ -602,7 +602,7 @@ class ProductionRules(object):
 
     def extra_test(self, name, tested, test, temp_actrvariables, time):
         """
-        Adding an extra test to a buffer.
+        Add an extra test to a buffer.
         """
         tested.state = tested._BUSY
         self.extra_tests[name] = test
@@ -611,7 +611,7 @@ class ProductionRules(object):
 
     def clear(self, name, cleared, optional, temp_actrvariables, time, freeing=True):
         """
-        Clears a buffer. The 'freeing' argument specifies whether the state should be considered FREE (if the rule is run alone) or not (if it is embedded in another rule).
+        Clear a buffer. The 'freeing' argument specifies whether the state should be considered FREE (if the rule is run alone) or not (if it is embedded in another rule).
         """
         cleared.state = cleared._BUSY
         try:
@@ -632,7 +632,7 @@ class ProductionRules(object):
 
     def execute(self, name, executed, executecommand, temp_actrvariables, time):
         """
-        Executes a command.
+        Execute a command.
         """
         executed.state = executed._BUSY
         for each in executecommand:
@@ -645,7 +645,7 @@ class ProductionRules(object):
 
     def modify(self, name, modified, otherchunk, temp_actrvariables, time):
         """
-        Modifies a buffer chunk.
+        Modify a buffer chunk.
         """
         modified.state = modified._BUSY
         if self.model_parameters['production_compilation']:
@@ -667,10 +667,10 @@ class ProductionRules(object):
 
     def modify_request(self, name, modified, otherchunk, temp_actrvariables, time):
         """
-        Modifies a buffer chunk.
+        Modify a buffer chunk. Unlike plain modify, this might add extra time to changing the chunk in the buffer.
         """
         modified.state = modified._BUSY
-        extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
+        extra_time = utilities.calculate_setting_time(updated)
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
         if self.model_parameters['production_compilation']:
@@ -692,10 +692,10 @@ class ProductionRules(object):
 
     def overwrite(self, name, updated, otherchunk, temp_actrvariables, time):
         """
-        Overwrites a buffer.
+        Overwrite a buffer.
         """
         updated.state = updated._BUSY
-        extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
+        extra_time = utilities.calculate_setting_time(updated)
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
         if self.model_parameters['production_compilation']:
@@ -704,13 +704,14 @@ class ProductionRules(object):
             self.current_slotvals[name] = RHSdict
 
         updated.create(otherchunk, list(self.dm.values())[0], temp_actrvariables)
+
         created_elem = list(updated)[0]
         updated.state = updated._FREE
         yield Event(roundtime(time), name, "WROTE A CHUNK: %s" % created_elem)
 
     def visualencode(self, name, visualbuffer, chunk, temp_actrvariables, time, extra_time):
         """
-        Encodes visual object.
+        Encode a visual object.
         """
         visualbuffer.state = visualbuffer._BUSY
         time += extra_time
@@ -721,12 +722,12 @@ class ProductionRules(object):
 
     def retrieveorset(self, name, updated, otherchunk, temp_actrvariables, time):
         """
-        Decides whether a buffer should be set (for buffers that are not attached to any dm, i.e., Goal or Motor or Vision) or should trigger retrieval.
+        Find out whether a buffer should be set (for buffers that are not attached to any dm, i.e., Goal or Motor or Vision) or should trigger retrieval.
         """
         updated.state = updated._BUSY
         if isinstance(updated, goals.Goal):
             yield from self.clear(name, updated, otherchunk, temp_actrvariables, time, freeing=False)
-            extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
+            extra_time = utilities.calculate_setting_time(updated)
             time += extra_time
             yield Event(roundtime(time), name, self._UNKNOWN)
             if self.model_parameters['production_compilation']:
@@ -739,7 +740,7 @@ class ProductionRules(object):
             updated.state = updated._FREE
             yield Event(roundtime(time), name, "CREATED A CHUNK: %s" % created_elem)
         elif isinstance(updated, vision.VisualLocation):
-            extra_time = utilities.calculate_setting_time(updated, self.model_parameters)
+            extra_time = utilities.calculate_setting_time(updated)
             time += extra_time #0 ms to create chunk in location (pop-up effect)
             yield Event(roundtime(time), name, self._UNKNOWN)
             chunk, stim = updated.find(otherchunk, actrvariables=temp_actrvariables, extra_tests=self.extra_tests.get(name, {})) #extra_time currently ignored
@@ -761,11 +762,11 @@ class ProductionRules(object):
 
     def retrieve(self, name, retrieval, otherchunk, temp_actrvariables, time):
         """
-        Carries out retrieval. 
+        Carry out retrieval using the retrieval buffer. 
         """
         #starting process
         yield Event(roundtime(time), name, 'START RETRIEVAL')
-        retrieved_elem, extra_time = retrieval.retrieve(time, otherchunk, temp_actrvariables, self.buffers, self.extra_tests.get(name, {}), self.model_parameters)
+        retrieved_elem, extra_time = retrieval.retrieve(time, otherchunk, temp_actrvariables, self.buffers, self.extra_tests.get(name, {}))
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
         if retrieved_elem:
@@ -784,7 +785,7 @@ class ProductionRules(object):
 
     def automatic_search(self, name, visualbuffer, stim, time):
         """
-        Automatic buffering of environment stim in the visual buffer. This is not entered by production rules. Production rules are bypassed, this is called directly by simulation.
+        Automatic buffering of environment stim in the visual buffer. Automatic search is never found by production rules. Production rules are bypassed, this is called directly by simulation.
         """
         visualbuffer.state = visualbuffer._BUSY
         newchunk = None
@@ -801,7 +802,7 @@ class ProductionRules(object):
 
     def automatic_buffering(self, name, visualbuffer, stim, time):
         """
-        Automatic buffering of environment stim in the visual buffer. This is not entered by production rules. Production rules are bypassed, this is called directly by simulation.
+        Automatic buffering of environment stim in the visual buffer. Automatic search is never found by production rules. Production rules are bypassed, this is called directly by simulation.
         """
         visualbuffer.state = visualbuffer._BUSY
         foveal_distance = utilities.calculate_distance(1, visualbuffer.environment.size, visualbuffer.environment.simulated_screen_size, visualbuffer.environment.viewing_distance)
@@ -810,7 +811,7 @@ class ProductionRules(object):
         encoding = 0
         for st in stim:
             if st['position'][0] > cf[0]-foveal_distance and st['position'][0] < cf[0]+foveal_distance and st['position'][1] > cf[1]-foveal_distance and st['position'][1] < cf[1]+foveal_distance:
-                newchunk, encoding = visualbuffer.automatic_buffering(st, self.model_parameters)
+                newchunk, encoding = visualbuffer.automatic_buffering(st)
         time += encoding
         yield Event(roundtime(time), name, self._UNKNOWN)
         visualbuffer.state = visualbuffer._FREE
@@ -823,9 +824,9 @@ class ProductionRules(object):
 
     def visualshift(self, name, visualbuffer, otherchunk, temp_actrvariables, time):
         """
-        Carries out preparation of visual shift.
+        Carry out preparation of visual shift.
         """
-        newchunk, extra_time, site = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters = self.model_parameters)
+        newchunk, extra_time, site = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables)
 
         encoding = extra_time[0]
         preparation = extra_time[1]
@@ -851,7 +852,7 @@ class ProductionRules(object):
 
     def visualcontinue(self, name, visualbuffer, otherchunk, temp_actrvariables, time, extra_time, landing_site):
         """
-        Carries out the rest of visual shift. Shift is split in two because of EMMA assumption that the two parts can act independently of each other.
+        Carry out the rest of visual shift. Shift is split in two because of EMMA assumption that the two parts can act independently of each other.
         """
         visualbuffer.preparation = visualbuffer._FREE
         visualbuffer.execution = visualbuffer._BUSY
@@ -870,14 +871,14 @@ class ProductionRules(object):
         visualbuffer.move_eye(landing_site)
         yield Event(roundtime(time), name, 'SHIFT COMPLETE TO POSITION: %s' %visualbuffer.current_focus)
         if encoding > preparation+execution:
-            newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters = self.model_parameters)
+            newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables)
             yield from self.visualencode(name, visualbuffer, otherchunk, temp_actrvariables, time, (1-((preparation+execution)/encoding))*extra_time[0])
         visualbuffer.processor = visualbuffer._FREE
         visualbuffer.execution = visualbuffer._FREE
 
     def motorset(self, name, motorbuffer, otherchunk, temp_actrvariables, time):
         """
-        Carries out preparation of motor action. 
+        Carry out preparation of motor action. 
         """
         newchunk = motorbuffer.create(otherchunk, temp_actrvariables)
 
@@ -912,7 +913,7 @@ class ProductionRules(object):
 
     def motorcontinue(self, name, motorbuffer, otherchunk, temp_actrvariables, time, time_presses):
         """
-        Carries out the rest of motor action. Motor action is split in two because of ACT-R assumption that the two parts can act independently of each other.
+        Carry out the rest of motor action. Motor action is split in two because of ACT-R assumption that the two parts can act independently of each other.
         """
         if motorbuffer.last_key[1]:
             time = motorbuffer.last_key[1] # if something else is being pressed, wait for that to finish before starting initializing etc.
@@ -950,7 +951,7 @@ class ProductionRules(object):
 
     def LHStest(self, dictionary, actrvariables, update=False):
         """
-        Tests rules in LHS of production rules. update specifies whether actrvariables should be updated (this does not happen when rules are tested, only when they are fired)
+        Test rules in LHS of production rules. update specifies whether actrvariables should be updated (this does not happen when rules are tested, only when they are fired)
         """
         for key in dictionary:
             submodule_name = key[1:] #this is the module
@@ -968,9 +969,16 @@ class ProductionRules(object):
 
     def test(self, submodule_name, tested, testchunk, temp_actrvariables):
         """
-        Tests the content of a buffer.
+        Test the content of a buffer.
+
+        What buffer - specified by tested.
         """
         if not tested:
+            return False, None
+
+        submodule_var = "".join(["=", submodule_name])
+
+        if submodule_var in temp_actrvariables and list(self.buffers[submodule_name])[0] != temp_actrvariables[submodule_var]:
             return False, None
 
         for chunk in tested:
@@ -978,14 +986,16 @@ class ProductionRules(object):
 
             if testchunk <= chunk:
                 temp_actrvariables = dict(testchunk.boundvars)
-                temp_actrvariables["=" + submodule_name] = list(self.buffers[submodule_name])[0]
+                temp_actrvariables[submodule_var] = list(self.buffers[submodule_name])[0]
                 return True, temp_actrvariables
             else:
                 return False, None
 
     def query(self, submodule_name, tested, testdict, temp_actrvariables):
         """
-        Queries a buffer.
+        Query a buffer.
+
+        What buffer - specified by tested.
         """
         for each in testdict:
             if each == 'buffer' and not tested.test_buffer(testdict.get(each)):

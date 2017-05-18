@@ -29,7 +29,7 @@ class Model(object):
         actr.makechunk(nameofchunk="attending", typename="chunk", value="attending")
         actr.makechunk(nameofchunk="done", typename="chunk", value="done")
         self.m.goal.add(actr.makechunk(typename="read", state=start))
-        self.m.goal = "g2"
+        self.m.set_goal("g2")
         self.m.goals["g2"].delay=0.2
 
         self.m.productionstring(name="find_probe", string="""
@@ -47,7 +47,6 @@ class Model(object):
         +visual_location>
         isa _visuallocation
         screen_x closest""") #this rule is used if automatic visual search does not put anything in the buffer
-
 
         self.m.productionstring(name="check_probe", string="""
         =g>
@@ -106,7 +105,7 @@ if __name__ == "__main__":
     #text = [{1: {'text': 'X', 'position': (10, 10)}, 2: {'text': 'Y', 'position': (10, 20)}, 3:{'text': 'Z', 'position': (10, 30)}},{1: {'text': 'A', 'position': (50, 10)}, 2: {'text': 'B', 'position': (50, 180)}, 3:{'text': 'C', 'position': (400, 180)}}]
     environ = actr.Environment(focus_position=(0,0))
     m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0, automatic_visual_search=True, eye_mvt_scaling_parameter=0.05, eye_mvt_angle_parameter=10) #If you don't want to use the EMMA model, specify emma=False in here
-    sim = m.m.simulation(realtime=True, trace=True,  gui=True, environment_process=environ.environment_process, stimuli=stim_d, triggers='X', times=10)
+    sim = m.m.simulation(realtime=True, trace=True,  gui=True, environment_process=environ.environment_process, stimuli=stim_d, triggers='X', times=50)
     sim.run(10)
     check = 0
     for key in m.dm:

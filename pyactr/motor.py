@@ -46,7 +46,7 @@ class Motor(buffers.Buffer):
 
     def create(self, otherchunk, actrvariables=None):
         """
-        Creates (aka sets) a chunk for manual control. The chunk is returned (and could be used by device or external environment).
+        Create (aka set) a chunk for manual control. The chunk is returned (and could be used by device or external environment).
         """
         if actrvariables == None:
             actrvariables = {}

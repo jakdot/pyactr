@@ -40,7 +40,7 @@ class Model(object):
             dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["earl"], arg2=dict_dm[word])
         dict_dm[13] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["lawyer"], arg2=dict_dm["store"])
 
-        self.model.decmem = set(dict_dm.values())
+        self.model.set_decmem(set(dict_dm.values()))
         self.dm = self.model.decmem
         
         self.harvest_person = actr.makechunk(nameofchunk="harvest_person", typename="chunk", value="harvest_person")

@@ -78,7 +78,7 @@ _INTERRUPTIBLE = {"retrieveorset", "modify_request"}
 
 def roundtime(time):
     """
-    Rounds time to tenths of miliseconds.
+    Round time to tenths of miliseconds.
     """
     return round(time, 4)
 
@@ -93,7 +93,7 @@ class ACTRError(Exception):
 
 def stringsplitting(info, empty=True):
     """
-    Splitting info into variables, negative variables, values and negative values. Used in chunks. Info is a string, e.g., '=x~=y!2'. This is a depreciated approach.
+    Split info into variables, negative variables, values and negative values. Used in chunks. Info is a string, e.g., '=x~=y!2'. This is a depreciated approach.
     """
     varval = {"variables": set(), "values": set(), "negvariables": set(), "negvalues": set()}
     #assume it's a string
@@ -110,7 +110,7 @@ def stringsplitting(info, empty=True):
 
 def splitting(info, empty=True):
     """
-    Splitting info into variables, negative variables, values and negative values. Used in chunks.
+    Split info into variables, negative variables, values and negative values. Used in chunks.
 
     Info could either be a string, e.g., '=x~=y!2', or a special chunk 'variablesvalues', e.g., Chunk('_variablesvalues', variables='x', negvariables='y', values=2). Alternatively, info could consist only of a value.
     """
@@ -142,7 +142,7 @@ def splitting(info, empty=True):
 
 def get_similarity(d, val1, val2):
     """
-    Gets similarity for partial matching.
+    Get similarity for partial matching.
     """
     dis = d.get(tuple((val2, val1)), -1) #-1 is the default value
     return dis
@@ -163,7 +163,7 @@ def getchunk():
 
 def make_chunkparts_without_varconflicts(chunkpart, rule_name, variables):
     """
-    Makes a chunk avoiding any variable names used in actrvariables. Uses new_name for naming, if possible.
+    Make a chunk avoiding any variable names used in actrvariables. The function uses rule_name for naming, if possible.
     """
     varval = splitting(chunkpart, empty=False)
     temp_var = set()
@@ -194,7 +194,7 @@ def make_chunkparts_without_varconflicts(chunkpart, rule_name, variables):
 
 def make_chunkparts_with_new_vars(chunkpart, variable_dict, val_dict):
     """
-    Makes a chunk changing variable names according to variable_dict.
+    Make a chunk changing variable names according to variable_dict.
     """
     varval = splitting(chunkpart, empty=False)
     temp_set = set()
@@ -225,7 +225,9 @@ def make_chunkparts_with_new_vars(chunkpart, variable_dict, val_dict):
 
 def merge_chunkparts(chunkpart1, chunkpart2):
     """
-    Chunkparts are merged as follows: chunkpart1 is used; info in chunkpart2 is added to chunkpart1
+    Merge two chunk parts.
+
+    Chunk parts are merged as follows: chunkpart1 is used; info in chunkpart2 is added to chunkpart1
     """
     varval1 = splitting(chunkpart1, empty=False)
     varval2 = splitting(chunkpart2, empty=False)
@@ -294,7 +296,7 @@ def check_bound_vars(actrvariables, elem):
 
 def match(dict2, slotvals, name1, name2):
     """
-    Matches variables that happen to be tied to the same slots. This function is used in production compilation. dict2 is the LHS of the second rule, slotvals is the dictionary based on the output of the first rule.
+    Match variables that happen to be tied to the same slots. This function is used in production compilation. dict2 is the LHS of the second rule, slotvals is the dictionary based on the output of the first rule.
     """
     def temp_func(temp_set, temp_val):
         """
@@ -378,16 +380,16 @@ def match(dict2, slotvals, name1, name2):
 
 def modify_utilities(time, reward, rulenames, rules, model_parameters):
     """
-    Updates rules with newly calculated utilites for rules whose firing led to reward.
+    Update rules with newly calculated utilites for rules whose firing led to reward.
     """
     for rulename in rulenames:
         for t in rulenames[rulename]:
             utility_time = time-t
             rules[rulename]["utility"] = round(rules[rulename]["utility"] + model_parameters["utility_alpha"]*(reward-utility_time-rules[rulename]["utility"]), 4)
 
-def calculate_setting_time(updated, model_parameters):
+def calculate_setting_time(updated):
     """
-    Calculates time to set a chunk in a buffer.
+    Calculate time to set a chunk in a buffer.
     """
     try:
         val = updated.delay
@@ -397,19 +399,27 @@ def calculate_setting_time(updated, model_parameters):
 
 #############utilities for baselevel learning and noise######################################
 
-def baselevel_learning(current_time, times, bll, decay):
+def baselevel_learning(current_time, times, bll, decay, activation=None, optimized_learning=False):
     """
-    Calculates base-level learning: B_i = ln(sum(t_j^{-decay})) for t_j = current_time - t for t in times.
+    Calculate base-level learning: B_i = ln(sum(t_j^{-decay})) for t_j = current_time - t for t in times.
     """
-    B = 0
-    if bll:
-        B = math.log(np.sum((current_time - times) ** (-decay)))
-                #((current_time - x) ** (-decay) for x in times))
+    if len(times) > 0:
+        if bll and not optimized_learning:
+            B = math.log(np.sum((current_time - times) ** (-decay)))
+        elif bll:
+            B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(times)) #calculating bll using optimized learning -- much faster since it's a single calculation
+
+    #add hard-coded activation
+    if activation != None:
+        try:
+            B = math.log(math.exp(B) + math.exp(activation))
+        except NameError:
+            B = activation
     return B
 
 def calculate_instantanoues_noise(instantaneous_noise):
     """
-    Calculates noise, generated by logistic distribution with mean 0 and variance = ( pi^2/3 ) * s^2 where s = instantaneous_noise.
+    Calculate noise, generated by logistic distribution with mean 0 and variance = ( pi^2/3 ) * s^2 where s = instantaneous_noise.
     """
     assert instantaneous_noise >= 0, "Instantaneous noise must be positive"
     if instantaneous_noise == 0:
@@ -421,9 +431,9 @@ def calculate_instantanoues_noise(instantaneous_noise):
 
 def weigh_buffer(chunk, weight_k):
     """
-    Calculates w_{kj}=w_k/n_k. That is, you supply chunk and its activation w_k and it divides w_k by the number of chunks in w_k.
+    Calculate w_{kj}=w_k/n_k. You supply chunk and its activation w_k and it divides w_k by the number of chunks in w_k.
     """
-    n_k = len(tuple(find_chunks(chunk)))
+    n_k = len(tuple(find_chunks(chunk).values()))
     if n_k == 0:
         weight_kj = 0
     else:
@@ -434,7 +444,7 @@ def find_chunks(chunk):
     """
     Find chunks as values in slots in the chunk 'chunk'.
     """
-    chunk_list = []
+    chunk_dict = {}
     for x in chunk:
         try:
             val = splitting(x[1])['values'].pop()
@@ -442,38 +452,66 @@ def find_chunks(chunk):
             pass
         else:
             if val != 'None' and not isinstance(val, str):
-                chunk_list.append(val)
-    return chunk_list
+                chunk_dict[x[0]] = val
+    return chunk_dict
 
-def calculate_strength_association(chunk, otherchunk, dm, strength_of_association):
+def calculate_strength_association(chunk, otherchunk, dm, strength_of_association, restricted=''):
     """
-    Calculates S_{ji} = S - ln((1+slots_j)/slots_ij), where j=chunk, i=otherchunk
+    Calculate S_{ji} = S - ln((1+slots_j)/slots_ij), where j=chunk, i=otherchunk
+
+    restricted specifies the slot name to which calculation is restricted.
     """
     if otherchunk.typename == VARVAL:
         otherchunk = splitting(x[1])['values'].pop()
-    slotvalues = find_chunks(otherchunk)
-    if chunk != otherchunk and chunk not in slotvalues:
+    chunk_dict = find_chunks(otherchunk)
+    slotvalues = chunk_dict.items()
+    values = chunk_dict.values()
+    if chunk != otherchunk and chunk not in values:
         return 0
     else:
-        slots_j = 1
-        for each in dm:
-            for x in each:
-                if chunk == splitting(x[1])['values'].pop():
-                    slots_j += 1
-    slots_ij = slotvalues.count(chunk)
+        if restricted:
+            if (restricted, chunk) in slotvalues:
+                if (restricted, chunk) not in dm.restricted_number_chunks:
+                    slots_j = 1
+                    for each in dm:
+                        for x in each:
+                            if x[0] == restricted and splitting(x[1])['values'] and chunk == splitting(x[1])['values'].pop():
+                                slots_j += 1
+                    dm.restricted_number_chunks.update({(restricted, chunk): slots_j})
+                else:
+                    slots_j = dm.restricted_number_chunks[(restricted, chunk)]
+            else:
+                return 0
+        else:
+            slots_j = 1
+            if chunk not in dm.unrestricted_number_chunks:
+                for each in dm:
+                    for x in each:
+                        if splitting(x[1])['values'] and chunk == splitting(x[1])['values'].pop():
+                            slots_j += 1
+                dm.unrestricted_number_chunks.update({chunk: slots_j})
+            else:
+                slots_j = dm.unrestricted_number_chunks[chunk]
+    slots_ij = list(values).count(chunk)
     return strength_of_association - math.log(slots_j/max(1, slots_ij))
 
-def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, strength):
+def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, strength, restricted=False):
     """
-    Calculates spreading activation.
+    Calculate spreading activation.
+
+    restricted states whether spreading activation should be restricted only to chunk names that share the same slot names.
     """
     SA = 0
     for each in buffer_spreading_activation:
         otherchunk = list(buffers[each])[0]
         w_kj = weigh_buffer(otherchunk, buffer_spreading_activation[each])
         s_ji = 0
-        for each in find_chunks(otherchunk):
-            s_ji += calculate_strength_association(each, chunk, dm, strength)
+        for each in find_chunks(otherchunk).items():
+            if restricted:
+                s_ji += calculate_strength_association(each[1], chunk, dm, strength, each[0])
+            else:
+                s_ji += calculate_strength_association(each[1], chunk, dm, strength)
+
         SA += w_kj*s_ji
     return SA
 
@@ -481,13 +519,13 @@ def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, streng
 
 def retrieval_success(activation, threshold):
     """
-    If retrieval successful, return the element.
+    If retrieval is successful, return the element.
     """
     return True if activation >= threshold else False
 
 def retrieval_latency(activation, latency_factor, latency_exponent):
     """
-    Calculates retrieval latency.
+    Calculate retrieval latency.
     """
     return latency_factor*(math.exp(-activation*latency_exponent))
 
@@ -499,7 +537,14 @@ def retrieval_latency(activation, latency_factor, latency_exponent):
 
 def calculate_visual_angle(start_position, final_position, screen_size, simulated_screen_size, viewing_distance):
     """
-    Calculates visual angle, needed for vision module. start_position is the current focus, final position is where the focus should be shifted. screen_size is the size of the environment in simulation, simulated_display_resolution in pixels - e.g., 1366:768, simulated_screen_size in cm - e.g., 50cm : 28cm, viewing distance in cm - e.g., 50cm
+    Calculate visual angle, needed for vision module.
+    
+    start_position is the current focus
+    final position is where the focus should be shifted
+    screen_size is the size of the environment in simulation
+    simulated_display_resolution in pixels - e.g., 1366:768
+    simulated_screen_size in cm - e.g., 50cm : 28cm
+    viewing distance in cm - e.g., 50cm
     """
     start_position = list(start_position)
     final_position = list(final_position)
@@ -517,7 +562,7 @@ def calculate_visual_angle(start_position, final_position, screen_size, simulate
 
 def calculate_distance(angle_degree, screen_size, simulated_screen_size, viewing_distance):
     """
-    Calculates distance from start position that is at the border given the visual angle.
+    Calculate distance from start position that is at the border given the visual angle.
     """
     angle = angle_degree*math.pi/180
     pxpercm = float(screen_size[0])/float(simulated_screen_size[0])
@@ -539,7 +584,9 @@ def calculate_pythagorian_distance(x, y):
 
 def calculate_onedimensional_distance(x, y, horizontal=True):
     """
-    x and y are 2D positions. horizontal checks whether we measure horizontal or vertical distance.
+    x and y are 2D positions.
+    
+    horizontal checks whether we measure horizontal or vertical distance.
     """
     x = list(x)
     y = list(y)
@@ -554,7 +601,12 @@ def calculate_onedimensional_distance(x, y, horizontal=True):
 
 def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, vis_delay=None):
     """
-    Delay in visual attention using EMMA model. Original formula: K*[-log frequency]*e^(k*distance). Simplified as: K * vis_delay * e^(k*distance). The modeller herself can decide how frequency should be hooked to delay via the parameter vis_delay.
+    Delay in visual attention using EMMA model.
+    
+    Original formula: K*[-log frequency]*e^(k*distance). Simplified as: K * vis_delay * e^(k*distance).
+    
+    The modeller herself can decide how frequency should be hooked to delay via the parameter vis_delay.
+    
     Distance is measured in degrees of visual angle.
     """
     if vis_delay:
@@ -568,7 +620,7 @@ def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, vis_delay
 
 def calculate_preparation_time(emma_noise):
     """
-    Returns time to prepare eye mvt.
+    This function returns time to prepare eye mvt.
     """
     if emma_noise:
         return np.random.gamma(shape=9, scale=0.135/9)
@@ -577,7 +629,7 @@ def calculate_preparation_time(emma_noise):
 
 def calculate_execution_time(angle_distance, emma_noise):
     """
-    Returns execution time for eye mvt. Angle_distance is in radians.
+    This function returns execution time for eye mvt. Angle_distance is in radians.
     """
     degree_distance = 180*angle_distance/math.pi
     execution_time = 0.07 + 0.002*degree_distance
@@ -586,15 +638,16 @@ def calculate_execution_time(angle_distance, emma_noise):
     else:
         return execution_time
 
-def calculate_landing_site(position, angle_distance, emma_noise):
+
+def calculate_landing_site(position, angle_distance, emma_landing_site_noise):
     """
-    Returns time to prepare eye mvt.
+    This function returns time to prepare eye mvt.
     """
     position = list(position)
     position[0] = float(position[0])
     position[1] = float(position[1])
     degree_distance = 180*angle_distance/math.pi
-    if emma_noise and degree_distance:
+    if emma_landing_site_noise and degree_distance:
         cov_mat = [[0.1*degree_distance,0], [0,0.1*degree_distance]]
         return tuple(np.random.multivariate_normal(position, cov_mat))
     else:

@@ -6,6 +6,7 @@ import collections
 import re
 import random
 import warnings
+import numbers
 
 import pyactr.utilities as utilities
 from pyactr.utilities import ACTRError
@@ -13,9 +14,12 @@ from pyactr.utilities import ACTRError
 def chunktype(cls_name, field_names, verbose=False):
     """
     Creates type chunk. Works like namedtuple.
+
+    For example:
+    >>> chunktype('chunktype_example0', 'value')
     """
     if cls_name in utilities.SPECIALCHUNKTYPES and field_names != utilities.SPECIALCHUNKTYPES[cls_name]:
-        raise ACTRError("You cannot redefine attributes of the chunk type '%s'; you can only use the attributes '%s'" % (cls_name, utilities.SPECIALCHUNKTYPES[cls_name]))
+        raise ACTRError("You cannot redefine slots of the chunk type '%s'; you can only use the slots '%s'" % (cls_name, utilities.SPECIALCHUNKTYPES[cls_name]))
 
     try:
         field_names = field_names.replace(',', ' ').split()
@@ -24,13 +28,17 @@ def chunktype(cls_name, field_names, verbose=False):
     field_names = tuple(sorted(name + "_" for name in field_names))
     for each in field_names:
         if each == "ISA" or each == "isa":
-            raise ACTRError("You cannot use the attribute 'isa' in your chunk. That attribute is used to define chunktypes.")
+            raise ACTRError("You cannot use the slot 'isa' in your chunk. That slot is used to define chunktypes.")
     
     Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, verbose=verbose)}) #chunktypes are not returned; they are stored as Chunk class attribute
 
 class Chunk(collections.Sequence):
     """
     ACT-R chunks. Based on namedtuple (tuple with dictionary-like properties).
+
+    For example:
+    >>> Chunk('chunktype_example0', value='one')
+    chunktype_example0(value= one)
     """
 
     class EmptyValue(object):
@@ -68,12 +76,20 @@ class Chunk(collections.Sequence):
         kwargs = {}
         for key in dictionary:
 
-            #change values (and values in a tuple) into string, when possible
-            if not isinstance(dictionary[key], collections.Sequence):
+            #change values (and values in a tuple) into string, when possible (i.e., when the value is not a chunk itself
+            if isinstance(dictionary[key], Chunk):
+                pass
+
+            elif dictionary[key] is None or isinstance(dictionary[key], Chunk.EmptyValue) or isinstance(dictionary[key], str) or isinstance(dictionary[key], numbers.Number):
                 dictionary[key] = str(dictionary[key])
 
-            elif type(dictionary[key]) == tuple:
-                dictionary[key] = tuple(str(x) if not isinstance(dictionary[key], Chunk) else x for x in dictionary[key])
+            #varvals get special treatment because they, unlike any other chunk, might store sequences of values (because negvalues, negvariables do not need to be unique)
+            elif typename == utilities.VARVAL and isinstance(dictionary[key], collections.Sequence):
+                #dictionary[key] = tuple(str(x) if not isinstance(dictionary[key], Chunk) else x for x in dictionary[key]) #OLD VERSION -- checking isinstance is useless since we only have tuples
+                dictionary[key] = tuple(str(x) for x in dictionary[key])
+
+            else:
+                raise ValueError("The value of a chunk slot can only be a chunk, string, number or None; you are using an illegal type for the value of the chunk slot %s, namely %s" % (key, type(dictionary[key])))
 
             #adding _ to minimize/avoid name clashes
             kwargs[key+"_"] = dictionary[key]
@@ -97,6 +113,10 @@ class Chunk(collections.Sequence):
 
         finally:
             self.actrchunk = self._chunktypes[typename](**kwargs)
+
+        self.__empty = None #this will store what the chunk looks like without empty values (the values will be stored on the first call of the relevant function)
+        self.__unused = None #this will store what the chunk looks like without unused values
+        self.__hash = None, self.boundvars.copy() #this will store the hash along with variables (hash changes if some variables are resolved)
 
     def _asdict(self):
         """
@@ -122,7 +142,9 @@ class Chunk(collections.Sequence):
         return re.sub("_$", "", self.actrchunk._fields[pos]), self.actrchunk[pos]
 
     def __hash__(self):
-        def func():
+        if self.__hash[0] and self.boundvars == self.__hash[1]:
+            return self.__hash[0]
+        def hash_func():
             for x in self.removeempty():
                 varval = sorted(utilities.splitting(x[1]).items(), reverse=True) #(neg)values and (neg)variables have to be checked
                 for idx in range(len(varval)):
@@ -142,7 +164,8 @@ class Chunk(collections.Sequence):
                             else:
                                 yield tuple([varval[idx][0], hash(value)])
 
-        return hash(tuple(func()))
+        self.__hash = hash(tuple(hash_func())), self.boundvars.copy() #store the hash along with the vars used to calculate it, so it doesnt need to be recalculated
+        return self.__hash[0]
 
     def __iter__(self):
         for x, y in zip(self.actrchunk._fields, self.actrchunk):
@@ -195,26 +218,19 @@ class Chunk(collections.Sequence):
 
     def __lt__(self, otherchunk):
         """
-        Checks whether one chunk is proper part of another (given bound variables in boundvars).
+        Check whether one chunk is proper part of another (given bound variables in boundvars).
         """
-        if self == otherchunk:
-            return False
-        else:
-            final_val = self.match(otherchunk, partialmatching=False)
-            return final_val
+        return not self == otherchunk and self.match(otherchunk, partialmatching=False)
 
     def __le__(self, otherchunk):
         """
-        Checks whether one chunk is part of another (given boundvariables in boundvars).
+        Check whether one chunk is part of another (given boundvariables in boundvars).
         """
-        if self == otherchunk:
-            return True
-        else:
-            return self < otherchunk
+        return self == otherchunk or self.match(otherchunk, partialmatching=False) #actually, the second disjunct should be enough -- TODO: check why it fails in some cases; this might be important for partial matching
 
     def match(self, otherchunk, partialmatching):
         """
-        Checks partial match (given bound variables in boundvars).
+        Check partial match (given bound variables in boundvars).
         """
         similarity = 0
         if self == otherchunk:
@@ -280,7 +296,7 @@ class Chunk(collections.Sequence):
             #checking negvalues, e.g., ~!10
             if varval["negvalues"]:
                 for negval in varval["negvalues"]:
-                    if negval == matching_val:
+                    if negval == matching_val or (negval in {self.__emptyvalue, 'None'} and matching_val == self.__emptyvalue):
                         if partialmatching:
                             similarity += utilities.get_similarity(self._similarities, negval, matching_val)
                         else:
@@ -292,9 +308,11 @@ class Chunk(collections.Sequence):
 
     def removeempty(self):
         """
-        Removes attribute-value pairs that have the value __emptyvalue. Careful! Returns a generator with attr-value pairs.
+        Remove attribute-value pairs that have the value __emptyvalue.
+        
+        Be careful! This returns a generator with attr-value pairs.
         """
-        def func():
+        def emptying_func():
             for x in self:
                 try:
                     if x[1].removeempty():
@@ -303,13 +321,17 @@ class Chunk(collections.Sequence):
                 except AttributeError:
                     if x[1] != self.__emptyvalue:
                         yield x
-        return tuple(func())
+        if not self.__empty:
+            self.__empty = tuple(emptying_func())
+        return self.__empty
 
     def removeunused(self):
         """
-        Removes values that were only added to fill in empty slots, using None. Careful! Returns a generator with attr-value pairs.
+        Remove values that were only added to fill in empty slots, using None. 
+        
+        Be careful! This returns a generator with attr-value pairs.
         """
-        def func():
+        def unusing_func():
             for x in self:
                 try:
                     if x[1].removeunused():
@@ -318,8 +340,9 @@ class Chunk(collections.Sequence):
                 except AttributeError:
                     if x[1] != None:
                         yield x
-        return tuple(func())
-        #return (x for x in self if x[1] != None) old version
+        if not self.__unused:
+            self.__unused = tuple(unusing_func())
+        return self.__unused
 
 #special chunk that can be used in production rules
 for key in utilities.SPECIALCHUNKTYPES:
@@ -327,7 +350,7 @@ for key in utilities.SPECIALCHUNKTYPES:
 
 def createchunkdict(chunk):
     """
-    Returns typename and chunkdict from pyparsed list.
+    Create typename and chunkdict from pyparsed list.
     """
     sp_dict = {utilities.ACTRVARIABLE: "variables", utilities.ACTRNEG: "negvalues", utilities.ACTRNEG + utilities.ACTRVARIABLE: "negvariables", utilities.ACTRVALUE: "values", utilities.ACTRNEG + utilities.ACTRVALUE: "negvalues"}
     chunk_dict = {}
@@ -393,7 +416,19 @@ def createchunkdict(chunk):
 
 def makechunk(nameofchunk="", typename="", **dictionary):
     """
-    Creates a chunk.
+    Create a chunk.
+
+    Three values can be specified:
+    
+    (i) the name of the chunk (the name could be used if the chunk appears as a value of other chunks or production rules)
+    (ii) its type
+    (ii) slot-value pairs.
+
+    For example:
+    >>> makechunk(nameofchunk='example0', typename='chunktype_example0', value='one')
+    chunktype_example0(value= one)
+
+    This creates a chunk of type chunk1, which has one slot (value) and the value of that slot is one.
     """
     if not nameofchunk:
         nameofchunk = "unnamedchunk"
@@ -401,8 +436,12 @@ def makechunk(nameofchunk="", typename="", **dictionary):
         typename = "undefined" + str(Chunk._undefinedchunktypecounter)
         Chunk._undefinedchunktypecounter += 1
     for key in dictionary:
-        #create varval if not created explicitly, i.e., if this chunk itself is not a varval
-        if typename != utilities.VARVAL and not isinstance(dictionary[key], Chunk):
+        #create varval if not created explicitly, i.e., if the chunk itself is not a varval
+        if typename == utilities.VARVAL:
+            pass
+        elif isinstance(dictionary[key], Chunk):
+            pass
+        elif dictionary[key] is None or isinstance(dictionary[key], str) or isinstance(dictionary[key], numbers.Number):
             temp_dict = utilities.stringsplitting(str(dictionary[key]))
             loop_dict = temp_dict.copy()
             for x in loop_dict:
@@ -415,6 +454,8 @@ def makechunk(nameofchunk="", typename="", **dictionary):
                 else:
                     temp_dict.pop(x) 
             dictionary[key] = Chunk(utilities.VARVAL, **temp_dict)
+        else:
+            raise ValueError("The value of a chunk slot can only be a chunk, string, number or None; you are using an illegal type for the chunk slot %s, namely %s" % (key, type(dictionary[key])))
 
     created_chunk = Chunk(typename, **dictionary)
     created_chunk._chunks[nameofchunk] = created_chunk
@@ -422,7 +463,11 @@ def makechunk(nameofchunk="", typename="", **dictionary):
 
 def chunkstring(name='', string=''):
     """
-    Returns a chunk when given a string. The string is specified in the form: slot value slot value (arbitrary number of slot-value pairs can be used). isa-slot is used as the type of chunk. If no isa-slot is provided, chunk is assigned an 'undefined' type.
+    Create a chunk when given a string. The string is specified in the form: slot value slot value (arbitrary number of slot-value pairs can be used). isa-slot is used as the type of chunk. If no isa-slot is provided, chunk is assigned an 'undefined' type.
+
+    For example:
+    >>> chunkstring(name="example0", string='isa chunktype_example0 value one')
+    chunktype_example0(value= one)
     """
     chunk_reader = utilities.getchunk()
     chunk = chunk_reader.parseString(string, parseAll=True)

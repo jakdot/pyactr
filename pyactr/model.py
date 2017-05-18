@@ -27,9 +27,11 @@ class ACTRModel(object):
     "latency_exponent": 1.0,
     "decay": 0.5,
     "baselevel_learning": True,
+    "optimized_learning": False,
     "instantaneous_noise" : 0,
     "retrieval_threshold" : 0,
     "buffer_spreading_activation" : {},
+    "spreading_activation_restricted" : False,
     "strength_of_association": 0,
     "partial_matching": False,
     "activation_trace": False,
@@ -42,9 +44,12 @@ class ACTRModel(object):
     "automatic_visual_search": True,
     "emma": True,
     "emma_noise": True,
+    "emma_landing_site_noise": False,
     "eye_mvt_angle_parameter": 1,
     "eye_mvt_scaling_parameter": 0.01
     }
+
+    environment has to be an instantiation of the class Environment.
     """
 
     MODEL_PARAMETERS = {"subsymbolic": False,
@@ -53,9 +58,11 @@ class ACTRModel(object):
                 "latency_exponent": 1.0,
                 "decay": 0.5,
                 "baselevel_learning": True,
+                "optimized_learning": False,
                 "instantaneous_noise" : 0,
                 "retrieval_threshold" : 0,
                 "buffer_spreading_activation" : {},
+                "spreading_activation_restricted" : False,
                 "strength_of_association": 0,
                 "partial_matching": False,
                 "activation_trace": False,
@@ -68,6 +75,7 @@ class ACTRModel(object):
                 "automatic_visual_search": True,
                 "emma": True,
                 "emma_noise": True,
+                "emma_landing_site_noise": False,
                 "eye_mvt_angle_parameter": 1, #in LispACT-R: 1
                 "eye_mvt_scaling_parameter": 0.01, #in LispACT-R: 0.01, but dft frequency -- 0.01 -- 0.05 would roughly correspond to their combination in EMMA
                 }
@@ -77,20 +85,25 @@ class ACTRModel(object):
         self.chunktype = chunks.chunktype
         self.chunkstring = chunks.chunkstring
 
-        self.__buffers = {}
-        
         self.visbuffers = {}
 
-        self.goals = {}
-        self.goal = 'g'
+        start_goal = goals.Goal()
+        self.goals = {"g": start_goal}
+        self.__goal = start_goal
 
-        self.retrievals = {}
-        self.retrieval = 'retrieval'
+        self.__buffers = {"g": start_goal}
 
+        start_retrieval = declarative.DecMemBuffer()
+        self.retrievals = {"retrieval": start_retrieval}
+        self.__retrieval = start_retrieval
+        
+        self.__buffers["retrieval"] = start_retrieval
+        
         self.__decmemcount = 0
         
-        self.decmems = {}
-        self.decmem = None #if no dm created, create it now
+        start_dm = declarative.DecMem()
+        self.decmems = {"decmem": start_dm}
+        self.__decmem = start_dm
 
         self.__productions = productions.Productions()
         self.__similarities = {}
@@ -110,24 +123,25 @@ class ACTRModel(object):
         """
         Retrieval in the model.
         """
-        return self.__retrieval
-
-    @retrieval.setter
-    def retrieval(self, name):
-        dmb = declarative.DecMemBuffer()
-        self.__buffers[name] = dmb
-        self.__retrieval = dmb
-        self.retrievals[name] = dmb
+        if len(self.retrievals) == 1:
+            return self.__retrieval
+        else:
+            raise(ValueError("More than 1 retreival specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
 
     @property
     def decmem(self):
         """
         Declarative memory in the model.
         """
-        return self.__decmem
+        if len(self.decmems) == 1:
+            return self.__decmem
+        else:
+            raise(ValueError("More than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
 
-    @decmem.setter
-    def decmem(self, data):
+    def set_decmem(self, data):
+        """
+        Set declarative memory.
+        """
         dm = declarative.DecMem(data)
         self.__decmem = dm
         if self.__decmemcount > 0:
@@ -135,24 +149,48 @@ class ACTRModel(object):
         else:
             self.decmems["decmem"] = dm
         self.__decmemcount += 1
+        return dm
 
     @property
     def goal(self):
         """
         Goal buffer in the model.
         """
-        return self.__goal
+        if len(self.goals) == 1:
+            return self.__goal
+        else:
+            raise(ValueError("More than 1 goal specified, unclear which one should be shown. Use ACTRModel.goals instead."))
 
-    @goal.setter
-    def goal(self, name):
-        g = goals.Goal()
+    def set_retrieval(self, name):
+        """
+        Set retrieval.
+
+        name specifies the name by which the retrieval buffer is referred to in production rules.
+        """
+        dmb = declarative.DecMemBuffer()
+        self.__buffers[name] = dmb
+        self.__retrieval = dmb
+        self.retrievals[name] = dmb
+        return dmb
+
+    def set_goal(self, name, delay=0):
+        """
+        Set goal buffer. delay specifies the delay of setting a chunk in the buffer.
+
+        name specifies the name by which the goal buffer is referred to in production rules.
+        """
+        g = goals.Goal(delay=delay)
         self.__buffers[name] = g
         self.__goal = g
         self.goals[name] = g
+        return g
 
     def visualBuffer(self, name_visual, name_visual_location, default_harvest=None, finst=4):
         """
-        Creates and returns visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned. Finst is relevant only for the visual location buffer.
+        Create visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned. Finst is relevant only for the visual location buffer.
+
+        name_visual and name_visual_location specify the name by which the two buffers are referred to in production rules.
+
         """
         v1 = vision.Visual(self.__env, default_harvest)
         v2 = vision.VisualLocation(self.__env, default_harvest, finst)
@@ -169,7 +207,19 @@ class ACTRModel(object):
 
     def productionstring(self, name='', string='', utility=0, reward=None):
         """
-        Returns a production rule when given a string. The string is specified in the form: LHS ==> RHS
+        Create a production rule when given a string. The string is specified in the following form (as a string): LHS ==> RHS
+
+        The following example would be a rule that checks the buffer 'g' and if the buffer has value one, it will reset it to two:
+        >>> ACTRModel().productionstring(name='example0', string='=g>\
+                isa example\
+                value one\
+                ==>\
+                =g>\
+                isa example\
+                value two')
+        {'=g': example(value= one)}
+        ==>
+        {'=g': example(value= two)}
         """
         if not name:
             name = "unnamedrule" + productions.Productions._undefinedrulecounter
@@ -206,16 +256,28 @@ class ACTRModel(object):
 
     def set_similarities(self, chunk, otherchunk, value):
         """
-        Sets similarities between chunks. By default, different chunks have the value of -1. This can be changed.
+        Set similarities between chunks. By default, different chunks have the value of -1.
+
+        chunk and otherchunk are two chunks whose similarities are set. value must be a non-positive number.
         """
         if value > 0:
             raise utilities.ACTRError("Values in similarities must be 0 or smaller than 0")
         self.__similarities[tuple((chunk, otherchunk))] = value
         self.__similarities[tuple((otherchunk, chunk))] = value
 
-    def simulation(self, realtime=False, trace=True, gui=True, environment_process=None, **kwargs):
+    def simulation(self, realtime=False, trace=True, gui=True, initial_time=0, environment_process=None, **kwargs):
         """
-        Returns a simulation that has to be run with simulation.run(max_time) command.
+        Prepare simulation of the model
+
+        This will actually not run the simulation it will only return the simulation object. The object can then be run using run(max_time) command.
+
+        realtime - should the simualtion be run in real time or not?
+        trace - should the trace of the simulation be printed?
+        gui - should the environment appear on a separate screen? (This requires tkinter)
+        initial_time - what is the starting time point of the simulation?
+        environment_process - what environment process should the simulation use?
+        The last argument should be supplied with the method environment_process of the environemnt used in the model.
+        kwargs are arguments that environment_process will be supplied with.
         """
 
         if len(self.decmems) == 1:
@@ -232,6 +294,7 @@ class ACTRModel(object):
         self.__buffers["manual"] = motor.Motor() #adding motor buffer
 
         if self.__env:
+            self.__env.initial_time = initial_time #set the initial time of the environment to be the same as simulation
             if self.visbuffers:
                 self.__buffers.update(self.visbuffers)
             else:
@@ -239,8 +302,18 @@ class ACTRModel(object):
                 self.__buffers["visual"] = vision.Visual(self.__env, dm) #adding vision buffers
                 self.__buffers["visual_location"] = vision.VisualLocation(self.__env, dm) #adding vision buffers
 
+        for each in self.__buffers:
+            try:
+                mp = self.__buffers[each].model_parameters
+            except AttributeError:
+                pass
+            else:
+                for param_name in self.model_parameters:
+                    if param_name not in mp:
+                        mp[param_name] = self.model_parameters[param_name]
+
         used_productions = productions.ProductionRules(self.__productions, self.__buffers, decmem, self.model_parameters)
 
         chunks.Chunk._similarities = self.__similarities
 
-        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, used_productions, environment_process, **kwargs)
+        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, used_productions, initial_time, environment_process, **kwargs)

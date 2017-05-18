@@ -26,8 +26,8 @@ actr.makechunk(nameofchunk="done", typename="chunk", value="done")
 m.goal.add(actr.chunkstring(name="reading", string="""
         isa     read
         state   start"""))
-m.goal = "g2"
-m.goal.delay = 0.2
+g2 = m.set_goal("g2")
+g2.delay = 0.2
 
 t2 = m.productionstring(name="encode_letter", string="""
         =g>
