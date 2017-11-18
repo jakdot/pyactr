@@ -67,9 +67,9 @@ actr.chunktype("isMember", ("object", "category", "judgment"))
 
 #you can vary what will appear in goal buffer
 
-semantic.goal.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['bird']))
-#g.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['animal']))
-#g.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['fish']))
+#semantic.goal.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['bird']))
+semantic.goal.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['animal']))
+#semantic.goal.add(actr.makechunk(typename="isMember", object=chunk_dict['canary'], category=chunk_dict['fish']))
 
 semantic.productionstring(name="initialRetrieve", string="""
         =g>
@@ -139,4 +139,5 @@ semantic.productionstring(name="fail", string="""
 if __name__ == "__main__":
     x = semantic.simulation()
     x.run(1)
+    print(semantic.goal.pop())
 

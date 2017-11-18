@@ -746,6 +746,7 @@ class Compilation7(object):
             isa     goal
             arg1    =v1
             arg2    =v2
+            arg2    ~5
             arg3    =v2
             arg4    =v3
             ==>
@@ -775,6 +776,16 @@ class Compilation7(object):
             arg2    =v2
             arg3    =v1
             arg4    =v0""")
+        
+        self.m.productionstring(name="three", string="""
+            =g>
+            isa     goal
+            arg2    5
+            ?retrieval>
+            buffer  empty
+            ==>
+            =g>
+            isa     goal""")
 
 class Compilation8(actr.ACTRModel):
     """

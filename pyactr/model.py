@@ -33,7 +33,9 @@ class ACTRModel(object):
     "buffer_spreading_activation" : {},
     "spreading_activation_restricted" : False,
     "strength_of_association": 0,
+    "association_only_from_chunks": True,
     "partial_matching": False,
+    "mismatch_penalty": 1,
     "activation_trace": False,
     "utility_noise": 0,
     "utility_learning": False,
@@ -64,7 +66,9 @@ class ACTRModel(object):
                 "buffer_spreading_activation" : {},
                 "spreading_activation_restricted" : False,
                 "strength_of_association": 0,
+                "association_only_from_chunks": True,
                 "partial_matching": False,
+                "mismatch_penalty": 1,
                 "activation_trace": False,
                 "utility_noise": 0,
                 "utility_learning": False,
@@ -138,7 +142,7 @@ class ACTRModel(object):
         else:
             raise(ValueError("More than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
 
-    def set_decmem(self, data):
+    def set_decmem(self, data=None):
         """
         Set declarative memory.
         """
@@ -302,18 +306,8 @@ class ACTRModel(object):
                 self.__buffers["visual"] = vision.Visual(self.__env, dm) #adding vision buffers
                 self.__buffers["visual_location"] = vision.VisualLocation(self.__env, dm) #adding vision buffers
 
-        for each in self.__buffers:
-            try:
-                mp = self.__buffers[each].model_parameters
-            except AttributeError:
-                pass
-            else:
-                for param_name in self.model_parameters:
-                    if param_name not in mp:
-                        mp[param_name] = self.model_parameters[param_name]
-
-        used_productions = productions.ProductionRules(self.__productions, self.__buffers, decmem, self.model_parameters)
+        self.used_productions = productions.ProductionRules(self.__productions, self.__buffers, decmem, self.model_parameters) #only temporarily changed, should be used_productions
 
         chunks.Chunk._similarities = self.__similarities
 
-        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, used_productions, initial_time, environment_process, **kwargs)
+        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, self.used_productions, initial_time, environment_process, **kwargs)

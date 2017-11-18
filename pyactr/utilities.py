@@ -33,7 +33,7 @@ VARVAL = "_variablesvalues"
 VISUAL = "_visual"
 VISUALLOCATION = "_visuallocation"
 
-SPECIALCHUNKTYPES = {VARVAL: "variables, values, negvariables, negvalues", MANUAL: "cmd, key", VISUAL: "cmd, value, color, screen_pos", VISUALLOCATION: "screen_x, screen_y, color"}
+SPECIALCHUNKTYPES = {VARVAL: "variables, values, negvariables, negvalues", MANUAL: "cmd, key", VISUAL: "cmd, value, color, screen_pos", VISUALLOCATION: "screen_x, screen_y, color, value"}
 
 #[{"test": {"position": (300, 170)}, "X": {"position": (300, 170)}}]
 
@@ -140,11 +140,11 @@ def splitting(info, empty=True):
 
     return varval
 
-def get_similarity(d, val1, val2):
+def get_similarity(d, val1, val2, mismatch_penalty=1):
     """
     Get similarity for partial matching.
     """
-    dis = d.get(tuple((val2, val1)), -1) #-1 is the default value
+    dis = d.get(tuple((val2, val1)), -mismatch_penalty) #-1 is the default value
     return dis
 
 def getchunk():
@@ -288,7 +288,9 @@ def check_bound_vars(actrvariables, elem):
                 temp_result = varval[x].pop()
             if x == "negvariables" or x == "negvalues":
                 raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of ACT-R rules; the object '%s' is illegal in ACT-R" % elem)
-            if result and temp_result != result:
+            if result and temp_result in {VISIONGREATER, VISIONSMALLER} or result in {VISIONGREATER, VISIONSMALLER}:
+                result = "".join(sorted([temp_result, result], reverse=True))
+            elif result and temp_result != result:
                 raise ACTRError("It looks like in '%s', one slot would have to carry two values at the same time; this is illegal in ACT-R" % elem)
             else:
                 result = temp_result
@@ -355,7 +357,7 @@ def match(dict2, slotvals, name1, name2):
                     chunkpart2 = splitting(chunkdict2[elem], empty=False)
                     try:
                         chunkpart3 = splitting(chunkdict3[elem], empty=False)
-                    except KeyError:
+                    except (KeyError, TypeError):
                         chunkpart3 = splitting(None)
 
                     temp_set = set()
@@ -429,20 +431,22 @@ def calculate_instantanoues_noise(instantaneous_noise):
 
 #############utilities for source activation######################################
 
-def weigh_buffer(chunk, weight_k):
+def weigh_buffer(chunk, weight_k, only_chunks=True):
     """
     Calculate w_{kj}=w_k/n_k. You supply chunk and its activation w_k and it divides w_k by the number of chunks in w_k.
     """
-    n_k = len(tuple(find_chunks(chunk).values()))
+    n_k = len(tuple(find_chunks(chunk, only_chunks).values()))
     if n_k == 0:
         weight_kj = 0
     else:
         weight_kj = weight_k/n_k
     return weight_kj
 
-def find_chunks(chunk):
+def find_chunks(chunk, only_chunks=True):
     """
     Find chunks as values in slots in the chunk 'chunk'.
+
+    only_chunks specifies whether spreading activation only goes from chunks, or it can also go from actual values (strings).
     """
     chunk_dict = {}
     for x in chunk:
@@ -451,11 +455,14 @@ def find_chunks(chunk):
         except KeyError:
             pass
         else:
-            if val != 'None' and not isinstance(val, str):
-                chunk_dict[x[0]] = val
+            if val != 'None':
+                if not only_chunks:
+                    chunk_dict[x[0]] = val
+                elif not isinstance(val, str):
+                    chunk_dict[x[0]] = val
     return chunk_dict
 
-def calculate_strength_association(chunk, otherchunk, dm, strength_of_association, restricted=''):
+def calculate_strength_association(chunk, otherchunk, dm, strength_of_association, restricted='', only_chunks=True):
     """
     Calculate S_{ji} = S - ln((1+slots_j)/slots_ij), where j=chunk, i=otherchunk
 
@@ -463,7 +470,7 @@ def calculate_strength_association(chunk, otherchunk, dm, strength_of_associatio
     """
     if otherchunk.typename == VARVAL:
         otherchunk = splitting(x[1])['values'].pop()
-    chunk_dict = find_chunks(otherchunk)
+    chunk_dict = find_chunks(otherchunk, only_chunks)
     slotvalues = chunk_dict.items()
     values = chunk_dict.values()
     if chunk != otherchunk and chunk not in values:
@@ -495,7 +502,7 @@ def calculate_strength_association(chunk, otherchunk, dm, strength_of_associatio
     slots_ij = list(values).count(chunk)
     return strength_of_association - math.log(slots_j/max(1, slots_ij))
 
-def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, strength, restricted=False):
+def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, strength, restricted=False, only_chunks=True):
     """
     Calculate spreading activation.
 
@@ -504,13 +511,13 @@ def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, streng
     SA = 0
     for each in buffer_spreading_activation:
         otherchunk = list(buffers[each])[0]
-        w_kj = weigh_buffer(otherchunk, buffer_spreading_activation[each])
+        w_kj = weigh_buffer(otherchunk, buffer_spreading_activation[each], only_chunks)
         s_ji = 0
-        for each in find_chunks(otherchunk).items():
+        for each in find_chunks(otherchunk, only_chunks).items():
             if restricted:
-                s_ji += calculate_strength_association(each[1], chunk, dm, strength, each[0])
+                s_ji += calculate_strength_association(each[1], chunk, dm, strength, each[0], only_chunks)
             else:
-                s_ji += calculate_strength_association(each[1], chunk, dm, strength)
+                s_ji += calculate_strength_association(each[1], chunk, dm, strength, only_chunks=only_chunks)
 
         SA += w_kj*s_ji
     return SA

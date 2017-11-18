@@ -153,7 +153,7 @@ class Productions(collections.UserDict):
                     for slot in pro2buff:
                         try:
                             slotvals_slot = slotvals[buff][slot].removeunused()
-                        except (KeyError, AttributeError):
+                        except (KeyError, AttributeError, TypeError):
                             slotvals_slot = None
                         if not slotvals_slot:
                             varval = utilities.merge_chunkparts(pro1buff[slot], pro2buff[slot])
@@ -194,7 +194,7 @@ class Productions(collections.UserDict):
                     for slot in pro2buff:
                         try:
                             slotvals_slot = slotvals[buff][slot].removeunused()
-                        except (KeyError, AttributeError):
+                        except (KeyError, AttributeError, TypeError):
                             slotvals_slot = None
                         if not slotvals_slot:
                             mod_attr_val[slot] = pro2buff[slot]
@@ -230,7 +230,7 @@ class Productions(collections.UserDict):
                 mod_attr_val = {}
                 
                 for slot in pro2buff:
-                    if slot in pro1buff:
+                    if pro1buff and slot in pro1buff:
                         varval = utilities.merge_chunkparts(pro2buff[slot], pro1buff[slot])
                         #if varval.get("values"):
                         #    varval = {"values": varval["values"]} #assigning values directly should trump anything else in actions
@@ -478,8 +478,6 @@ class ProductionRules(object):
 
         self.procs = [] #list of active processes
 
-        self.extra_tests = {}
-        
         self.dm = dm #list of (submodules of) memories
 
         self.env_interaction = set() #set interacting with environment (pressed keys)
@@ -500,6 +498,7 @@ class ProductionRules(object):
         max_utility = float("-inf")
         used_rulename = None
         self.used_rulename = None
+        self.extra_tests = {}
         
         self.last_rule_slotvals = self.current_slotvals.copy()
 
@@ -766,7 +765,7 @@ class ProductionRules(object):
         """
         #starting process
         yield Event(roundtime(time), name, 'START RETRIEVAL')
-        retrieved_elem, extra_time = retrieval.retrieve(time, otherchunk, temp_actrvariables, self.buffers, self.extra_tests.get(name, {}))
+        retrieved_elem, extra_time = retrieval.retrieve(time, otherchunk, temp_actrvariables, self.buffers, self.extra_tests.get(name, {}), self.model_parameters)
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
         if retrieved_elem:
@@ -811,7 +810,7 @@ class ProductionRules(object):
         encoding = 0
         for st in stim:
             if st['position'][0] > cf[0]-foveal_distance and st['position'][0] < cf[0]+foveal_distance and st['position'][1] > cf[1]-foveal_distance and st['position'][1] < cf[1]+foveal_distance:
-                newchunk, encoding = visualbuffer.automatic_buffering(st)
+                newchunk, encoding = visualbuffer.automatic_buffering(st, self.model_parameters)
         time += encoding
         yield Event(roundtime(time), name, self._UNKNOWN)
         visualbuffer.state = visualbuffer._FREE
@@ -826,7 +825,7 @@ class ProductionRules(object):
         """
         Carry out preparation of visual shift.
         """
-        newchunk, extra_time, site = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables)
+        newchunk, extra_time, site = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters=self.model_parameters)
 
         encoding = extra_time[0]
         preparation = extra_time[1]
@@ -871,7 +870,7 @@ class ProductionRules(object):
         visualbuffer.move_eye(landing_site)
         yield Event(roundtime(time), name, 'SHIFT COMPLETE TO POSITION: %s' %visualbuffer.current_focus)
         if encoding > preparation+execution:
-            newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables)
+            newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters=self.model_parameters)
             yield from self.visualencode(name, visualbuffer, otherchunk, temp_actrvariables, time, (1-((preparation+execution)/encoding))*extra_time[0])
         visualbuffer.processor = visualbuffer._FREE
         visualbuffer.execution = visualbuffer._FREE

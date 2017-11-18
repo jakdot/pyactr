@@ -17,8 +17,8 @@ class DecMem(collections.MutableMapping):
 
     def __init__(self, data=None):
         self._data = {}
-        self.restricted_number_chunks = collections.Counter() #counter for pairs of slot - value, used to calculate strength association
-        self.unrestricted_number_chunks = collections.Counter() # counter for chunks, used to calculate strength association
+        self.restricted_number_chunks = collections.Counter() #counter for pairs of slot - value, used to store strength association
+        self.unrestricted_number_chunks = collections.Counter() # counter for chunks, used to store strength association
         self.activations  = {}
         if data is not None:
             try:
@@ -177,10 +177,13 @@ class DecMemBuffer(buffers.Buffer):
         """
         return getattr(self, state) == inquiry
 
-    def retrieve(self, time, otherchunk, actrvariables, buffers, extra_tests):
+    def retrieve(self, time, otherchunk, actrvariables, buffers, extra_tests, model_parameters):
         """
         Retrieve a chunk from declarative memory that matches otherchunk.
         """
+        model_parameters = model_parameters.copy()
+        model_parameters.update(self.model_parameters)
+
         if actrvariables == None:
             actrvariables = {}
         try:
@@ -204,28 +207,29 @@ class DecMemBuffer(buffers.Buffer):
             except KeyError:
                 pass
 
-            if self.model_parameters["subsymbolic"]: #if subsymbolic, check activation
+            if model_parameters["subsymbolic"]: #if subsymbolic, check activation
                 A_pm = 0
-                if self.model_parameters["partial_matching"]:
-                    A_pm = chunk_tobe_matched.match(chunk, partialmatching=True)
+                if model_parameters["partial_matching"]:
+                    A_pm = chunk_tobe_matched.match(chunk, partialmatching=True, mismatch_penalty=model_parameters["mismatch_penalty"])
                 else:
                     if not chunk_tobe_matched <= chunk:
                         continue
 
                 if chunk in self.dm.activations:
-                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], self.model_parameters["baselevel_learning"], self.model_parameters["decay"], self.dm.activations[chunk], optimized_learning=self.model_parameters["optimized_learning"]) #bll
+                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"], self.dm.activations[chunk], optimized_learning=model_parameters["optimized_learning"]) #bll
                 else:
-                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], self.model_parameters["baselevel_learning"], self.model_parameters["decay"], optimized_learning=self.model_parameters["optimized_learning"]) #bll
-                A_sa = utilities.spreading_activation(chunk, buffers, self.dm, self.model_parameters["buffer_spreading_activation"], self.model_parameters["strength_of_association"], self.model_parameters["spreading_activation_restricted"])
-                inst_noise = utilities.calculate_instantanoues_noise(self.model_parameters["instantaneous_noise"])
+                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"], optimized_learning=model_parameters["optimized_learning"]) #bll
+                A_sa = utilities.spreading_activation(chunk, buffers, self.dm, model_parameters["buffer_spreading_activation"], model_parameters["strength_of_association"], model_parameters["spreading_activation_restricted"], model_parameters["association_only_from_chunks"])
+                inst_noise = utilities.calculate_instantanoues_noise(model_parameters["instantaneous_noise"])
                 A = A_bll + A_sa + A_pm + inst_noise #chunk.activation is the manually specified activation, potentially used by the modeller
 
-                if utilities.retrieval_success(A, self.model_parameters["retrieval_threshold"]) and max_A < A:
+                if utilities.retrieval_success(A, model_parameters["retrieval_threshold"]) and max_A < A:
                     max_A = A
+                    self.activation = max_A
                     retrieved = chunk
-                    extra_time = utilities.retrieval_latency(A, self.model_parameters["latency_factor"],  self.model_parameters["latency_exponent"])
+                    extra_time = utilities.retrieval_latency(A, model_parameters["latency_factor"],  model_parameters["latency_exponent"])
 
-                    if self.model_parameters["activation_trace"]:
+                    if model_parameters["activation_trace"]:
                         print("(Partially) matching chunk:", chunk)
                         print("Base level learning:", A_bll)
                         print("Spreading activation", A_sa)
@@ -236,13 +240,13 @@ class DecMemBuffer(buffers.Buffer):
             else: #otherwise, just standard time for rule firing
                 if chunk_tobe_matched <= chunk:
                     retrieved = chunk
-                    extra_time = self.model_parameters["rule_firing"]
+                    extra_time = model_parameters["rule_firing"]
 
         if not retrieved:
-            if self.model_parameters["subsymbolic"]:
-                extra_time = utilities.retrieval_latency(self.model_parameters["retrieval_threshold"], self.model_parameters["latency_factor"],  self.model_parameters["latency_exponent"])
+            if model_parameters["subsymbolic"]:
+                extra_time = utilities.retrieval_latency(model_parameters["retrieval_threshold"], model_parameters["latency_factor"],  model_parameters["latency_exponent"])
             else:
-                extra_time = self.model_parameters["rule_firing"]
+                extra_time = model_parameters["rule_firing"]
         if self.__finst:
             self.recent.append(retrieved)
             if self.__finst < len(self.recent):

@@ -19,12 +19,15 @@ class Environment(object):
     def __init__(self, size=(640, 360), simulated_display_resolution=(1366, 768), simulated_screen_size=(50, 28), viewing_distance=50, focus_position=None):
         self.gui = True
         self.size = size
-        if focus_position and len(focus_position) != 2:
+        try:
+            if focus_position and len(focus_position) != 2:
+                raise utilities.ACTRError("Focus position of the environemnt must be an iterable with 2 values.")
+        except TypeError:
             raise utilities.ACTRError("Focus position of the environemnt must be an iterable with 2 values.")
         if not focus_position:
             focus_position = (size[0]/2, size[1]/2)
         
-        self.current_focus = list(focus_position)
+        self.__current_focus = list(focus_position)
 
         self.stimuli = None
         self.triggers = None
@@ -76,7 +79,7 @@ class Environment(object):
                     if not isinstance(stimuli[idx][each], collections.Mapping): #stimuli[idx][each] encodes position etc.
                         raise utilities.ACTRError("Arguments of stimuli, if any, must be dictionaries, e.g.,: [{'stimulus1-0time': {'text': 'hi', 'position': (0, 0)}, 'stimulus2-0time': {'text': 'you', 'position': (10, 10)}}, {'stimulus3-latertime': {'text': 'new', 'position': (0, 0)}}] etc. Currently, you have this: '%s'" %stimuli[idx])
             else:
-                stimuli[idx] = {stimuli[idx]: {'position': (320, 180)}} #default position - 0,0
+                stimuli[idx] = {stimuli[idx]: {'position': (320, 180)}} #default position - 320, 180
         if isinstance(triggers, str) or not isinstance(triggers, collections.Iterable):
             triggers = [triggers]
         if isinstance(times, str) or not isinstance(times, collections.Iterable):

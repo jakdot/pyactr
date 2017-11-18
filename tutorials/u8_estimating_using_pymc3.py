@@ -1,5 +1,7 @@
 """
-This example shows the workings of pyMC3 in pyactr. pyMC3 allows Bayesian inference on user-defined probabilistic models. Combining this with pyactr allows us to get the posterior on free parameters assumed in pyactr. You will need to install pymc3 and its dependencies to make this work.
+This example shows the workings of pyMC3 in pyactr. pyMC3 allows Bayesian inference on user-defined probabilistic models. Combining this with pyactr will allow you to get the posterior on free parameters assumed in pyactr.
+
+You will need to install pymc3 and packages it depends on to make this work.
 """
 
 import math
@@ -8,9 +10,10 @@ import numpy as np
 import scipy
 import simpy
 import pyactr as actr
-from pymc3 import Model, Normal, HalfNormal, Gamma, find_MAP, sample, summary, Metropolis, Slice
+from pymc3 import Model, Normal, HalfNormal, Gamma, find_MAP, sample, summary, Metropolis, Slice, traceplot, gelman_rubin
 import theano.tensor as T
 from theano.compile.ops import as_op
+import matplotlib.pyplot as pp
 
 def counting_model(sub):
     counting = actr.ACTRModel(subsymbolic=sub)
@@ -209,31 +212,40 @@ counting.model_parameters["latency_factor"] = math.exp(map_estimate['lf_log_'])
 sim = counting.simulation(trace=True)
 sim.run()
 
-print("Search of parameters using Slice/Metropolis.")
+print("Search for parameters using Slice/Metropolis.")
 
 basic_model = Model()
 
 with basic_model:
 
     # Priors for unknown model parameters
-    rule_firing = HalfNormal('rule_firing', sd=2)
-    lf = HalfNormal('lf', sd=2)
+    rule_firing = HalfNormal('rule_firing', sd=2, testval=abs(np.random.randn(1)[0]))
+    lf = HalfNormal('lf', sd=2, testval=abs(np.random.randn(1)[0]))
 
     sigma = HalfNormal('sigma', sd=1)
 
+    #you can print searched values after every iteration
+    lf_print = T.printing.Print('lf')(lf)
     #Deterministic value, found in the model
-    mu = model(rule_firing, lf)
+    mu = model(rule_firing, lf_print)
+    
+    #Deterministic value, found in the model
+    #mu = model(rule_firing, lf)
 
     # Likelihood (sampling distribution) of observations
     Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    #Slice should be used for continuous variables but it gets stuck sometimes - you can also use Metropolis, which, however, is normally used for discrete values, its estimates might be off
-    #step = Metropolis(basic_model.vars, .5)
+    #Slice should be used for continuous variables but it gets stuck sometimes - you can also use Metropolis
+    step = Metropolis(basic_model.vars)
 
-    step = Slice(basic_model.vars)
-    
-    trace = sample(500, step, njobs=1, init='MAP')
+    #step = Slice(basic_model.vars)
 
-    summary(trace)
+    trace = sample(10, step, njobs=2, init='auto')
+
+print(summary(trace))
+traceplot(trace)
+pp.savefig("plot_u8_estimating_using_pymc3.png")
+print(trace['lf'], trace['rule_firing'])
+print(gelman_rubin(trace))
 
 print("Of course, much more things can be explored this way: more parameters could be studied; their priors could be better adjusted etc.")

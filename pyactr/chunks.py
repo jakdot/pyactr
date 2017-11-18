@@ -120,7 +120,7 @@ class Chunk(collections.Sequence):
 
     def _asdict(self):
         """
-        Creates a dictionary out of chunk.
+        Create a dictionary out of chunk.
         """
         temp_dict = self.actrchunk._asdict()
         dictionary = {re.sub("_$", "", key): temp_dict[key] for key in temp_dict}
@@ -228,7 +228,7 @@ class Chunk(collections.Sequence):
         """
         return self == otherchunk or self.match(otherchunk, partialmatching=False) #actually, the second disjunct should be enough -- TODO: check why it fails in some cases; this might be important for partial matching
 
-    def match(self, otherchunk, partialmatching):
+    def match(self, otherchunk, partialmatching, mismatch_penalty=1):
         """
         Check partial match (given bound variables in boundvars).
         """
@@ -259,13 +259,13 @@ class Chunk(collections.Sequence):
                     for each in self.boundvars.get("~=" + var, set()):
                         if each == matching_val:
                             if partialmatching:
-                                similarity += utilities.get_similarity(self._similarities, each, matching_val) #False if otherchunk's value among the values of ~=x
+                                similarity += utilities.get_similarity(self._similarities, each, matching_val, mismatch_penalty) #False if otherchunk's value among the values of ~=x
                             else:
                                 return False
                     try:
                         if self.boundvars["=" + var] != matching_val:
                             if partialmatching:
-                                similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val) #False if =x does not match otherchunks' value
+                                similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val, mismatch_penalty) #False if =x does not match otherchunks' value
                             else:
                                 return False
                     except KeyError:
@@ -277,7 +277,7 @@ class Chunk(collections.Sequence):
                     try:
                         if self.boundvars["=" + var] == matching_val:
                             if partialmatching:
-                                similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val) #False if =x does not match otherchunks' value
+                                similarity += utilities.get_similarity(self._similarities, self.boundvars["=" + var], matching_val, mismatch_penalty) #False if =x does not match otherchunks' value
                             else:
                                 return False
                     except KeyError:
@@ -290,7 +290,7 @@ class Chunk(collections.Sequence):
                 val = varval["values"].pop()
                 if val != None and val != matching_val: #None is the misssing value of the attribute
                     if partialmatching:
-                        similarity += utilities.get_similarity(self._similarities, val, matching_val) 
+                        similarity += utilities.get_similarity(self._similarities, val, matching_val, mismatch_penalty) 
                     else:
                         return False
             #checking negvalues, e.g., ~!10
@@ -298,7 +298,7 @@ class Chunk(collections.Sequence):
                 for negval in varval["negvalues"]:
                     if negval == matching_val or (negval in {self.__emptyvalue, 'None'} and matching_val == self.__emptyvalue):
                         if partialmatching:
-                            similarity += utilities.get_similarity(self._similarities, negval, matching_val)
+                            similarity += utilities.get_similarity(self._similarities, negval, matching_val, mismatch_penalty)
                         else:
                             return False
         if partialmatching:
@@ -367,9 +367,14 @@ def createchunkdict(chunk):
             temp_dict["negvariables"] = set(temp_dict["negvariables"])
         for idx in range(1, len(elem)):
             try:
-                if elem[idx][0] == utilities.VISIONGREATER or elem[idx][0] == utilities.VISIONSMALLER: #this checks special visual conditions on greater/smaller than
+                if elem[idx][0][0] == utilities.VISIONGREATER or elem[idx][0][0] == utilities.VISIONSMALLER: #this checks special visual conditions on greater/smaller than
+                    if elem[idx][0][-1] == utilities.ACTRVARIABLE:
+                        temp_dict['variables'] = elem[idx][1]
+                        update_val = elem[idx][0][0]
+                    else:
+                        update_val = elem[idx][0] + elem[idx][1]
+                        #here fix
                     updating = 'values'
-                    update_val = elem[idx][0] + elem[idx][1]
                 elif elem[idx][1][0] == "'" or elem[idx][1][0] == '"':
                     updating = sp_dict[elem[idx][0]]
                     update_val = elem[idx][1][1:-1]
@@ -377,7 +382,7 @@ def createchunkdict(chunk):
                     updating = sp_dict[elem[idx][0]]
                     update_val = elem[idx][1]
 
-            except (KeyError, IndexError): #indexerror --> only a string is present; keyerror: the first element in elem[idx] is not a special symbol given above
+            except (KeyError, IndexError) as err: #indexerror --> only a string is present; keyerror: the first element in elem[idx] is not a special symbol (in sp)
                 if elem[idx][0] == "'" or elem[idx][0] == '"':
                     update_val = elem[idx][1:-1]
                     updating = 'values'

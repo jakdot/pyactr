@@ -48,7 +48,7 @@ class Model(object):
         attended False
         +visual_location>
         isa _visuallocation
-        screen_x <400""")
+        screen_x 320""")
         
         self.m.productionstring(name="attend_probe", string="""
         =g>
@@ -156,6 +156,7 @@ if __name__ == "__main__":
     for x in zip(used_stim.keys(), used_stim.values()):
         text.append({1: {'text': x[0], 'position': (320, 180)}})
         text.append({1: {'text': x[1], 'position': (320, 180)}})
+    print(text)
     trigger = list(used_stim.values())
     environ = actr.Environment( focus_position=(0, 0))
     m = Model(environ, subsymbolic=True, latency_factor=0.4, decay=0.5, retrieval_threshold=-2, instantaneous_noise=0, strict_harvesting=True, automatic_visual_search=False)

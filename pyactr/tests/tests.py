@@ -7,6 +7,7 @@ import unittest
 import collections
 import re
 import warnings
+import math
 
 import simpy
 import numpy as np
@@ -878,6 +879,159 @@ class TestMotorModel(unittest.TestCase):
             if self.sim.current_event.action == "KEY PRESSED: C":
                 break
         self.assertEqual(self.sim.show_time(), 0.8)
+
+class TestBaseLevelLearning(unittest.TestCase):
+    """
+    Testing that Base Level learning works. Comparing the internal workings of bll with the hardcoded activation.
+    """
+    
+    def setUp(self):
+
+        d = 0.5
+
+        self.model = actr.ACTRModel(subsymbolic=True, baselevel_learning=True, latency_factor=0.4, decay=d, retrieval_threshold=-2, instantaneous_noise=0)
+
+        self.model.chunktype("countOrder", "first, second")
+
+        temps = [-100, -50, -1]
+
+        self.model.set_decmem({self.model.chunkstring(string="\
+                isa countOrder\
+                first 1\
+                second 2"): np.array(temps)})
+
+        self.model.chunktype("countFrom", ("start", "end", "count"))
+        self.model.goal.add(self.model.chunkstring(string="\
+                isa countFrom\
+                start   1\
+                end 2"))
+
+        self.model.productionstring(name="start", string="""
+                =g>
+                isa countFrom
+                start =x
+                count None
+                ==>
+                =g>
+                isa countFrom
+                count =x
+                +retrieval>
+                isa countOrder
+                first =x""")
+
+        self.sim = self.model.simulation(trace=False, start_time=0)
+        
+        self.model2 = actr.ACTRModel(subsymbolic=True, baselevel_learning=True, latency_factor=0.4, decay=d, retrieval_threshold=-2, instantaneous_noise=0)
+
+        self.model2.chunktype("countOrder", "first, second")
+
+        self.model2.set_decmem({self.model2.chunkstring(string="\
+                isa countOrder\
+                first 1\
+                second 2"): np.array([])})
+
+        self.model2.decmem.activations.update({self.model2.chunkstring(string="\
+                isa countOrder\
+                first 1\
+                second 2"): math.log(sum([(0.05-x)** (-d) for x in temps]))})
+
+        self.model2.chunktype("countFrom", ("start", "end", "count"))
+        self.model2.goal.add(self.model2.chunkstring(string="\
+                isa countFrom\
+                start   1\
+                end 2"))
+
+        self.model2.productionstring(name="start", string="""
+                =g>
+                isa countFrom
+                start =x
+                count None
+                ==>
+                =g>
+                isa countFrom
+                count =x
+                +retrieval>
+                isa countOrder
+                first =x""")
+
+        self.sim2 = self.model2.simulation(trace=False, start_time=0)
+
+        temps = [-100, -1]
+
+        self.model3 = actr.ACTRModel(subsymbolic=True, baselevel_learning=True, latency_factor=0.4, decay=d, retrieval_threshold=-2, instantaneous_noise=0)
+
+        self.model3.chunktype("countOrder", "first, second")
+
+        self.model3.set_decmem({self.model3.chunkstring(string="\
+                isa countOrder\
+                first 1\
+                second 2"): np.array([-50])})
+
+        self.model3.decmem.activations.update({self.model3.chunkstring(string="\
+                isa countOrder\
+                first 1\
+                second 2"): math.log(sum([(0.05-x)** (-d) for x in temps]))})
+
+        self.model3.chunktype("countFrom", ("start", "end", "count"))
+        self.model3.goal.add(self.model3.chunkstring(string="\
+                isa countFrom\
+                start   1\
+                end 2"))
+
+        self.model3.productionstring(name="start", string="""
+                =g>
+                isa countFrom
+                start =x
+                count None
+                ==>
+                =g>
+                isa countFrom
+                count =x
+                +retrieval>
+                isa countOrder
+                first =x""")
+
+        self.sim3 = self.model3.simulation(trace=False, start_time=0)
+
+    def test_procedure(self):
+        warnings.simplefilter("ignore")
+        while True:
+            self.sim.step()
+            if self.sim.current_event.action == "RULE FIRED: start":
+                break
+        self.assertEqual(self.sim.show_time(), 0.05)
+        time0 = self.sim.show_time()
+        while True:
+            self.sim.step()
+            if self.sim.current_event.action == "RETRIEVED: countOrder(first= 1, second= 2)":
+                break
+        comp_time = self.sim.show_time() - time0
+
+        while True:
+            self.sim2.step()
+            if self.sim2.current_event.action == "RULE FIRED: start":
+                break
+        time0 = self.assertEqual(self.sim2.show_time(), 0.05)
+        time0 = self.sim2.show_time()
+        while True:
+            self.sim2.step()
+            if self.sim2.current_event.action == "RETRIEVED: countOrder(first= 1, second= 2)":
+                break
+        comp_time2 = self.sim2.show_time() - time0
+        self.assertEqual(comp_time, comp_time2)
+
+        while True:
+            self.sim3.step()
+            if self.sim3.current_event.action == "RULE FIRED: start":
+                break
+        time0 = self.assertEqual(self.sim3.show_time(), 0.05)
+        time0 = self.sim3.show_time()
+        while True:
+            self.sim3.step()
+            if self.sim3.current_event.action == "RETRIEVED: countOrder(first= 1, second= 2)":
+                break
+        comp_time3 = self.sim3.show_time() - time0
+        self.assertEqual(comp_time3, comp_time2)
 
 class TestBaseLevelLearningModel(unittest.TestCase):
     """
