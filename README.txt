@@ -27,12 +27,17 @@ Requires Python3 (>=3.3), numpy, simpy and pyparsing.
 
 You might also consider getting tkinter if you want to see visual output on how ACT-R models interact with environment. But this is not necessary to run any models.
 
-Documentation
--------------
+Getting started
+---------------
 
-Documentation is on https://github.com/jakdot/pyactr. In particular, check:
+Go to https://github.com/jakdot/pyactr/wiki for a short intro into ACT-R and pyactr.
 
-1. the folder docs for discussion of ACT-R and pyactr. Examples are geared towards (psycho)linguists, but discussion on models should be accessible to anyone.
+More documentation
+------------------
+
+More documents are on https://github.com/jakdot/pyactr. In particular, check:
+
+1. the folder docs for discussion of ACT-R and pyactr. The book in the folder is currently incomplete, only the first few chapters are available. Examples in the excerpt are geared towards (psycho)linguists.
 
 2. the folder tutorials for many examples of ACT-R models. Most of those models are translated from Lisp ACT-R, so if you are familiar with that it should be easy to understand these.
 

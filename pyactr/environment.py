@@ -77,7 +77,7 @@ class Environment(object):
             if isinstance(stimuli[idx], collections.Mapping):
                 for each in stimuli[idx]:
                     if not isinstance(stimuli[idx][each], collections.Mapping): #stimuli[idx][each] encodes position etc.
-                        raise utilities.ACTRError("Arguments of stimuli, if any, must be dictionaries, e.g.,: [{'stimulus1-0time': {'text': 'hi', 'position': (0, 0)}, 'stimulus2-0time': {'text': 'you', 'position': (10, 10)}}, {'stimulus3-latertime': {'text': 'new', 'position': (0, 0)}}] etc. Currently, you have this: '%s'" %stimuli[idx])
+                        raise utilities.ACTRError("Stimuli must be a list of dictionaries, e.g.,: [{'stimulus1-0time': {'text': 'hi', 'position': (0, 0)}, 'stimulus2-0time': {'text': 'you', 'position': (10, 10)}}, {'stimulus3-latertime': {'text': 'new', 'position': (0, 0)}}] etc. Currently, you have this: '%s'" %stimuli[idx])
             else:
                 stimuli[idx] = {stimuli[idx]: {'position': (320, 180)}} #default position - 320, 180
         if isinstance(triggers, str) or not isinstance(triggers, collections.Iterable):
