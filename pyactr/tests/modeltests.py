@@ -949,3 +949,41 @@ class Compilation11(object):
             =g>
             isa   state
             ending 2""")
+
+class Compilation12(object):
+    """
+    Model testing compilation -- basic cases. Setting a chunk with an empty value.
+    """
+
+    def __init__(self, **kwargs):
+        actr.chunktype("state", "starting ending position")
+        self.m = actr.ACTRModel(**kwargs)
+
+
+        self.dm = self.m.decmem
+
+        self.m.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
+        self.m.goal.default_harvest = self.dm
+
+        self.m.productionstring(name="one", string="""
+            =g>
+            isa     state
+            starting =x
+            ending ~=x
+            position 'start'
+            ==>
+            +g>
+            isa     state
+            starting    None
+            position 'end'
+            ending =x""")
+
+        self.m.productionstring(name="two", string="""
+            =g>
+            isa     state
+            starting None
+            position 'end'
+            ==>
+            =g>
+            isa     state
+            position 'completeend'""")

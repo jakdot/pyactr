@@ -48,12 +48,12 @@ class DecMem(collections.MutableMapping):
     def __setitem__(self, key, time):
         if self.unrestricted_number_chunks and key not in self:
             for x in key:
-                if utilities.splitting(x[1])['values'] and utilities.splitting(x[1])['values'].pop() in self.unrestricted_number_chunks:
-                    self.unrestricted_number_chunks.update([utilities.splitting(x[1])['values'].pop()])
+                if utilities.splitting(x[1]).values and utilities.splitting(x[1]).values in self.unrestricted_number_chunks:
+                    self.unrestricted_number_chunks.update([utilities.splitting(x[1]).values])
         if self.restricted_number_chunks and key not in self:
             for x in key:
-                if utilities.splitting(x[1])['values'] and (x[0], utilities.splitting(x[1])['values'].pop()) in self.restricted_number_chunks:
-                    self.restricted_number_chunks.update([(x[0], utilities.splitting(x[1])['values'].pop())])
+                if utilities.splitting(x[1]).values and (x[0], utilities.splitting(x[1]).values) in self.restricted_number_chunks:
+                    self.restricted_number_chunks.update([(x[0], utilities.splitting(x[1]).values)])
         if isinstance(key, chunks.Chunk):
             if isinstance(time, np.ndarray):
                 self._data[key] = time
@@ -104,6 +104,9 @@ class DecMem(collections.MutableMapping):
         Copy declarative memory.
         """
         dm = DecMem(self._data.copy())
+        dm.activations = self.activations.copy()
+        dm.restricted_number_chunks = self.restricted_number_chunks.copy()
+        dm.unrestricted_number_chunks = self.unrestricted_number_chunks.copy()
         return dm
 
 class DecMemBuffer(buffers.Buffer):
@@ -187,9 +190,9 @@ class DecMemBuffer(buffers.Buffer):
         if actrvariables == None:
             actrvariables = {}
         try:
-            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()}
+            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1], negative_impossible=False) for x in otherchunk.removeunused()}
         except utilities.ACTRError as arg:
-            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
+            raise utilities.ACTRError("Retrieving the chunk '%s' is impossible; %s" % (otherchunk, arg))
         chunk_tobe_matched = chunks.Chunk(otherchunk.typename, **mod_attr_val)
 
         max_A = float("-inf")
@@ -215,10 +218,10 @@ class DecMemBuffer(buffers.Buffer):
                     if not chunk_tobe_matched <= chunk:
                         continue
 
-                if chunk in self.dm.activations:
-                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"], self.dm.activations[chunk], optimized_learning=model_parameters["optimized_learning"]) #bll
-                else:
-                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"], optimized_learning=model_parameters["optimized_learning"]) #bll
+                try:
+                    A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"], self.dm.activations.get(chunk), optimized_learning=model_parameters["optimized_learning"]) #bll
+                except UnboundLocalError:
+                    continue
                 A_sa = utilities.spreading_activation(chunk, buffers, self.dm, model_parameters["buffer_spreading_activation"], model_parameters["strength_of_association"], model_parameters["spreading_activation_restricted"], model_parameters["association_only_from_chunks"])
                 inst_noise = utilities.calculate_instantanoues_noise(model_parameters["instantaneous_noise"])
                 A = A_bll + A_sa + A_pm + inst_noise #chunk.activation is the manually specified activation, potentially used by the modeller
@@ -237,8 +240,8 @@ class DecMemBuffer(buffers.Buffer):
                         print("Noise:", inst_noise)
                         print("Total activation", A)
                         print("Time to retrieve", extra_time)
-            else: #otherwise, just standard time for rule firing
-                if chunk_tobe_matched <= chunk:
+            else: #otherwise, just standard time for rule firing, so no extra calculation needed
+                if chunk_tobe_matched <= chunk and self.dm[chunk][0] != time: #the second condition ensures that the chunk that was created are not retrieved at the same time
                     retrieved = chunk
                     extra_time = model_parameters["rule_firing"]
 

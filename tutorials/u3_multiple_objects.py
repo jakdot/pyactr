@@ -100,7 +100,8 @@ class Model(object):
 
 
 if __name__ == "__main__":
-    stim_d = {key: {'text': x, 'position': (random.randint(10,630), random.randint(10, 310))} for key, x in enumerate(string.ascii_uppercase)}
+    stim_d = {key: {'text': x, 'position': (random.randint(10,630), random.randint(10, 310)), 'vis_delay': 10} for key, x in enumerate(string.ascii_uppercase)}
+    #stim_d = {key: {'text': x, 'position': (random.randint(10,630), random.randint(10, 310))} for key, x in enumerate(string.ascii_uppercase)}
     print(stim_d)
     #text = [{1: {'text': 'X', 'position': (10, 10)}, 2: {'text': 'Y', 'position': (10, 20)}, 3:{'text': 'Z', 'position': (10, 30)}},{1: {'text': 'A', 'position': (50, 10)}, 2: {'text': 'B', 'position': (50, 180)}, 3:{'text': 'C', 'position': (400, 180)}}]
     environ = actr.Environment(focus_position=(0,0))

@@ -81,7 +81,7 @@ class ACTRModel(object):
                 "emma_noise": True,
                 "emma_landing_site_noise": False,
                 "eye_mvt_angle_parameter": 1, #in LispACT-R: 1
-                "eye_mvt_scaling_parameter": 0.01, #in LispACT-R: 0.01, but dft frequency -- 0.01 -- 0.05 would roughly correspond to their combination in EMMA
+                "eye_mvt_scaling_parameter": 0.01, #in LispACT-R: 0.01, but dft rule firing -- 0.01
                 }
 
     def __init__(self, environment=None, **model_parameters):
@@ -93,21 +93,16 @@ class ACTRModel(object):
 
         start_goal = goals.Goal()
         self.goals = {"g": start_goal}
-        self.__goal = start_goal
 
         self.__buffers = {"g": start_goal}
 
         start_retrieval = declarative.DecMemBuffer()
         self.retrievals = {"retrieval": start_retrieval}
-        self.__retrieval = start_retrieval
         
         self.__buffers["retrieval"] = start_retrieval
         
-        self.__decmemcount = 0
-        
         start_dm = declarative.DecMem()
         self.decmems = {"decmem": start_dm}
-        self.__decmem = start_dm
 
         self.__productions = productions.Productions()
         self.__similarities = {}
@@ -115,7 +110,8 @@ class ACTRModel(object):
         self.model_parameters = self.MODEL_PARAMETERS.copy()
 
         try:
-            assert set(model_parameters.keys()).issubset(set(self.MODEL_PARAMETERS.keys())), "Incorrect model parameter(s) %s. The only possible model parameters are: '%s'" % (set(model_parameters.keys()).difference(set(self.MODEL_PARAMETERS.keys())), set(self.MODEL_PARAMETERS.keys()))
+            if not set(model_parameters.keys()).issubset(set(self.MODEL_PARAMETERS.keys())):
+                raise(utilities.ACTRError("Incorrect model parameter(s) %s. The only possible model parameters are: '%s'" % (set(model_parameters.keys()).difference(set(self.MODEL_PARAMETERS.keys())), set(self.MODEL_PARAMETERS.keys()))))
             self.model_parameters.update(model_parameters)
         except TypeError:
             pass
@@ -128,9 +124,9 @@ class ACTRModel(object):
         Retrieval in the model.
         """
         if len(self.retrievals) == 1:
-            return self.__retrieval
+            return list(self.retrievals.values())[0]
         else:
-            raise(ValueError("More than 1 retreival specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
+            raise(ValueError("Zero or more than 1 retreival specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
 
     @property
     def decmem(self):
@@ -138,21 +134,19 @@ class ACTRModel(object):
         Declarative memory in the model.
         """
         if len(self.decmems) == 1:
-            return self.__decmem
+            return list(self.decmems.values())[0]
         else:
-            raise(ValueError("More than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
+            raise(ValueError("Zero or more than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.decmems instead."))
 
     def set_decmem(self, data=None):
         """
         Set declarative memory.
         """
         dm = declarative.DecMem(data)
-        self.__decmem = dm
-        if self.__decmemcount > 0:
-            self.decmems["".join(["decmem", str(self.__decmemcount)])] = dm
+        if len(self.decmems) > 1:
+            self.decmems["".join(["decmem", str(len(self.decmems))])] = dm
         else:
             self.decmems["decmem"] = dm
-        self.__decmemcount += 1
         return dm
 
     @property
@@ -161,9 +155,9 @@ class ACTRModel(object):
         Goal buffer in the model.
         """
         if len(self.goals) == 1:
-            return self.__goal
+            return list(self.goals.values())[0]
         else:
-            raise(ValueError("More than 1 goal specified, unclear which one should be shown. Use ACTRModel.goals instead."))
+            raise(ValueError("Zero or more than 1 goal specified, unclear which one should be shown. Use ACTRModel.goals instead."))
 
     def set_retrieval(self, name):
         """
@@ -173,7 +167,6 @@ class ACTRModel(object):
         """
         dmb = declarative.DecMemBuffer()
         self.__buffers[name] = dmb
-        self.__retrieval = dmb
         self.retrievals[name] = dmb
         return dmb
 
@@ -185,7 +178,6 @@ class ACTRModel(object):
         """
         g = goals.Goal(delay=delay)
         self.__buffers[name] = g
-        self.__goal = g
         self.goals[name] = g
         return g
 
@@ -241,7 +233,10 @@ class ACTRModel(object):
                 if each[0] == temp_dictLHS["query"]:
                     lhs[each[0]+each[1]] = {x[0]:x[1] for x in each[3]}
                 else:
-                    type_chunk, chunk_dict = chunks.createchunkdict(each[3])
+                    try:
+                        type_chunk, chunk_dict = chunks.createchunkdict(each[3])
+                    except utilities.ACTRError as e:
+                        raise utilities.ACTRError("The rule string %s is not defined correctly; %s" %(name, e))
                     lhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield lhs
             for each in rule[2]:
@@ -252,7 +247,10 @@ class ACTRModel(object):
                 elif each[0] == temp_dictRHS["execute"]:
                     rhs[each[0]+each[1]] = each[3]
                 else:
-                    type_chunk, chunk_dict = chunks.createchunkdict(each[3])
+                    try:
+                        type_chunk, chunk_dict = chunks.createchunkdict(each[3])
+                    except utilities.ACTRError as e:
+                        raise utilities.ACTRError("The rule string %s is not defined correctly; %s" %(name, e))
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield rhs
         self.__productions.update({name: {"rule": func, "utility": utility, "reward": reward}})

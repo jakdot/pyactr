@@ -1,5 +1,5 @@
 """
-Testing the symbolic part of the module.
+Testing the symbolic & subsymbolic part of the module.
 Requires Python >= 3.3
 """
 
@@ -144,58 +144,43 @@ class TestChunks3(unittest.TestCase):
 
 class TestChunks4(unittest.TestCase):
     """
-    Testing chunks. Testing variables, and the combination of variables, negation and values. Using the special chunk _variablesvalues
+    Testing chunks. Testing variables, and the combination of variables, negation and values. Using the special namedtuple _variablesvalues
     """
 
     def setUp(self):
         chunks.chunktype("test", ("arg1", "arg2"))
-        self.chunkvar1 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", values="v1", variables=None), arg2=chunks.makechunk("02", "_variablesvalues", values="v2"))
-        self.chunkvar2 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", values="v1"), arg2=chunks.makechunk("02", "_variablesvalues", values="v2"))
+        self.chunkvar1 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values="v1", variables=None, negvalues=(), negvariables=()), arg2=util.VarvalClass(values="v2", variables=None, negvalues=(), negvariables=()))
+        self.chunkvar2 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values="v1", variables=None, negvalues=(), negvariables=()), arg2=util.VarvalClass(values="v2", variables=None, negvalues=(), negvariables=()))
         self.chunk = chunks.makechunk("01", "test", arg1="v1", arg2="v2")
-        self.chunk2 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", variables="x"))
-        self.chunk2e = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", variables=tuple(("x",))))
-        self.chunk3 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", variables="x"))
-        self.chunk3e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", variables=tuple(("x",))))
-        self.chunk4 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", negvariables="x"))
-        self.chunk4e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", negvariables=tuple(("x",))))
-        self.chunk5 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", negvariables=tuple(("x", "y"))))
-        self.chunk6 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", variables="y", negvariables="x"))
-        self.chunk6e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", variables=tuple(("y",)), negvariables=tuple(("x",))))
-        self.chunk7 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", variables="x", values="v2"))
-        self.chunk7e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", variables=tuple(("x",)), values=tuple(("v12",))))
-        self.chunk8 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", values="v2"))
-        self.chunk8e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", values=tuple(("v2",))))
-        self.chunk9 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", values="v2", negvariables="y"))
-        self.chunk9e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", values=tuple(("v2",)), negvariables=tuple(("y",))))
-        self.chunk10 = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", values="v2", variables="x"))
-        self.chunk10e = chunks.makechunk("01", "test", arg2=chunks.makechunk("02", "_variablesvalues", values=tuple(("v2",)), variables=tuple(("x",))))
-        self.chunk12 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", negvariables="x"))
-        self.chunk13 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", negvariables="x", values="v1"))
-        self.chunk13e = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", negvariables=tuple(("x",)), values=tuple(("v1",))))
-        self.chunk20 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", variables="one", negvariables=tuple(("two", "three")), negvalues=tuple(("v2", "v4"))), arg2=chunks.makechunk("02", "_variablesvalues", values="v2", variables="two", negvariables=tuple(("one", "five"))))
-        self.chunk21 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", variables="one", negvariables=tuple(("two", "three")), negvalues=tuple(("v2", "v4"))), arg2=chunks.makechunk("02", "_variablesvalues", values="v2", variables="one", negvariables=tuple(("three", "five"))))
-        self.chunk22 = chunks.makechunk("01", "test", arg1=chunks.makechunk("02", "_variablesvalues", variables="one", negvariables=tuple(("two", "three")), negvalues=tuple(("v2", "v4"))), arg2=chunks.makechunk("02", "_variablesvalues", values="v2", negvariables=tuple(("one", "two"))))
+        self.chunk2 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values=None, variables='x', negvalues=(), negvariables=()))
+        self.chunk3 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values=None, variables='x', negvalues=(), negvariables=()))
+        self.chunk4 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values=None, negvariables=('x',), negvalues=(), variables=None))
+        self.chunk5 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values=None, negvariables=('x', 'y'), negvalues=(), variables=None))
+        self.chunk6 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values=None, negvariables=('x',), negvalues=(), variables='y'))
+        self.chunk7 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values='v2', negvariables=(), negvalues=(), variables='x'))
+        self.chunk7e = chunks.makechunk("01", "test", arg2=util.VarvalClass(values='v12', negvariables=(), negvalues=(), variables='x'))
+        self.chunk8 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values='v2', negvariables=(), negvalues=(), variables=None))
+        self.chunk9 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values='v2', negvariables=("y",), negvalues=(), variables=None))
+        self.chunk10 = chunks.makechunk("01", "test", arg2=util.VarvalClass(values='v2', negvariables=("y",), negvalues=(), variables='x'))
+        self.chunk12 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values=None, negvariables=("x",), negvalues=(), variables=None))
+        self.chunk13 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values='v1', negvariables=("x",), negvalues=(), variables=None))
+        self.chunk20 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values=None, negvariables=("two", "three"), negvalues=(), variables='one'), arg2=util.VarvalClass(values='v2', negvariables=("one", "five"), negvalues=(), variables='two'))
+        self.chunk21 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values=None, negvariables=("two", "three"), negvalues=('v2', 'v4'), variables='one'), arg2=util.VarvalClass(values='v2', negvariables=("three", "five"), negvalues=(), variables='one'))
+        self.chunk22 = chunks.makechunk("01", "test", arg1=util.VarvalClass(values=None, negvariables=("two", "three"), negvalues=('v2', 'v4'), variables='one'), arg2=util.VarvalClass(values='v2', negvariables=("one", "two"), negvalues=(), variables=None))
 
         self.chunk.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk2.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk2e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk3.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk3e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk4.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk4e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk5.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk6.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk6e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk7.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk7e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk8.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk8e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk9.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk9e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk10.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk12.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk13.boundvars = {"=x" : "v1", "=y" : "v5"}
-        self.chunk13e.boundvars = {"=x" : "v1", "=y" : "v5"}
         self.chunk20.boundvars = {"~=one" : {"v2", "v3", "v5"}, "=two": "v2", "~=three": {"v1", "v4"}, "=five": "v5"}
         self.chunk21.boundvars = {"~=one" : {"v2", "v3", "v5"}, "=two": "v2", "~=three": {"v1", "v4"}, "=five": "v5"}
         self.chunk22.boundvars = {"~=one" : {"v2", "v3", "v5"}, "=two": "v2", "~=three": {"v1", "v4"}, "=five": "v5"}
@@ -204,24 +189,17 @@ class TestChunks4(unittest.TestCase):
         self.assertTrue(self.chunkvar1 == self.chunkvar2)
         self.assertTrue(self.chunk2 < self.chunk)
         self.assertTrue(self.chunk2 <= self.chunk)
-        self.assertTrue(self.chunk2e < self.chunk)
         self.assertFalse(self.chunk3 < self.chunk)
-        self.assertFalse(self.chunk3e < self.chunk)
         self.assertTrue(self.chunk4 < self.chunk)
-        self.assertTrue(self.chunk4e < self.chunk)
         self.assertTrue(self.chunk5 < self.chunk)
         self.assertFalse(self.chunk6 < self.chunk)
-        self.assertFalse(self.chunk6e < self.chunk)
         self.assertFalse(self.chunk7 < self.chunk)
         self.assertFalse(self.chunk7e < self.chunk)
         self.assertTrue(self.chunk8 < self.chunk)
-        self.assertTrue(self.chunk8e < self.chunk)
         self.assertTrue(self.chunk9 < self.chunk)
-        self.assertTrue(self.chunk9e < self.chunk)
         self.assertFalse(self.chunk10 < self.chunk)
         self.assertFalse(self.chunk12 < self.chunk)
         self.assertFalse(self.chunk13 < self.chunk)
-        self.assertFalse(self.chunk13e < self.chunk)
         self.assertTrue(self.chunk20 <= self.chunk)
         self.assertEqual(self.chunk20.boundvars, {"=one": "v1", "~=one" : {"v2", "v3", "v5"}, "~=two": {"v1"}, "=two": "v2", "~=three": {"v1", "v4"}, "=five": "v5", "~=five": {"v2"}})
         self.assertFalse(self.chunk21 <= self.chunk)
@@ -247,7 +225,7 @@ class Testchunkstring(unittest.TestCase):
                 'isa    test\
                 arg2    "v1"\
                 arg1    "v2"')
-        self.chunk3 = chunks.makechunk("","test", arg1=chunks.makechunk("","_variablesvalues", values="v1"), arg2=chunks.makechunk("","_variablesvalues", values="v2"))
+        self.chunk3 = chunks.makechunk("","test", arg1=util.VarvalClass(values='v1', negvariables=(), negvalues=(), variables=None), arg2=util.VarvalClass(values='v2', negvariables=(), negvalues=(), variables=None))
         self.chunk4 = chunks.makechunk("","test", arg1="v1", arg2="v2")
         self.chunk5 = chunks.chunkstring("c5", \
                 "isa test\
@@ -1413,7 +1391,7 @@ class TestCompilation1(unittest.TestCase):
         var1 = pro["=g"]._asdict()["starting"].variables
         var2 = pro["=g"]._asdict()["ending"].negvariables
         var3 = pro["=g"]._asdict()["ending"].variables
-        self.assertTrue(var1 == var2)
+        self.assertTrue(var1 == var2[0])
         self.assertFalse(var1 == var3)
         
         pro = next(new_rule)
@@ -1424,7 +1402,8 @@ class TestCompilation1(unittest.TestCase):
         var22 = pro["=g"]._asdict()["ending"].negvariables
         var23 = pro["=g"]._asdict()["ending"].variables
         val = pro["=g"]._asdict()["starting"].values
-        self.assertTrue(var21 == var22)
+        self.assertTrue(var21 == None)
+        self.assertTrue(var22 == ())
         self.assertFalse(var21 == var23)
         self.assertTrue(var1 == var23)
         self.assertEqual(val, '4')
@@ -1500,17 +1479,17 @@ class TestCompilation3(unittest.TestCase):
         val2 = pro["=g"]._asdict()["arg2"].values
         val3 = pro["=g"]._asdict()["arg3"].values
         val4 = pro["=g"]._asdict()["arg4"].values
-        self.assertEqual(var1, 'None')
+        self.assertEqual(var1, None)
         self.assertEqual(var2, 'v2')
         self.assertEqual(var3, 'v2')
         self.assertEqual(var4, 'v3')
         self.assertEqual(val1, '3')
-        self.assertEqual(val2, 'None')
-        self.assertEqual(val3, 'None')
-        self.assertEqual(val4, 'None')
+        self.assertEqual(val2, None)
+        self.assertEqual(val3, None)
+        self.assertEqual(val4, None)
         
         pro = next(new_rule)
-
+        
         self.assertSetEqual(set(pro), {"=g"})
         var1 = pro["=g"]._asdict()["arg1"].variables
         var2 = pro["=g"]._asdict()["arg2"].variables
@@ -1524,10 +1503,10 @@ class TestCompilation3(unittest.TestCase):
         self.assertEqual(var2, 'v3')
         self.assertEqual(var3, 'v3')
         self.assertEqual(var4, 'v2')
-        self.assertEqual(val1, 'None')
-        self.assertEqual(val2, 'None')
-        self.assertEqual(val3, 'None')
-        self.assertEqual(val4, 'None')
+        self.assertEqual(val1, None)
+        self.assertEqual(val2, None)
+        self.assertEqual(val3, None)
+        self.assertEqual(val4, None)
 
 class TestCompilation4(unittest.TestCase):
     """
@@ -1614,9 +1593,9 @@ class TestCompilation5(unittest.TestCase):
         var3 = pro["=g"]._asdict()["ending"].variables
         val1 = pro["=g"]._asdict()["starting"].values
         self.assertEqual(var1, 'x')
-        self.assertEqual(var2, 'x')
-        self.assertEqual(var3, 'None')
-        self.assertEqual(val1, 'None')
+        self.assertEqual(var2, ('x',))
+        self.assertEqual(var3, None)
+        self.assertEqual(val1, None)
         
         pro = next(new_rule)
 
@@ -1625,10 +1604,10 @@ class TestCompilation5(unittest.TestCase):
         var2 = pro["=g"]._asdict()["ending"].variables
         val1 = pro["=g"]._asdict()["starting"].values
         val2 = pro["=g"]._asdict()["ending"].values
-        self.assertEqual(var1, 'None')
+        self.assertEqual(var1, None)
         self.assertEqual(var2, 'x')
         self.assertEqual(val1, '4')
-        self.assertEqual(val2, 'None')
+        self.assertEqual(val2, None)
         
         self.model._ACTRModel__productions.pop("one")
 
@@ -1685,14 +1664,14 @@ class TestCompilation6(unittest.TestCase):
         val2 = pro["=g"]._asdict()["arg2"].values
         val3 = pro["=g"]._asdict()["arg3"].values
         val4 = pro["=g"]._asdict()["arg4"].values
-        self.assertEqual(var1, 'None')
+        self.assertEqual(var1, None)
         self.assertEqual(var2, 'v2')
         self.assertEqual(var3, 'v2')
         self.assertEqual(var4, 'v3')
         self.assertEqual(val1, '3')
-        self.assertEqual(val2, 'None')
-        self.assertEqual(val3, 'None')
-        self.assertEqual(val4, 'None')
+        self.assertEqual(val2, None)
+        self.assertEqual(val3, None)
+        self.assertEqual(val4, None)
         
         pro = next(new_rule)
 
@@ -1706,13 +1685,13 @@ class TestCompilation6(unittest.TestCase):
         val3 = pro["=g"]._asdict()["arg3"].values
         val4 = pro["=g"]._asdict()["arg4"].values
         self.assertEqual(var1, 'v2')
-        self.assertEqual(var2, 'None')
+        self.assertEqual(var2, None)
         self.assertEqual(var3, 'v3')
         self.assertEqual(var4, 'v2')
-        self.assertEqual(val1, 'None')
+        self.assertEqual(val1, None)
         self.assertEqual(val2, '5')
-        self.assertEqual(val3, 'None')
-        self.assertEqual(val4, 'None')
+        self.assertEqual(val3, None)
+        self.assertEqual(val4, None)
 
 class TestCompilation7(unittest.TestCase):
     """
@@ -1747,14 +1726,14 @@ class TestCompilation7(unittest.TestCase):
         val2 = pro["=g"]._asdict()["arg2"].values
         val3 = pro["=g"]._asdict()["arg3"].values
         val4 = pro["=g"]._asdict()["arg4"].values
-        self.assertEqual(var1, 'None')
+        self.assertEqual(var1, None)
         self.assertEqual(var2, 'v2')
         self.assertEqual(var3, 'v2')
         self.assertEqual(var4, 'v3')
         self.assertEqual(val1, '3')
-        self.assertEqual(val2, 'None')
-        self.assertEqual(val3, 'None')
-        self.assertEqual(val4, 'None')
+        self.assertEqual(val2, None)
+        self.assertEqual(val3, None)
+        self.assertEqual(val4, None)
         
         pro = next(new_rule)
 
@@ -1768,13 +1747,13 @@ class TestCompilation7(unittest.TestCase):
         val3 = pro["=g"]._asdict()["arg3"].values
         val4 = pro["=g"]._asdict()["arg4"].values
         self.assertEqual(var1, 'v2')
-        self.assertEqual(var2, 'None')
+        self.assertEqual(var2, None)
         self.assertEqual(var3, 'v3')
         self.assertEqual(var4, 'v2')
-        self.assertEqual(val1, 'None')
+        self.assertEqual(val1, None)
         self.assertEqual(val2, '5')
-        self.assertEqual(val3, 'None')
-        self.assertEqual(val4, 'None')
+        self.assertEqual(val3, None)
+        self.assertEqual(val4, None)
 
 class TestCompilation8(unittest.TestCase):
     """
@@ -1878,6 +1857,74 @@ class TestCompilation11(unittest.TestCase):
         self.model._ACTRModel__productions.pop("two and one")
         self.assertEqual(new_rule["utility"], u2)
 
+class TestCompilation12(unittest.TestCase):
+    """
+    Testing production compilation.
+    """
+    
+    def setUp(self):
+        mm = modeltests.Compilation12(production_compilation=True)
+        self.test = mm
+        self.model = mm.m
+        self.sim = self.model.simulation(trace=False)
+
+    def test_procedure(self):
+        while True:
+            try:
+                self.sim.step()
+            except simpy.core.EmptySchedule:
+                break
+            if self.sim.current_event.action == "RULE CREATED: one and two":
+                break
+
+        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+
+        pro = next(new_rule)
+        self.assertSetEqual(set(pro), {"=g"})
+        var1 = pro["=g"]._asdict()["starting"].variables
+        var2 = pro["=g"]._asdict()["ending"].negvariables
+        var3 = pro["=g"]._asdict()["ending"].variables
+        val1 = pro["=g"]._asdict()["starting"].values
+        self.assertEqual(var1, 'x')
+        self.assertEqual(var2, ('x',))
+        self.assertEqual(var3, None)
+        self.assertEqual(val1, None)
+        
+        pro = next(new_rule)
+
+        self.assertSetEqual(set(pro), {"=g"})
+        var1 = pro["=g"]._asdict()["starting"].variables
+        var2 = pro["=g"]._asdict()["ending"].variables
+        val1 = pro["=g"]._asdict()["starting"].values
+        val2 = pro["=g"]._asdict()["ending"].values
+        val3 = pro["=g"]._asdict()["position"].values
+        self.assertEqual(var1, None)
+        self.assertEqual(var2, 'x')
+        self.assertEqual(val1, 'None')
+        self.assertEqual(val2, None)
+        self.assertEqual(val3, 'completeend')
+        
+        self.model._ACTRModel__productions.pop("one")
+
+        g_noncompiled = self.model.goal.copy()
+
+        self.model.goal.add(actr.makechunk(nameofchunk="start", typename="state", starting=1, ending=3, position='start'))
+
+        self.sim = self.model.simulation(trace=False)
+
+        while True:
+            self.sim.step()
+            if self.sim.current_event.action == "RULE FIRED: one and two":
+                break
+
+        while True:
+            self.sim.step()
+            if self.sim.current_event.action == "CONFLICT RESOLUTION":
+                break
+
+        g_compiled = self.model.goal.copy()
+
+        self.assertEqual(g_noncompiled, g_compiled)
 
 if __name__ == '__main__':
     unittest.main()

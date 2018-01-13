@@ -6,6 +6,7 @@ import collections
 import re
 import math
 import random
+import warnings
 
 import numpy as np
 import pyparsing as pp
@@ -29,22 +30,51 @@ ACTRRETRIEVE = "+"
 ACTRRETRIEVER = "\+" #used for regex
 
 MANUAL = "_manual"
-VARVAL = "_variablesvalues"
 VISUAL = "_visual"
 VISUALLOCATION = "_visuallocation"
 
-SPECIALCHUNKTYPES = {VARVAL: "variables, values, negvariables, negvalues", MANUAL: "cmd, key", VISUAL: "cmd, value, color, screen_pos", VISUALLOCATION: "screen_x, screen_y, color, value"}
+EMPTYVALUE = None
+
+VarvalClass = collections.namedtuple("_variablesvalues", "values, variables, negvalues, negvariables")
+
+def varval_repr(self):
+    """
+    This is a function used for string representation of VarvalClass.
+    """
+    temp = self
+    y = ""
+    if temp.values:
+        y = "".join([y, str(temp.values)])
+    if temp.variables:
+        y = "".join([y, "=", str(temp.variables)])
+    if temp.negvalues:
+        if not isinstance(temp.negvalues, str):
+            for each in temp.negvalues:
+                y = "".join([y, "~", str(each)])
+        else:
+            y = "".join([y, "~", str(temp.negvalues)])
+    if temp.negvariables:
+        if not isinstance(temp.negvariables, str):
+            for each in temp.negvariables:
+                y = "".join([y, "~=", str(each)])
+        else:
+            y = "".join([y, "~=", str(temp[key])])
+    return y
+
+VarvalClass.__repr__ = varval_repr
+
+SPECIALCHUNKTYPES = {MANUAL: "cmd, key", VISUAL: "cmd, value, color, screen_pos", VISUALLOCATION: "screen_x, screen_y, color, value"}
 
 #[{"test": {"position": (300, 170)}, "X": {"position": (300, 170)}}]
 
 #special values for cmd in MANUAL
 
-CMDMANUAL = set([None, "None", "press_key"])
+CMDMANUAL = set([EMPTYVALUE, str(EMPTYVALUE), "press_key"])
 CMDPRESSKEY = "press_key"
 
 #special values for cmd in VISUAL
 
-CMDVISUAL = set([None, "None", "move_attention"])
+CMDVISUAL = set([EMPTYVALUE, str(EMPTYVALUE), "move_attention"])
 CMDMOVEATTENTION = "move_attention"
 
 #special character for visual chunks
@@ -104,41 +134,21 @@ def stringsplitting(info, empty=True):
     if not any(varval.values()):
         varval["values"] = set([info]) #varval empty -> only values present
 
-    assert len(set(varval["values"])) <= 1, "Any attribute must have at most one value"
+    if len(set(varval["values"])) > 1:
+        raise ACTRError("Any slot must have at most one value, there is more than one value in this slot")
+    if len(set(varval["variables"])) > 1:
+        raise ACTRError("Any slot must have at most one variable, there is more than one variable in this slot")
 
     return varval
 
-def splitting(info, empty=True):
+def splitting(info):
     """
-    Split info into variables, negative variables, values and negative values. Used in chunks.
+    Split info into variables, negative variables, values and negative values. 
 
-    Info could either be a string, e.g., '=x~=y!2', or a special chunk 'variablesvalues', e.g., Chunk('_variablesvalues', variables='x', negvariables='y', values=2). Alternatively, info could consist only of a value.
     """
-    varval = {"variables": set(), "values": set(), "negvariables": set(), "negvalues": set()}
-    try: #assume it's a attr-val chunk
-        if info.typename == "_variablesvalues":
-            if empty:
-                subpart = info.removeempty()
-            else:
-                subpart = info.removeunused()
-            for x in subpart:
-                if isinstance(x[1], tuple):
-                    varval[x[0]] = set(x[1]) #tuples are iterated over and added to the set
-                else:
-                    varval[x[0]] = set([x[1]]) #other elements (strings, chunks) are added as a whole
-        else:
-            varval["values"] = set([info]) #not varval -> only a chunk present
-    except AttributeError: #it's just values; this could happen for None, which lacks any structure
-        if empty:
-            if info != 'None' and info != None:
-                varval["values"] = set([info])
-        else:
-            if info != None:
-                varval["values"] = set([info])
-
-    assert len(set(varval["values"])) <= 1, "Any attribute must have at most one value"
-
-    return varval
+    if info == EMPTYVALUE:
+        info = VarvalClass(variables=None, values=None, negvariables=(), negvalues=())
+    return info
 
 def get_similarity(d, val1, val2, mismatch_penalty=1):
     """
@@ -165,30 +175,22 @@ def make_chunkparts_without_varconflicts(chunkpart, rule_name, variables):
     """
     Make a chunk avoiding any variable names used in actrvariables. The function uses rule_name for naming, if possible.
     """
-    varval = splitting(chunkpart, empty=False)
-    temp_var = set()
-    for x in varval['variables']:
-        new_name = "".join([str(x), "__rule__", rule_name])
+    varval = splitting(chunkpart)
+    temp_var = None
+    if varval.variables:
+        new_name = "".join([str(varval.variables), "__rule__", rule_name])
         if "".join(["=", new_name]) in variables:
             raise ACTRError("A name clash appeared when trying to compile two rules. Try to rename variables in the rule '%s'" %rule_name)
         else:
-            temp_var.add(new_name)
+            temp_var = new_name
     temp_negvar = set()
-    for x in varval['negvariables']:
+    for x in varval.negvariables:
         new_name = "".join([str(x), "__rule__", rule_name])
         if "".join(["=", "new_name"]) in variables:
             raise ACTRError("A name clash appeared when trying to compile two rules. Try to rename variables in the rule '%s'" %rule_name)
         else:
             temp_negvar.add(new_name)
-    varval['negvariables'] = temp_negvar
-    varval['variables'] = temp_var
-    new_varval = {key: varval[key] for key in varval if varval[key]}
-
-    for key in new_varval:
-        if len(new_varval[key]) == 1:
-            new_varval[key] = new_varval[key].pop()
-        else:
-            new_varval[key] = tuple(new_varval[key])
+    new_varval = VarvalClass(variables=temp_var, values=varval.values, negvariables=tuple(temp_negvar), negvalues=varval.negvalues)
 
     return new_varval
 
@@ -196,29 +198,29 @@ def make_chunkparts_with_new_vars(chunkpart, variable_dict, val_dict):
     """
     Make a chunk changing variable names according to variable_dict.
     """
-    varval = splitting(chunkpart, empty=False)
-    temp_set = set()
-    for x in varval["variables"]:
+    varval = splitting(chunkpart)
+    temp_var = None
+    temp_val = varval.values
+    if varval.variables:
+        if varval.variables not in val_dict:
+            temp_var = variable_dict.setdefault(varval.variables, varval.variables)
+        else:
+            if varval.values:
+                if val_dict[varval.variables] == varval.values:
+                    pass
+                else:
+                    raise ACTRError("During the compilation, one slot received two different values, namely %s and %s; exiting" %(varval.values, val_dict[varval.variables]))
+            else:
+                temp_val = val_dict[varval.variables]
+    temp_negvar = set()
+    temp_negval = set(varval.negvalues)
+    for x in varval.negvariables:
         if x not in val_dict:
-            temp_set.add(variable_dict.setdefault(x, x))
+            temp_negvar.add(variable_dict.setdefault(x, x))
         else:
-            varval["values"].add(val_dict[x])
-    varval["variables"] = temp_set
-    temp_set = set()
-    for x in varval["negvariables"]:
-        if x not in val_dict:
-            temp_set.add(variable_dict.setdefault(x, x))
-        else:
-            varval["negvalues"].add(val_dict[x])
-    varval["negvariables"] = temp_set
+            temp_negval.add(val_dict[x])
 
-    new_varval = {key: varval[key] for key in varval if varval[key]}
-
-    for key in new_varval:
-        if len(new_varval[key]) == 1:
-            new_varval[key] = new_varval[key].pop()
-        else:
-            new_varval[key] = tuple(new_varval[key])
+    new_varval = VarvalClass(variables=temp_var, values=temp_val, negvariables=tuple(temp_negvar), negvalues=tuple(temp_negval))
 
     return new_varval
 
@@ -229,30 +231,17 @@ def merge_chunkparts(chunkpart1, chunkpart2):
 
     Chunk parts are merged as follows: chunkpart1 is used; info in chunkpart2 is added to chunkpart1
     """
-    varval1 = splitting(chunkpart1, empty=False)
-    varval2 = splitting(chunkpart2, empty=False)
-    for key in varval1:
-        if varval1[key]:
+    varval1 = splitting(chunkpart1)
+    varval2 = splitting(chunkpart2)
+    for x in varval1:
+        if x:
             break
     else:
         varval1 = varval2
 
-    new_varval = {key: varval1[key] for key in varval1 if varval1[key]}
-
-    #for key in varval1:
-    #    if varval2[key] and not varval1[key]:
-    #        varval1[key] = varval2[key]
-
-    #new_varval = {key: varval1[key] for key in varval1 if varval1[key]}
-
-    for key in new_varval:
-        if len(new_varval[key]) == 1:
-            new_varval[key] = new_varval[key].pop()
-        else:
-            new_varval[key] = tuple(new_varval[key])
+    new_varval = VarvalClass(variables=varval1.variables, values=varval1.values, negvariables=varval1.negvariables, negvalues=varval1.negvalues)
 
     return new_varval
-
 
 #############utilities for rules######################################
 
@@ -269,32 +258,56 @@ def getrule():
     rule_reader = pp.Group(pp.OneOrMore(pp.Group(special_valueLHS + buff + end_buffer + pp.Group(pp.Optional(chunk))))) + arrow + pp.Group(pp.OneOrMore(pp.Group(special_valueRHS + buff + end_buffer + pp.Group(pp.Optional(chunk)))))
     return rule_reader
 
-def check_bound_vars(actrvariables, elem):
+def check_bound_vars(actrvariables, elem, negative_impossible=True):
     """
     Check that elem is a bound variable, or not a variable. If the test goes through, return elem.
+    If negative_impossible is set to True, then having negative values (or neg. variables) raises an Error. This is needed if the goal buffer is set. Otherwise, negative values are returned.
     """
     result = None
+    neg_result = set()
     varval = splitting(elem)
-    for x in varval:
-        for _ in range(len(varval[x])):
-            if x == "variables":
-                var = str(varval[x].pop())
-                var = "".join([ACTRVARIABLE, var])
-                try:
-                    temp_result = actrvariables[var]
-                except KeyError:
-                    raise ACTRError("Object '%s' in the value '%s' is a variable that is not bound; this is illegal in ACT-R" % (var[1:], elem)) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
-            if x == "values":
-                temp_result = varval[x].pop()
-            if x == "negvariables" or x == "negvalues":
-                raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of ACT-R rules; the object '%s' is illegal in ACT-R" % elem)
-            if result and temp_result in {VISIONGREATER, VISIONSMALLER} or result in {VISIONGREATER, VISIONSMALLER}:
-                result = "".join(sorted([temp_result, result], reverse=True))
-            elif result and temp_result != result:
-                raise ACTRError("It looks like in '%s', one slot would have to carry two values at the same time; this is illegal in ACT-R" % elem)
+    for x in varval._fields:
+        if x == "variables" and getattr(varval, x):
+            var = getattr(varval, x)
+            var = "".join([ACTRVARIABLE, var])
+            try:
+                temp_result = actrvariables[var]
+            except KeyError:
+                raise ACTRError("Object '%s' in the value '%s' is a variable that is not bound; this is illegal in ACT-R" % (var[1:], elem)) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
+        elif x == "values" and getattr(varval, x):
+            temp_result = getattr(varval, x)
+        elif x == "negvalues" and getattr(varval, x):
+            if negative_impossible:
+                raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of some ACT-R rules, notably, the ones that do not search environment or memory; '%s' is illegal in this case" % elem)
             else:
+                for neg in getattr(varval, x):
+                    neg_result.add(neg)
+        elif x == "negvariables" and getattr(varval, x):
+            if negative_impossible:
+                raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of some ACT-R rules, notably, the ones that do not search environment or memory; '%s' is illegal in this case" % elem)
+            else:
+                for neg in getattr(varval, x):
+                    neg_var = neg
+                    neg_var = "".join([ACTRVARIABLE, neg_var])
+                    try:
+                        neg_result.add(actrvariables[neg_var])
+                    except KeyError:
+                        raise ACTRError("Object '%s' in the value '%s' is a variable that is not bound; this is illegal in ACT-R" % (var[1:], elem)) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
+        if result and temp_result in {VISIONGREATER, VISIONSMALLER} or result in {VISIONGREATER, VISIONSMALLER}:
+            result = "".join(sorted([temp_result, result], reverse=True))
+        elif result and temp_result != result:
+            raise ACTRError("It looks like in '%s', one slot would have to carry two values at the same time; this is illegal in ACT-R" % elem)
+        else:
+            try:
                 result = temp_result
-    return result
+            except UnboundLocalError: #temp_result wasn't used
+                pass
+    try:
+        if temp_result:
+            returned_tuple = VarvalClass(variables=None, values=result, negvariables=(), negvalues=tuple(neg_result))
+    except UnboundLocalError: #temp_result was never used, which means that no values were defined
+        returned_tuple = VarvalClass(variables=None, values=None, negvariables=(), negvalues=tuple(neg_result))
+    return returned_tuple
 
 def match(dict2, slotvals, name1, name2):
     """
@@ -315,6 +328,7 @@ def match(dict2, slotvals, name1, name2):
             else:
                 matched.update({x: temp_var for x in temp_set})
         return matched, valued
+
     matched = {}
     valued = {}
     temp_slotvals = slotvals.copy()
@@ -338,36 +352,40 @@ def match(dict2, slotvals, name1, name2):
 
             if isinstance(chunkdict3, collections.MutableSequence): #this is retrieval, it consists of mutable sequence -- 0=chunk description in the 1st rule; 1=retrieved chunk
                 for elem in chunkdict2:
-                    chunkpart2 = splitting(chunkdict2[elem], empty=False)
+                    chunkpart2 = splitting(chunkdict2[elem])
                     try:
-                        chunkpart3 = splitting(chunkdict3[0][elem], empty=False)
+                        chunkpart3 = splitting(chunkdict3[0][elem])
                     except KeyError:
-                        chunkpart3 = splitting(None)
+                        chunkpart3 = splitting(EMPTYVALUE)
                     try:
                         temp_val = getattr(chunkdict3[1], elem).values
                     except AttributeError:
                         temp_val = None
                     temp_set = set()
-                    temp_set.update(chunkpart2["variables"])
-                    temp_set.update(chunkpart3["variables"])
+                    if chunkpart2.variables:
+                        temp_set.update(set([chunkpart2.variables]))
+                    if chunkpart3.variables:
+                        temp_set.update(set([chunkpart3.variables]))
                     matched, valued = temp_func(temp_set, temp_val)
                 slotvals.pop(buff) #info about retrieved element has been fully used, it can be discarded now
             else: #anything else but retrieval is here
                 for elem in chunkdict2:
-                    chunkpart2 = splitting(chunkdict2[elem], empty=False)
+                    chunkpart2 = splitting(chunkdict2[elem])
                     try:
-                        chunkpart3 = splitting(chunkdict3[elem], empty=False)
+                        chunkpart3 = splitting(chunkdict3[elem])
                     except (KeyError, TypeError):
-                        chunkpart3 = splitting(None)
+                        chunkpart3 = splitting(EMPTYVALUE)
 
                     temp_set = set()
-                    temp_set.update(chunkpart2["variables"])
-                    temp_set.update(chunkpart3["variables"])
+                    if chunkpart2.variables:
+                        temp_set.update(set([chunkpart2.variables]))
+                    if chunkpart3.variables:
+                        temp_set.update(set([chunkpart3.variables]))
                     temp_val, val2, val3 = None, None, None
-                    if chunkpart2["values"]:
-                        val2 = chunkpart2["values"].pop()
-                    if chunkpart3["values"]:
-                        val3 = chunkpart3["values"].pop()
+                    if chunkpart2.values:
+                        val2 = chunkpart2.values
+                    if chunkpart3.values:
+                        val3 = chunkpart3.values
 
                     if val2 and val3 and val2 != val3:
                         raise ACTRError("The values in rules '%s' and '%s' do not match, production compilation failed" % (name1, name2))
@@ -406,10 +424,24 @@ def baselevel_learning(current_time, times, bll, decay, activation=None, optimiz
     Calculate base-level learning: B_i = ln(sum(t_j^{-decay})) for t_j = current_time - t for t in times.
     """
     if len(times) > 0:
-        if bll and not optimized_learning:
-            B = math.log(np.sum((current_time - times) ** (-decay)))
-        elif bll:
-            B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(times)) #calculating bll using optimized learning -- much faster since it's a single calculation
+        with warnings.catch_warnings(record=True):
+            warnings.filterwarnings('error')
+            if bll and not optimized_learning:
+                try:
+                    B = math.log(np.sum((current_time - times) ** (-decay)))
+                #this part removes chunk storages that are stored at current time (blocking simultaneous retrieval)
+                except RuntimeWarning:
+                    temp_times = np.delete(times, times.argmax())
+                    if len(temp_times) > 0:
+                        B = math.log(np.sum((current_time - temp_times) ** (-decay)))
+            elif bll:
+                try:
+                    B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(times)) #calculating bll using optimized learning -- much faster since it's a single calculation
+                #this part removes chunk storages that are stored at current time (blocking simultaneous retrieval)
+                except RuntimeWarning:
+                    temp_times = np.delete(times, times.argmax())
+                    if len(temp_times) > 0:
+                        B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(temp_times)) #calculating bll using optimized learning -- much faster since it's a single calculation
 
     #add hard-coded activation
     if activation != None:
@@ -451,11 +483,11 @@ def find_chunks(chunk, only_chunks=True):
     chunk_dict = {}
     for x in chunk:
         try:
-            val = splitting(x[1])['values'].pop()
-        except KeyError:
+            val = splitting(x[1]).values
+        except AttributeError:
             pass
         else:
-            if val != 'None':
+            if val != EMPTYVALUE and val != str(EMPTYVALUE):
                 if not only_chunks:
                     chunk_dict[x[0]] = val
                 elif not isinstance(val, str):
@@ -468,8 +500,6 @@ def calculate_strength_association(chunk, otherchunk, dm, strength_of_associatio
 
     restricted specifies the slot name to which calculation is restricted.
     """
-    if otherchunk.typename == VARVAL:
-        otherchunk = splitting(x[1])['values'].pop()
     chunk_dict = find_chunks(otherchunk, only_chunks)
     slotvalues = chunk_dict.items()
     values = chunk_dict.values()
@@ -482,7 +512,7 @@ def calculate_strength_association(chunk, otherchunk, dm, strength_of_associatio
                     slots_j = 1
                     for each in dm:
                         for x in each:
-                            if x[0] == restricted and splitting(x[1])['values'] and chunk == splitting(x[1])['values'].pop():
+                            if x[0] == restricted and splitting(x[1]).values and chunk == splitting(x[1]).values:
                                 slots_j += 1
                     dm.restricted_number_chunks.update({(restricted, chunk): slots_j})
                 else:
@@ -494,7 +524,7 @@ def calculate_strength_association(chunk, otherchunk, dm, strength_of_associatio
             if chunk not in dm.unrestricted_number_chunks:
                 for each in dm:
                     for x in each:
-                        if splitting(x[1])['values'] and chunk == splitting(x[1])['values'].pop():
+                        if splitting(x[1]).values and chunk == splitting(x[1]).values:
                             slots_j += 1
                 dm.unrestricted_number_chunks.update({chunk: slots_j})
             else:

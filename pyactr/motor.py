@@ -40,7 +40,7 @@ class Motor(buffers.Buffer):
 
     def add(self, elem):
         """
-        Tries to add a chunk. This is illegal for motor buffer.
+        Adding a chunk. This is illegal for motor buffer.
         """
         raise AttributeError("Attempt to add an element to motor buffer. This is not possible.")
 
@@ -53,17 +53,19 @@ class Motor(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
         except ACTRError as arg:
-            raise ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
+            raise ACTRError("Setting the chunk '%s' in the manual buffer is impossible; %s" % (otherchunk, arg))
 
         new_chunk = chunks.Chunk(self._MANUAL, **mod_attr_val) #creates new chunk
 
-        if new_chunk.cmd not in utilities.CMDMANUAL:
-            raise ACTRError("Motor module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd, utilities.CMDMANUAL))
+        if new_chunk.cmd.values not in utilities.CMDMANUAL:
+            raise ACTRError("Motor module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd.values, utilities.CMDMANUAL))
 
-        if new_chunk.cmd == utilities.CMDPRESSKEY:
-            new_chunk.key = new_chunk.key.upper() #change key into upper case
-        if new_chunk.key not in self.LEFT_HAND and new_chunk.key not in self.RIGHT_HAND:
-            raise ACTRError("Motor module received an invalid key: %s" % new_chunk.key)
+        if new_chunk.cmd.values == utilities.CMDPRESSKEY:
+            pressed_key = new_chunk.key.values.upper() #change key into upper case
+            mod_attr_val["key"] = pressed_key
+            new_chunk = chunks.Chunk(self._MANUAL, **mod_attr_val) #creates new chunk
+        if pressed_key not in self.LEFT_HAND and new_chunk.key.values not in self.RIGHT_HAND:
+            raise ACTRError("Motor module received an invalid key: %s" % pressed_key)
 
         return new_chunk
 

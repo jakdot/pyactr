@@ -30,6 +30,9 @@ class Production(collections.UserDict):
         self.rule['utility'] = utility
         self.rule['reward'] = reward
 
+        self.utility = utility
+        self.reward = reward
+
     def __contains__(self, elem):
         return elem in self.rule
 
@@ -157,7 +160,7 @@ class Productions(collections.UserDict):
                             slotvals_slot = None
                         if not slotvals_slot:
                             varval = utilities.merge_chunkparts(pro1buff[slot], pro2buff[slot])
-                            mod_attr_val[slot] = chunks.Chunk(utilities.VARVAL, **varval)
+                            mod_attr_val[slot] = varval
                         else:
                             mod_attr_val[slot] = pro1buff[slot]
                 elif buff == retrieval:
@@ -165,7 +168,7 @@ class Productions(collections.UserDict):
                 else:
                     for slot in pro2buff:
                         varval = utilities.merge_chunkparts(pro1buff[slot], pro2buff[slot])
-                        mod_attr_val[slot] = chunks.Chunk(utilities.VARVAL, **varval)
+                        mod_attr_val[slot] = varval
 
                 new_chunk = chunks.Chunk(pro1[key].typename, **mod_attr_val)
                 pro1[key] = new_chunk
@@ -232,9 +235,7 @@ class Productions(collections.UserDict):
                 for slot in pro2buff:
                     if pro1buff and slot in pro1buff:
                         varval = utilities.merge_chunkparts(pro2buff[slot], pro1buff[slot])
-                        #if varval.get("values"):
-                        #    varval = {"values": varval["values"]} #assigning values directly should trump anything else in actions
-                        mod_attr_val[slot] = chunks.Chunk(utilities.VARVAL, **varval)
+                        mod_attr_val[slot] = varval
                     else:
                         mod_attr_val[slot] = pro2buff[slot]
 
@@ -277,7 +278,7 @@ class Productions(collections.UserDict):
 
     def __rename__(self, name, variables):
         """
-        Renames production, so that variable names do not clash. name is used to change the variable name to minimize clash. Returns the production with the new name.
+        Rename production, so that variable names do not clash. name is used to change the variable name to minimize clash. Returns the production with the new name.
         """
         def func():
             production = self[name]['rule']()
@@ -294,7 +295,7 @@ class Productions(collections.UserDict):
                         mod_attr_val = {}
                         for elem in pro[key]:
                             varval = utilities.make_chunkparts_without_varconflicts(elem[1], name, variables)
-                            mod_attr_val[elem[0]] = chunks.Chunk(utilities.VARVAL, **varval)
+                            mod_attr_val[elem[0]] = varval
                         new_chunk = chunks.Chunk(pro[key].typename, **mod_attr_val)
                         pro[key] = new_chunk
 
@@ -321,7 +322,7 @@ class Productions(collections.UserDict):
                         mod_attr_val = {}
                         for elem in pro[key]:
                             varval = utilities.make_chunkparts_with_new_vars(elem[1], variable_dict, val_dict)
-                            mod_attr_val[elem[0]] = chunks.Chunk(utilities.VARVAL, **varval)
+                            mod_attr_val[elem[0]] = varval
                         new_chunk = chunks.Chunk(pro[key].typename, **mod_attr_val)
                         pro[key] = new_chunk
 
@@ -400,20 +401,18 @@ class Productions(collections.UserDict):
                         return False, False
                 else:
                     for slot in slotvals[buff]:
-                        if slotvals[buff][slot] != chunks.Chunk.EmptyValue():
-                            var = slotvals[buff][slot]._asdict()['variables']
-                            if var != chunks.Chunk.EmptyValue():
+                        if slotvals[buff][slot] != None:
+                            var = slotvals[buff][slot].variables
+                            if var != None:
                                 modified_actrvariables.add(var)
-
 
         new_2rule = self.__rename__(rule_name2, modified_actrvariables) #rename all variables in rule_name2 to avoid var clashes
 
         production2 = new_2rule['rule']()
-
+        
         pro2 = next(production2)
 
         matched, valued = utilities.match(pro2, slotvals, rule_name1, rule_name2)
-
 
         new_1rule = self.__substitute__(self[rule_name1], matched, valued)
         
@@ -424,9 +423,9 @@ class Productions(collections.UserDict):
             if slotvals[buff]:
                 for elem in slotvals[buff]:
                     varval = utilities.make_chunkparts_with_new_vars(slotvals[buff][elem], matched, valued)
-                    mod_attr_val[elem] = chunks.Chunk(utilities.VARVAL, **varval)
+                    mod_attr_val[elem] = varval
                 slotvals[buff] = mod_attr_val
-        
+
         new_rule = self.__collapse__(new_1rule, new_2rule, slotvals, retrieval)
         
         idx = 0
@@ -540,7 +539,10 @@ class ProductionRules(object):
                     yield Event(roundtime(time), self._PROCEDURAL, 'RULE %s: %s' % (re_created, compiled_rulename))
                 self.current_slotvals = {key: None for key in self.buffers}
                 yield Event(roundtime(time), self._PROCEDURAL, 'RULE FIRED: %s' % used_rulename)
-                yield from self.update(next(production), time)
+                try:
+                    yield from self.update(next(production), time)
+                except utilities.ACTRError as e:
+                    raise utilities.ACTRError("The following rule is not defined correctly according to ACT-R: '%s'. The following error occured: %s" % (self.used_rulename, e))
                 if self.last_rule and self.last_rule != used_rulename:
                     self.compile = [self.last_rule, used_rulename, self.last_rule_slotvals.copy()]
                     self.last_rule_slotvals = {key: None for key in self.buffers}
@@ -619,7 +621,7 @@ class ProductionRules(object):
             if len(self.dm) == 1:
                 cleared.clear(time, list(self.dm.values())[0]) #if there is only one memory, add the chunk there
             elif optional:
-                    cleared.clear(time, self.dm[optional]) #if not, optional must specify memory where chunk should be added
+                cleared.clear(time, self.dm[optional]) #if not, optional must specify memory where chunk should be added
             else:
                 try:
                     cleared.clear(time, self.dm[name]) #if nothing else works, check whether buffer instance was bound to a decl. mem by user
@@ -706,7 +708,7 @@ class ProductionRules(object):
 
         created_elem = list(updated)[0]
         updated.state = updated._FREE
-        yield Event(roundtime(time), name, "WROTE A CHUNK: %s" % created_elem)
+        yield Event(roundtime(time), name, "WROTE A CHUNK: %s" % str(created_elem))
 
     def visualencode(self, name, visualbuffer, chunk, temp_actrvariables, time, extra_time):
         """
@@ -717,7 +719,7 @@ class ProductionRules(object):
         yield from self.clear(name, visualbuffer, None, temp_actrvariables, time, freeing=False)
         visualbuffer.add(chunk, time)
         visualbuffer.state = visualbuffer._FREE
-        yield Event(roundtime(time), name, "ENCODED VIS OBJECT:'%s'" %chunk) 
+        yield Event(roundtime(time), name, "ENCODED VIS OBJECT:'%s'" % str(chunk))
 
     def retrieveorset(self, name, updated, otherchunk, temp_actrvariables, time):
         """
@@ -731,13 +733,13 @@ class ProductionRules(object):
             yield Event(roundtime(time), name, self._UNKNOWN)
             if self.model_parameters['production_compilation']:
                 RHSdict = otherchunk._asdict()
-                RHSdict = {item[0]: str(item[1]) if item[1] == None else item[1] for item in RHSdict.items()}
+                RHSdict = {item[0]: item[1] for item in RHSdict.items()}
                 self.current_slotvals[name] = RHSdict
 
             updated.create(otherchunk, list(self.dm.values())[0], temp_actrvariables)
             created_elem = list(updated)[0]
             updated.state = updated._FREE
-            yield Event(roundtime(time), name, "CREATED A CHUNK: %s" % created_elem)
+            yield Event(roundtime(time), name, "CREATED A CHUNK: %s" % str(created_elem))
         elif isinstance(updated, vision.VisualLocation):
             extra_time = utilities.calculate_setting_time(updated)
             time += extra_time #0 ms to create chunk in location (pop-up effect)
@@ -749,7 +751,7 @@ class ProductionRules(object):
                 updated.state = updated._FREE
             else:
                 updated.state = updated._ERROR
-            yield Event(roundtime(time), name, "ENCODED LOCATION:'%s'" %chunk) 
+            yield Event(roundtime(time), name, "ENCODED LOCATION:'%s'" % str(chunk))
         elif isinstance(updated, vision.Visual):
             ret = yield from self.visualshift(name, updated, otherchunk, temp_actrvariables, time)
             return ret #visual action returns value, namely, its continuation method
@@ -780,7 +782,7 @@ class ProductionRules(object):
             RHSdict = {item[0]: item[1] for item in RHSdict.items() if item[1] != chunks.Chunk.EmptyValue()} #delete None values
             self.current_slotvals[name] = [RHSdict, retrieved_elem]
 
-        yield Event(roundtime(time), name, 'RETRIEVED: %s' % retrieved_elem)
+        yield Event(roundtime(time), name, 'RETRIEVED: %s' % str(retrieved_elem))
 
     def automatic_search(self, name, visualbuffer, stim, time):
         """
@@ -819,7 +821,7 @@ class ProductionRules(object):
                 visualbuffer.modify(newchunk)
             else:
                 visualbuffer.add(newchunk, time)
-            yield Event(roundtime(time), name, 'AUTOMATIC BUFFERING: %s' %newchunk)
+            yield Event(roundtime(time), name, 'AUTOMATIC BUFFERING: %s' % str(newchunk))
 
     def visualshift(self, name, visualbuffer, otherchunk, temp_actrvariables, time):
         """
@@ -868,7 +870,7 @@ class ProductionRules(object):
 
         yield Event(roundtime(time), name, self._UNKNOWN)
         visualbuffer.move_eye(landing_site)
-        yield Event(roundtime(time), name, 'SHIFT COMPLETE TO POSITION: %s' %visualbuffer.current_focus)
+        yield Event(roundtime(time), name, 'SHIFT COMPLETE TO POSITION: %s' % str(visualbuffer.current_focus))
         if encoding > preparation+execution:
             newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters=self.model_parameters)
             yield from self.visualencode(name, visualbuffer, otherchunk, temp_actrvariables, time, (1-((preparation+execution)/encoding))*extra_time[0])
@@ -903,7 +905,7 @@ class ProductionRules(object):
         motorbuffer.preparation = motorbuffer._BUSY
         motorbuffer.processor = motorbuffer._BUSY
 
-        yield Event(roundtime(time), name, 'COMMAND: %s' % newchunk.cmd)
+        yield Event(roundtime(time), name, 'COMMAND: %s' % str(newchunk.cmd))
         time += preparation
         
         yield Event(roundtime(time), name, 'PREPARATION COMPLETE')
@@ -935,9 +937,9 @@ class ProductionRules(object):
         time += execution
         yield Event(roundtime(time), name, self._UNKNOWN)
         
-        self.env_interaction.add(otherchunk.key)
+        self.env_interaction.add(otherchunk.key.values)
 
-        yield Event(roundtime(time), name, 'KEY PRESSED: %s' % otherchunk.key)
+        yield Event(roundtime(time), name, 'KEY PRESSED: %s' % str(otherchunk.key))
         
         time += movement_finish
 

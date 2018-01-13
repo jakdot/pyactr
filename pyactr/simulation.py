@@ -35,7 +35,7 @@ class Simulation(object):
 
         self.gui = environment and gui and GUI
 
-        self.__simulation = simpy.Environment(initial_time=initial_time)
+        self.__simulation = simpy.Environment(initial_time=round(initial_time, 4))
 
         self.__env = environment
         if self.__env:

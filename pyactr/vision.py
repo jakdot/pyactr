@@ -98,7 +98,7 @@ class VisualLocation(buffers.Buffer):
         if actrvariables == None:
             actrvariables = {}
         try:
-            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()}
+            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1], negative_impossible=False) for x in otherchunk.removeunused()}
         except utilities.ACTRError as arg:
             raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
         chunk_used_for_search = chunks.Chunk(utilities.VISUALLOCATION, **mod_attr_val)
@@ -125,77 +125,76 @@ class VisualLocation(buffers.Buffer):
                 pass
 
             #check value in text; in principle, you can search based on any value, so this is more powerful than actual visual search
-            if chunk_used_for_search.value != chunk_used_for_search.EmptyValue() and chunk_used_for_search.value != self.environment.stimulus[each]["text"]:
+            if chunk_used_for_search.value != chunk_used_for_search.EmptyValue() and chunk_used_for_search.value.values != self.environment.stimulus[each]["text"]:
                 continue
 
             position = (int(self.environment.stimulus[each]['position'][0]), int(self.environment.stimulus[each]['position'][1]))
 
-            #check absolute position
+            #check absolute position; exception on AttributeError is to avoid the case in which the slot has empty value (in that case, the attribute "values" is undefined)
             try: 
-                if chunk_used_for_search.screen_x and int(chunk_used_for_search.screen_x) != position[0]:
+                if chunk_used_for_search.screen_x.values and int(chunk_used_for_search.screen_x.values) != position[0]:
                     continue
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, AttributeError):
                 pass
             try:
-                if chunk_used_for_search.screen_y and int(chunk_used_for_search.screen_y) != position[1]:
+                if chunk_used_for_search.screen_y.values and int(chunk_used_for_search.screen_y.values) != position[1]:
                     continue
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, AttributeError):
                 pass
 
             #check on x and y relative positions
             try: 
-                if chunk_used_for_search.screen_x[0] == utilities.VISIONSMALLER and int(chunk_used_for_search.screen_x[1:]) <= position[0]:
+                if chunk_used_for_search.screen_x.values[0] == utilities.VISIONSMALLER and int(chunk_used_for_search.screen_x.values[1:]) <= position[0]:
                     continue
-                elif chunk_used_for_search.screen_x[0] == utilities.VISIONGREATER and int(chunk_used_for_search.screen_x[1:]) >= position[0]:
+                elif chunk_used_for_search.screen_x.values[0] == utilities.VISIONGREATER and int(chunk_used_for_search.screen_x.values[1:]) >= position[0]:
                     continue
-            except (TypeError, IndexError):
+            except (TypeError, IndexError, AttributeError):
                 pass
 
             try: 
-                if chunk_used_for_search.screen_y[0] == utilities.VISIONSMALLER and int(chunk_used_for_search.screen_y[1:]) <= position[1]:
+                if chunk_used_for_search.screen_y.values[0] == utilities.VISIONSMALLER and int(chunk_used_for_search.screen_y.values[1:]) <= position[1]:
                     continue
-                elif chunk_used_for_search.screen_y[0] == utilities.VISIONGREATER and int(chunk_used_for_search.screen_y[1:]) >= position[1]:
+                elif chunk_used_for_search.screen_y.values[0] == utilities.VISIONGREATER and int(chunk_used_for_search.screen_y.values[1:]) >= position[1]:
                     continue
-            except (TypeError, IndexError):
+            except (TypeError, IndexError, AttributeError):
                 pass
 
             #check on x and y absolute positions 
             try: 
-                if chunk_used_for_search.screen_x == utilities.VISIONLOWEST and current_x != None and position[0] > current_x:
+                if chunk_used_for_search.screen_x.values == utilities.VISIONLOWEST and current_x != None and position[0] > current_x:
                     continue
-                elif chunk_used_for_search.screen_x == utilities.VISIONHIGHEST and current_x != None and position[0] < current_x:
+                elif chunk_used_for_search.screen_x.values == utilities.VISIONHIGHEST and current_x != None and position[0] < current_x:
                     continue
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass
 
             try: 
-                if chunk_used_for_search.screen_y == utilities.VISIONLOWEST and current_y != None and position[1] > current_y:
+                if chunk_used_for_search.screen_y.values == utilities.VISIONLOWEST and current_y != None and position[1] > current_y:
                     continue
-                elif chunk_used_for_search.screen_y == utilities.VISIONHIGHEST and current_y != None and position[1] < current_y:
+                elif chunk_used_for_search.screen_y.values == utilities.VISIONHIGHEST and current_y != None and position[1] < current_y:
                     continue
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass
 
             #check on closest
             try: 
-                if (chunk_used_for_search.screen_x == utilities.VISIONCLOSEST or  chunk_used_for_search.screen_y == utilities.VISIONCLOSEST) and utilities.calculate_pythagorian_distance(self.environment.current_focus, position) > closest:
+                if (chunk_used_for_search.screen_x.values == utilities.VISIONCLOSEST or chunk_used_for_search.screen_y.values == utilities.VISIONCLOSEST) and utilities.calculate_pythagorian_distance(self.environment.current_focus, position) > closest:
                     continue
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass
 
             #check on onewayclosest
             try: 
-                if (chunk_used_for_search.screen_x == utilities.VISIONONEWAYCLOSEST) and utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=True) > x_closest:
+                if (chunk_used_for_search.screen_x.values == utilities.VISIONONEWAYCLOSEST) and utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=True) > x_closest:
                     continue
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass
 
             try:
-                if (chunk_used_for_search.screen_y == utilities.VISIONONEWAYCLOSEST) and utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=False) > y_closest:
+                if (chunk_used_for_search.screen_y.values == utilities.VISIONONEWAYCLOSEST) and utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=False) > y_closest:
                     continue
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass
-
 
             found_stim = self.environment.stimulus[each]
 
@@ -330,15 +329,15 @@ class Visual(buffers.Buffer):
         if actrvariables == None:
             actrvariables = {}
         try:
-            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
+            mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()}
         except ACTRError as arg:
-            raise ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
+            raise ACTRError("Shifting towards the chunk '%s' is impossible; %s" % (otherchunk, arg))
 
         vis_delay = None
 
         for each in self.environment.stimulus:
             try:
-                if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].screen_x), float(mod_attr_val['screen_pos'].screen_y)):
+                if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].values.screen_x.values), float(mod_attr_val['screen_pos'].values.screen_y.values)):
                     mod_attr_val['value'] = self.environment.stimulus[each]['text']
                     vis_delay = self.environment.stimulus[each].get('vis_delay')
             except (AttributeError, KeyError):
@@ -346,22 +345,22 @@ class Visual(buffers.Buffer):
 
         new_chunk = chunks.Chunk(self._VISUAL, **mod_attr_val) #creates new chunk
 
-        if new_chunk.cmd not in utilities.CMDVISUAL:
+        if new_chunk.cmd.values not in utilities.CMDVISUAL:
             raise ACTRError("Visual module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd, utilities.CMDVISUAL))
 
-        if new_chunk.cmd == utilities.CMDMOVEATTENTION and model_parameters['emma']:
-            angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
+        if new_chunk.cmd.values == utilities.CMDMOVEATTENTION and model_parameters['emma']:
+            angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
             encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'], vis_delay=vis_delay)
             preparation_time = utilities.calculate_preparation_time(emma_noise=model_parameters['emma_noise'])
             execution_time = utilities.calculate_execution_time(angle_distance, emma_noise=model_parameters['emma_noise'])
-            landing_site = utilities.calculate_landing_site([float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y)], angle_distance, emma_landing_site_noise=model_parameters['emma_landing_site_noise'])
-        elif new_chunk.cmd == utilities.CMDMOVEATTENTION and not model_parameters['emma']:
+            landing_site = utilities.calculate_landing_site([float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], angle_distance, emma_landing_site_noise=model_parameters['emma_landing_site_noise'])
+        elif new_chunk.cmd.values == utilities.CMDMOVEATTENTION and not model_parameters['emma']:
             encoding_time = 0.085
             preparation_time = 0
             execution_time = 0.085
-            landing_site = (float(new_chunk.screen_pos.screen_x), float(new_chunk.screen_pos.screen_y))
+            landing_site = (float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values))
         else:
-            raise ACTRError("Visual module received an invalid command: '%s'. The only valid command currently is: %s" % (new_chunk.cmd, utilities.CMDMOVEATTENTION))
+            raise ACTRError("Visual module received an invalid command: '%s'. The only valid command currently is: %s" % (new_chunk.cmd.values, utilities.CMDMOVEATTENTION))
         return new_chunk, (encoding_time, preparation_time, execution_time), landing_site
 
     def move_eye(self, position):

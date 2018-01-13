@@ -95,7 +95,7 @@ class Goal(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
         except utilities.ACTRError as arg:
-            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
+            raise utilities.ACTRError("Setting the buffer using the chunk '%s' is impossible; %s" % (otherchunk, arg))
 
         new_chunk = chunks.Chunk(otherchunk.typename, **mod_attr_val) #creates new chunk
 
