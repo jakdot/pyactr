@@ -257,6 +257,8 @@ class Visual(buffers.Buffer):
         self.preparation = self._FREE
         self.processor = self._FREE
         self.execution = self._FREE
+        self.autoattending = self._FREE
+        self.attend_automatic = True #the current focus automatically attends
         self.last_mvt = 0
 
         #parameters
@@ -317,6 +319,12 @@ class Visual(buffers.Buffer):
         """
         super().modify(otherchunk, actrvariables)
 
+    def stop_automatic_buffering(self):
+        """
+        Stop automatic buffering of the visual buffer.
+        """
+        self.attend_automatic = False
+
     def shift(self, otherchunk, harvest=None, actrvariables=None, model_parameters=None):
         """
         Return a chunk, time needed to attend and shift eye focus to the chunk, and the landing site of eye mvt.
@@ -345,22 +353,17 @@ class Visual(buffers.Buffer):
 
         new_chunk = chunks.Chunk(self._VISUAL, **mod_attr_val) #creates new chunk
 
-        if new_chunk.cmd.values not in utilities.CMDVISUAL:
-            raise ACTRError("Visual module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd, utilities.CMDVISUAL))
-
-        if new_chunk.cmd.values == utilities.CMDMOVEATTENTION and model_parameters['emma']:
+        if model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
             encoding_time = utilities.calculate_delay_visual_attention(angle_distance=angle_distance, K=model_parameters["eye_mvt_scaling_parameter"], k=model_parameters['eye_mvt_angle_parameter'], emma_noise=model_parameters['emma_noise'], vis_delay=vis_delay)
             preparation_time = utilities.calculate_preparation_time(emma_noise=model_parameters['emma_noise'])
             execution_time = utilities.calculate_execution_time(angle_distance, emma_noise=model_parameters['emma_noise'])
             landing_site = utilities.calculate_landing_site([float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], angle_distance, emma_landing_site_noise=model_parameters['emma_landing_site_noise'])
-        elif new_chunk.cmd.values == utilities.CMDMOVEATTENTION and not model_parameters['emma']:
+        elif not model_parameters['emma']:
             encoding_time = 0.085
             preparation_time = 0
             execution_time = 0.085
             landing_site = (float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values))
-        else:
-            raise ACTRError("Visual module received an invalid command: '%s'. The only valid command currently is: %s" % (new_chunk.cmd.values, utilities.CMDMOVEATTENTION))
         return new_chunk, (encoding_time, preparation_time, execution_time), landing_site
 
     def move_eye(self, position):

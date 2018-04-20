@@ -111,7 +111,7 @@ class Simulation(object):
                 if isinstance(self.__buffers[name], vision.VisualLocation) and self.__buffers[name].environment == self.__env:
                     proc = (name, self.__pr.automatic_search(name, self.__buffers[name], list(self.__env.stimulus.values()), self.__simulation.now))
                     self.__procs_started.append(proc)
-                elif isinstance(self.__buffers[name], vision.Visual) and self.__buffers[name].environment == self.__env:
+                elif isinstance(self.__buffers[name], vision.Visual) and self.__buffers[name].environment == self.__env and self.__buffers[name].attend_automatic:
                     try:
                         cf = tuple(self.__buffers[name].current_focus)
                     except AttributeError:

@@ -3,6 +3,7 @@ Declarative memory. Consists of the actual declarative memory, and its associate
 """
 
 import collections
+import math
 
 import numpy as np
 
@@ -222,6 +223,8 @@ class DecMemBuffer(buffers.Buffer):
                     A_bll = utilities.baselevel_learning(time, self.dm[chunk], model_parameters["baselevel_learning"], model_parameters["decay"], self.dm.activations.get(chunk), optimized_learning=model_parameters["optimized_learning"]) #bll
                 except UnboundLocalError:
                     continue
+                if math.isnan(A_bll):
+                    raise utilities.ACTRError("The following chunk cannot receive base activation: %s. The reason is that one of its traces did not appear in a past moment." % chunk)
                 A_sa = utilities.spreading_activation(chunk, buffers, self.dm, model_parameters["buffer_spreading_activation"], model_parameters["strength_of_association"], model_parameters["spreading_activation_restricted"], model_parameters["association_only_from_chunks"])
                 inst_noise = utilities.calculate_instantanoues_noise(model_parameters["instantaneous_noise"])
                 A = A_bll + A_sa + A_pm + inst_noise #chunk.activation is the manually specified activation, potentially used by the modeller

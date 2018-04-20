@@ -710,12 +710,13 @@ class ProductionRules(object):
         updated.state = updated._FREE
         yield Event(roundtime(time), name, "WROTE A CHUNK: %s" % str(created_elem))
 
-    def visualencode(self, name, visualbuffer, chunk, temp_actrvariables, time, extra_time):
+    def visualencode(self, name, visualbuffer, chunk, temp_actrvariables, time, extra_time, site):
         """
         Encode a visual object.
         """
         visualbuffer.state = visualbuffer._BUSY
         time += extra_time
+        visualbuffer.current_focus = site #use it if visual focus is fully attention-based (internal) and not based on eye position; site is the position of attention
         yield from self.clear(name, visualbuffer, None, temp_actrvariables, time, freeing=False)
         visualbuffer.add(chunk, time)
         visualbuffer.state = visualbuffer._FREE
@@ -753,8 +754,16 @@ class ProductionRules(object):
                 updated.state = updated._ERROR
             yield Event(roundtime(time), name, "ENCODED LOCATION:'%s'" % str(chunk))
         elif isinstance(updated, vision.Visual):
-            ret = yield from self.visualshift(name, updated, otherchunk, temp_actrvariables, time)
-            return ret #visual action returns value, namely, its continuation method
+            mod_attr_val = {x[0]: utilities.check_bound_vars(temp_actrvariables, x[1]) for x in otherchunk.removeunused()}
+            if (not mod_attr_val['cmd'].values) or mod_attr_val['cmd'].values not in utilities.CMDVISUAL:
+                raise ACTRError("Visual module received no command or an invalid command: '%s'. The valid commands are: '%s'" % (mod_attr_val['cmd'].values, utilities.CMDVISUAL))
+            if mod_attr_val['cmd'].values == utilities.CMDMOVEATTENTION:
+                ret = yield from self.visualshift(name, updated, otherchunk, temp_actrvariables, time)
+                return ret #visual action returns value, namely, its continuation method
+            elif mod_attr_val['cmd'].values == utilities.CMDCLEAR:
+                updated.stop_automatic_buffering()
+                updated.state = updated._FREE
+                yield Event(roundtime(time), name, "VISUAL STOPPED FROM AUTOMATIC BUFFERING AT ITS CURRENT FOCUS")
         elif isinstance(updated, motor.Motor):
             ret = yield from self.motorset(name, updated, otherchunk, temp_actrvariables, time)
             return ret #motor action returns value, namely, its continuation method
@@ -786,7 +795,7 @@ class ProductionRules(object):
 
     def automatic_search(self, name, visualbuffer, stim, time):
         """
-        Automatic buffering of environment stim in the visual buffer. Automatic search is never found by production rules. Production rules are bypassed, this is called directly by simulation.
+        Automatic search of environment stim in the visual buffer. Automatic search is never found by production rules. Production rules are bypassed, this is called directly by simulation.
         """
         visualbuffer.state = visualbuffer._BUSY
         newchunk = None
@@ -803,19 +812,22 @@ class ProductionRules(object):
 
     def automatic_buffering(self, name, visualbuffer, stim, time):
         """
-        Automatic buffering of environment stim in the visual buffer. Automatic search is never found by production rules. Production rules are bypassed, this is called directly by simulation.
+        Automatic buffering of environment stim in the visual buffer. Automatic buffering is never found by production rules. Production rules are bypassed, this is called directly by simulation.
         """
         visualbuffer.state = visualbuffer._BUSY
+        visualbuffer.autoattending = visualbuffer._BUSY
         foveal_distance = utilities.calculate_distance(1, visualbuffer.environment.size, visualbuffer.environment.simulated_screen_size, visualbuffer.environment.viewing_distance)
         cf = tuple(visualbuffer.current_focus)
         newchunk = None
         encoding = 0
         for st in stim:
             if st['position'][0] > cf[0]-foveal_distance and st['position'][0] < cf[0]+foveal_distance and st['position'][1] > cf[1]-foveal_distance and st['position'][1] < cf[1]+foveal_distance:
-                newchunk, encoding = visualbuffer.automatic_buffering(st, self.model_parameters)
+                if (not visualbuffer) or list(visualbuffer)[0].value.values != st['text']: #automatic buffer only of there is sth to buffer
+                    newchunk, encoding = visualbuffer.automatic_buffering(st, self.model_parameters)
         time += encoding
         yield Event(roundtime(time), name, self._UNKNOWN)
         visualbuffer.state = visualbuffer._FREE
+        visualbuffer.autoattending = visualbuffer._FREE
         if newchunk:
             if visualbuffer:
                 visualbuffer.modify(newchunk)
@@ -840,14 +852,14 @@ class ProductionRules(object):
         yield Event(roundtime(time), name, 'PREPARATION TO SHIFT VISUAL ATTENTION STARTED')
 
         if encoding <= preparation:
-            yield from self.visualencode(name, visualbuffer, newchunk, temp_actrvariables, time, encoding)
+            yield from self.visualencode(name, visualbuffer, newchunk, temp_actrvariables, time, encoding, site)
 
         time += preparation
         
         yield Event(roundtime(time), name, 'PREPARATION TO SHIFT VISUAL ATTENTION COMPLETED')
         
         if encoding > preparation and encoding <= preparation+execution:
-            yield from self.visualencode(name, visualbuffer, newchunk, temp_actrvariables, time-preparation, encoding)
+            yield from self.visualencode(name, visualbuffer, newchunk, temp_actrvariables, time-preparation, encoding, site)
 
         return self.visualcontinue(name, visualbuffer, newchunk, temp_actrvariables, time, extra_time, site)
 
@@ -873,10 +885,15 @@ class ProductionRules(object):
         yield Event(roundtime(time), name, 'SHIFT COMPLETE TO POSITION: %s' % str(visualbuffer.current_focus))
         if encoding > preparation+execution:
             newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters=self.model_parameters)
-            yield from self.visualencode(name, visualbuffer, otherchunk, temp_actrvariables, time, (1-((preparation+execution)/encoding))*extra_time[0])
+            yield from self.visualencode(name, visualbuffer, otherchunk, temp_actrvariables, time, (1-((preparation+execution)/encoding))*extra_time[0], landing_site)
         visualbuffer.processor = visualbuffer._FREE
         visualbuffer.execution = visualbuffer._FREE
-
+        visualbuffer.state = visualbuffer._FREE
+        visualbuffer.attend_automatic = True
+        #the following lines - if we think that automatic buffering should be repeated after being done with shift
+        #if visualbuffer.attend_automatic:
+        #    yield from self.automatic_buffering(name, visualbuffer, list(visualbuffer.environment.stimulus.values()), time)
+    
     def motorset(self, name, motorbuffer, otherchunk, temp_actrvariables, time):
         """
         Carry out preparation of motor action. 
