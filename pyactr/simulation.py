@@ -24,6 +24,8 @@ import pyactr.utilities as utilities
 import pyactr.vision as vision
 import pyactr.chunks as chunks
 
+Event = utilities.Event
+
 class Simulation(object):
     """
     ACT-R simulations.
@@ -181,7 +183,12 @@ class Simulation(object):
         Triggers local process. name is the name of module. generator must only yield Events.
         """
         while True:
-            event = next(generator)
+            try:
+                event = next(generator)
+            except StopIteration:
+                return
+            if not isinstance(event, Event):
+                return event
             try:
                 yield self.__simulation.timeout(event.time-round(self.__simulation.now, 4)) #a hack -- rounded because otherwise there was a very tiny negative delay in some cases
             except simpy.Interrupt:

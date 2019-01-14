@@ -12,7 +12,7 @@ Significant changes might still occur in the near future.
 Installing pyactr
 -----------------
 
-The best way to install this is to run pip:
+The best way to install pyactr is to run pip:
 
 pip3 install pyactr
 
@@ -23,9 +23,14 @@ python setup.py install
 Requirements
 ------------
 
-Requires Python3 (>=3.3), numpy, simpy and pyparsing.
+pyactr requires Python3 (>=3.3), numpy, simpy and pyparsing.
 
 You might also consider getting tkinter if you want to see visual output on how ACT-R models interact with environment. But this is not necessary to run any models.
+
+A note on Python3.3
+-------------------
+
+pyactr works with Python3.3 but some packages that it is dependent on dropped support for Python3.3. If you want to use pyactr with Python3.3 you must install numpy version 1.11.3 or lower. simpy is also planning to drop support of Python3.3 in future versions (as of January 2019).
 
 Getting started
 ---------------

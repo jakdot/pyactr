@@ -83,7 +83,7 @@ class DecMem(collections.MutableMapping):
 
         element can be either one chunk, or an iterable of chunks.
         """
-        if isinstance(time, collections.Iterable):
+        if isinstance(time, collections.abc.Iterable):
             try:
                 new = np.concatenate((self.setdefault(element, np.array([])), np.array(time)))
                 self[element] = new

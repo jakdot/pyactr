@@ -542,7 +542,10 @@ def spreading_activation(chunk, buffers, dm, buffer_spreading_activation, streng
     """
     SA = 0
     for each in buffer_spreading_activation:
-        otherchunk = list(buffers[each])[0]
+        try:
+            otherchunk = list(buffers[each])[0]
+        except IndexError:
+            continue
         w_kj = weigh_buffer(otherchunk, buffer_spreading_activation[each], only_chunks)
         s_ji = 0
         for each in find_chunks(otherchunk, only_chunks).items():

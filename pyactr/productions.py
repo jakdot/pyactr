@@ -551,7 +551,7 @@ class ProductionRules(object):
         else:
             self.procs.remove(self._PROCEDURAL,)
             yield Event(roundtime(time), self._PROCEDURAL, 'NO RULE FOUND')
-        return self.procs #returns processes activated by PROCEDURAL
+        yield self.procs #yields processes activated by PROCEDURAL
 
     def compile_rules(self):
         """
@@ -759,14 +759,14 @@ class ProductionRules(object):
                 raise ACTRError("Visual module received no command or an invalid command: '%s'. The valid commands are: '%s'" % (mod_attr_val['cmd'].values, utilities.CMDVISUAL))
             if mod_attr_val['cmd'].values == utilities.CMDMOVEATTENTION:
                 ret = yield from self.visualshift(name, updated, otherchunk, temp_actrvariables, time)
-                return ret #visual action returns value, namely, its continuation method
+                yield ret #visual action returns value, namely, its continuation method
             elif mod_attr_val['cmd'].values == utilities.CMDCLEAR:
                 updated.stop_automatic_buffering()
                 updated.state = updated._FREE
                 yield Event(roundtime(time), name, "VISUAL STOPPED FROM AUTOMATIC BUFFERING AT ITS CURRENT FOCUS")
         elif isinstance(updated, motor.Motor):
             ret = yield from self.motorset(name, updated, otherchunk, temp_actrvariables, time)
-            return ret #motor action returns value, namely, its continuation method
+            yield ret #motor action returns value, namely, its continuation method
         else:
             yield from self.retrieve(name, updated, otherchunk, temp_actrvariables, time)
 
@@ -861,7 +861,7 @@ class ProductionRules(object):
         if encoding > preparation and encoding <= preparation+execution:
             yield from self.visualencode(name, visualbuffer, newchunk, temp_actrvariables, time-preparation, encoding, site)
 
-        return self.visualcontinue(name, visualbuffer, newchunk, temp_actrvariables, time, extra_time, site)
+        yield self.visualcontinue(name, visualbuffer, newchunk, temp_actrvariables, time, extra_time, site)
 
     def visualcontinue(self, name, visualbuffer, otherchunk, temp_actrvariables, time, extra_time, landing_site):
         """
@@ -927,7 +927,7 @@ class ProductionRules(object):
         
         yield Event(roundtime(time), name, 'PREPARATION COMPLETE')
 
-        return self.motorcontinue(name, motorbuffer, newchunk, temp_actrvariables, time, time_presses)
+        yield self.motorcontinue(name, motorbuffer, newchunk, temp_actrvariables, time, time_presses)
 
     def motorcontinue(self, name, motorbuffer, otherchunk, temp_actrvariables, time, time_presses):
         """

@@ -11,12 +11,15 @@ import numbers
 import pyactr.utilities as utilities
 from pyactr.utilities import ACTRError
 
-def chunktype(cls_name, field_names, verbose=False):
+def chunktype(cls_name, field_names, defaults=None):
     """
     Creates type chunk. Works like namedtuple.
 
     For example:
     >>> chunktype('chunktype_example0', 'value')
+
+    :param field_names: an iterable or a string of slot names separated by spaces
+    :param defaults: default values for the slots, given as an iterable, counting from the last element
     """
     if cls_name in utilities.SPECIALCHUNKTYPES and field_names != utilities.SPECIALCHUNKTYPES[cls_name]:
         raise ACTRError("You cannot redefine slots of the chunk type '%s'; you can only use the slots '%s'" % (cls_name, utilities.SPECIALCHUNKTYPES[cls_name]))
@@ -29,8 +32,10 @@ def chunktype(cls_name, field_names, verbose=False):
     for each in field_names:
         if each == "ISA" or each == "isa":
             raise ACTRError("You cannot use the slot 'isa' in your chunk. That slot is used to define chunktypes.")
-    
-    Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, verbose=verbose)}) #chunktypes are not returned; they are stored as Chunk class attribute
+    try:
+        Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, defaults=defaults)}) #chunktypes are not returned; they are stored as Chunk class attribute
+    except TypeError:
+        Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names)}) #chunktypes are not returned; they are stored as Chunk class attribute
 
 class Chunk(collections.Sequence):
     """
@@ -85,10 +90,10 @@ class Chunk(collections.Sequence):
                     if x in {"values", "variables"} and not isinstance(getattr(dictionary[key], x), str) and getattr(dictionary[key], x) != self.__emptyvalue and not isinstance(getattr(dictionary[key], x), Chunk):
                         raise TypeError("Values and variables must be strings, chunks or empty (None)")
 
-                    elif x in {"negvariables", "negvalues"} and (not isinstance(getattr(dictionary[key], x), collections.Sequence) or isinstance(getattr(dictionary[key], x), collections.MutableSequence)):
+                    elif x in {"negvariables", "negvalues"} and (not isinstance(getattr(dictionary[key], x), collections.abc.Sequence) or isinstance(getattr(dictionary[key], x), collections.abc.MutableSequence)):
                         raise TypeError("Negvalues and negvariables must be tuples")
 
-            elif (isinstance(dictionary[key], collections.Iterable) and not isinstance(dictionary[key], str)) or not isinstance(dictionary[key], collections.Hashable):
+            elif (isinstance(dictionary[key], collections.abc.Iterable) and not isinstance(dictionary[key], str)) or not isinstance(dictionary[key], collections.abc.Hashable):
                 raise ValueError("The value of a chunk slot must be hashable and not iterable; you are using an illegal type for the value of the chunk slot %s, namely %s" % (key, type(dictionary[key])))
 
             else:
