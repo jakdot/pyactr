@@ -542,7 +542,7 @@ class ProductionRules(object):
                 try:
                     yield from self.update(next(production), time)
                 except utilities.ACTRError as e:
-                    raise utilities.ACTRError("The following rule is not defined correctly according to ACT-R: '%s'. The following error occured: %s" % (self.used_rulename, e))
+                    raise utilities.ACTRError("The following rule is not defined correctly according to ACT-R: '%s'. The following error occurred: %s" % (self.used_rulename, e))
                 if self.last_rule and self.last_rule != used_rulename:
                     self.compile = [self.last_rule, used_rulename, self.last_rule_slotvals.copy()]
                     self.last_rule_slotvals = {key: None for key in self.buffers}
