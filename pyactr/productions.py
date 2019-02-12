@@ -509,7 +509,7 @@ class ProductionRules(object):
             pro = next(production)
 
             if self.model_parameters["subsymbolic"]:
-                inst_noise = utilities.calculate_instantanoues_noise(self.model_parameters["utility_noise"])
+                inst_noise = utilities.calculate_instantaneous_noise(self.model_parameters["utility_noise"])
                 utility += inst_noise
             if max_utility <= utility and self.LHStest(pro, self.__actrvariables.copy()):
                 max_utility = utility
