@@ -286,7 +286,7 @@ class Chunk(collections.Sequence):
 
             if varval.values:
                 val = varval.values
-                if val != None and val != matching_val: #None is the misssing value of the attribute
+                if val != None and val != matching_val: #None is the missing value of the attribute
                     if partialmatching:
                         similarity += utilities.get_similarity(self._similarities, val, matching_val, mismatch_penalty) 
                     else:

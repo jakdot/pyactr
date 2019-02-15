@@ -126,7 +126,7 @@ class ACTRModel(object):
         if len(self.retrievals) == 1:
             return list(self.retrievals.values())[0]
         else:
-            raise(ValueError("Zero or more than 1 retreival specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
+            raise(ValueError("Zero or more than 1 retrieval specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
 
     @property
     def decmem(self):
@@ -273,12 +273,12 @@ class ACTRModel(object):
 
         This will actually not run the simulation it will only return the simulation object. The object can then be run using run(max_time) command.
 
-        realtime - should the simualtion be run in real time or not?
+        realtime - should the simulation be run in real time or not?
         trace - should the trace of the simulation be printed?
         gui - should the environment appear on a separate screen? (This requires tkinter)
         initial_time - what is the starting time point of the simulation?
         environment_process - what environment process should the simulation use?
-        The last argument should be supplied with the method environment_process of the environemnt used in the model.
+        The last argument should be supplied with the method environment_process of the environment used in the model.
         kwargs are arguments that environment_process will be supplied with.
         """
 
