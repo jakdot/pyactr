@@ -37,14 +37,19 @@ Getting started
 
 Go to https://github.com/jakdot/pyactr/wiki for a short intro into ACT-R and pyactr.
 
-More documentation
-------------------
+Learning more
+-------------
 
-More documents are on https://github.com/jakdot/pyactr. In particular, check:
+NEW! There is a book published recently by Springer that uses pyactr. The book is geared towards (psycho)linguists but it includes a lot of code that can be useful to cognitive scientists outside of psycholinguistics. It explains how models can be created and run in pyactr, from simple counting models up to complex psychology models (fan effects, interpretation of complex sentences).
 
-1. the folder docs for discussion of ACT-R and pyactr. The book in the folder is currently incomplete, only the first few chapters are available. Examples in the excerpt are geared towards (psycho)linguists.
+The book is open access and available on this site:
 
-2. the folder tutorials for many examples of ACT-R models. Most of those models are translated from Lisp ACT-R, so if you are familiar with that it should be easy to understand these.
+www.doi.org/10.1007/978-3-030-31846-8
+
+Even more?
+----------
+
+Some more documents are on https://github.com/jakdot/pyactr. In particular, check the folder tutorials for many examples of ACT-R models. Most of those models are translated from Lisp ACT-R, so if you are familiar with LispACT-R they should be fairly easy to understand.
 
 Modifying pyactr
 ----------------
