@@ -167,7 +167,7 @@ def getchunk():
             + pp.Word("".join([pp.alphanums, "_", '"', "'"])))
     strvalue = pp.QuotedString('"', unquoteResults=False)
     strvalue2 = pp.QuotedString("'", unquoteResults=False)
-    varvalue = pp.Word("".join([pp.alphanums, "_"]))
+    varvalue = pp.Word("".join([pp.alphanums, "_", "\:", "\|", "\.", ",", "%", "&", "\$", "`", "\*", "-"]))
     value = varvalue | special_value | strvalue | strvalue2
     chunk_reader = pp.OneOrMore(pp.Group(slot + value))
     return chunk_reader

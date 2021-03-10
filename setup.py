@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = '0.2.4'
+VERSION = '0.2.5'
 
 setup(name='pyactr',
       version=VERSION,
