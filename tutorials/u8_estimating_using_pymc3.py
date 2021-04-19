@@ -7,26 +7,26 @@ You will need to install pymc3 and packages it depends on to make this work.
 import math
 
 import numpy as np
-import scipy
 import simpy
 import pyactr as actr
-from pymc3 import Model, Normal, HalfNormal, Gamma, find_MAP, sample, summary, Metropolis, Slice, traceplot, gelman_rubin
+from pymc3 import Model, Normal, Gamma, Uniform, sample, summary, Metropolis, traceplot
 import theano.tensor as T
 from theano.compile.ops import as_op
 import matplotlib.pyplot as pp
 
-def counting_model(sub):
+
+#Each chunk type should be defined first.
+actr.chunktype("countOrder", ("first", "second"))
+
+#creating goal buffer
+actr.chunktype("countFrom", ("start", "end", "count"))
+
+def counting_model(sub=True):
+    """
+    sub: is subsymbolic switched on?
+    """
     counting = actr.ACTRModel(subsymbolic=sub)
 
-    #Each chunk type should be defined first.
-    actr.chunktype("countOrder", ("first", "second"))
-    #Chunk type is defined as (name, attributes)
-
-    #Attributes are written as an iterable (above) or as a string, separated by comma:
-    actr.chunktype("countOrder", "first, second")
-
-    #creating goal buffer
-    actr.chunktype("countFrom", ("start", "end", "count"))
 
     #production rules follow; using productionstring, they are similar to Lisp ACT-R
 
@@ -86,166 +86,89 @@ dd = {actr.chunkstring(string="\
     first 4\
     second 5"): [0]} #we have to store memory chunks separately, see below
 
-#Simulating data
-
-size = 5000
-
-Y = np.random.randn(size) + 0.5 #suppose these are data on the rule counting from u1, that is, how fast people are on counting from 2 to 4
-
-#We now want to know what the speed of firing rule should be to fit these simulations.
+# Simulating data
 
 counting = counting_model(True)
-
-@as_op(itypes=[T.dscalar], otypes=[T.dvector]) #what should go in (itypes) and out (otpyes) into deterministic part
-def model(rule_firing):
-    """
-    We will create a model on two rules. We will let the pyMC find the best value for firing a rule.
-    """
-    counting.decmems = {}
-    counting.set_decmem(dd)
-    #adding stuff to goal buffer
-    counting.goal.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
-    counting.model_parameters["rule_firing"] = rule_firing
-    sim = counting.simulation(trace=False)
-    while True:
-        last_time = sim.show_time()
-        try:
-            sim.step()
-        except simpy.core.EmptySchedule:
-            break
-        if not counting.goal:
-            break
-    return np.repeat(np.array(last_time), size) #what is outputed -- nparray of simulated time points
-
-basic_model = Model()
-
-with basic_model:
-
-    # Priors for unknown model parameters
-    rule_firing = HalfNormal('rule_firing', sd=2)
-
-    sigma = HalfNormal('sigma', sd=1)
-
-    #Deterministic value, found in the model
-    mu = model(rule_firing)
-
-    # Likelihood (sampling distribution) of observations
-    Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
-
-map_estimate = find_MAP(model=basic_model, fmin=scipy.optimize.fmin_powell)
-
-print(map_estimate)
-
-print("Estimated rule firing:", math.exp(map_estimate['rule_firing_log_']))
-
-print("Let's see whether the estimate is reasonably close to the simulated data. The final rule 'stop' should fire close to 500 ms. The model tends to be off.")
 
 counting.decmems = {}
 counting.set_decmem(dd)
 
 counting.goal.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
-counting.model_parameters["rule_firing"] = math.exp(map_estimate['rule_firing_log_'])
+#counting.model_parameters["latency_factor"] = 0.2
 sim = counting.simulation(trace=True)
+# an example of one run of the simulation
 sim.run()
 
-#We could consider other parameters. Let's check latency factor *and* rule firing.
+size=5000
 
-counting = counting_model(True)
+Y = np.random.normal(loc=257.4, scale=10, size=size) #suppose these are data on counting, that is, how fast people are in counting from 2 to 4; we simulate them as normal distribution with mean 257.4 (milliseconds) and st.d. 10 (milliseconds)
+print("Simulated data")
+print(Y)
+# We would get the mean of 257.4 milliseconds if the latency factor would be equal to 0.1.
 
-@as_op(itypes=[T.dscalar, T.dscalar], otypes=[T.dvector])
-def model(rule_firing, lf):
+# We now want to know what the posterior distribution of latency factor should be.
+# We find this using pymc3 combining a Bayesian model and our ACT-R counting model.
+# Ideally, we should get close to 0.1 for lf
+
+# The part below runs the ACT-R model; this is not run on its own but called from inside the Bayesian model
+@as_op(itypes=[T.dscalar], otypes=[T.dvector])
+def model(lf):
     """
     We will create a model on two rules. We will let the pyMC find the best value for firing a rule.
     """
     #adding stuff to goal buffer
     counting.decmems = {} #we have to clean all the memories first, because each loop adds chunks into a memory and we want to ignore these
     counting.set_decmem(dd) #we then add only memory chunks that are present at the beginning
-    counting.goal.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
+    counting.goal.add(actr.chunkstring(string="isa countFrom start 2 end 4")) # starting goal
     counting.model_parameters["latency_factor"] = lf
-    counting.model_parameters["rule_firing"] = rule_firing
     sim = counting.simulation(trace=False)
+    last_time = 0
     while True:
-        last_time = sim.show_time()
-        if last_time > 10: #if the value is unreasonably high, break
+        if last_time > 10: #if the value is unreasonably high, which might happen with weird proposed estimates, break
             last_time = 10.0
             break
         try:
-            sim.step()
-        except simpy.core.EmptySchedule:
-            last_time = 10.0 #some high value so it is clear that this is not the right way
+            sim.step() # run one step ahead in simulation
+            last_time = sim.show_time()
+        except simpy.core.EmptySchedule: #if you run out of actions, break
+            last_time = 10.0 #some high value time so it is clear that this is not the right way to end
             break
-        if not counting.goal:
+        if not counting.goal: #if goal cleared (as should happen when you finish the task correctly and reach stop, break)
             break
-    return np.repeat(np.array(last_time), size)
+
+    return np.repeat(np.array(1000*last_time), size) # we return time in ms
 
 basic_model = Model()
 
 with basic_model:
 
     # Priors for unknown model parameters
-    rule_firing = HalfNormal('rule_firing', sd=2)
-    lf = HalfNormal('lf', sd=2)
+    lf = Gamma('lf', alpha=2, beta=4)
 
-    sigma = HalfNormal('sigma', sd=1)
+    sigma = Uniform('sigma', lower=0.1,upper=50)
 
-    #Deterministic value, found in the model
-    mu = model(rule_firing, lf)
+    #you can print searched values from every draw
+    #lf_print = T.printing.Print('lf')(lf)
 
-    # Likelihood (sampling distribution) of observations
-    Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+    #Deterministic value (RT in ms) established by the ACT-R model
+    mu = model(lf)
     
-map_estimate = find_MAP(model=basic_model, fmin=scipy.optimize.fmin_powell)
-
-print(map_estimate)
-
-print("Estimated rule firing:", math.exp(map_estimate['rule_firing_log_']))
-print("Estimated latency factor:", math.exp(map_estimate['lf_log_']))
-
-print("Let's see whether the estimate is reasonably close to the simulated data. The final rule 'stop' should fire close to 500 ms. The model can still be somewhat off, even though usually it gets close within 10 percent of the value. It is often better than the model that only estimates the time it takes to fire a rule.")
-
-counting.decmems = {}
-counting.set_decmem(dd)
-
-counting.goal.add(actr.chunkstring(string="isa countFrom start 2 end 4"))
-counting.model_parameters["rule_firing"] = math.exp(map_estimate['rule_firing_log_'])
-counting.model_parameters["latency_factor"] = math.exp(map_estimate['lf_log_'])
-sim = counting.simulation(trace=True)
-sim.run()
-
-print("Search for parameters using Slice/Metropolis.")
-
-basic_model = Model()
-
-with basic_model:
-
-    # Priors for unknown model parameters
-    rule_firing = HalfNormal('rule_firing', sd=2, testval=abs(np.random.randn(1)[0]))
-    lf = HalfNormal('lf', sd=2, testval=abs(np.random.randn(1)[0]))
-
-    sigma = HalfNormal('sigma', sd=1)
-
-    #you can print searched values after every iteration
-    lf_print = T.printing.Print('lf')(lf)
-    #Deterministic value, found in the model
-    mu = model(rule_firing, lf_print)
-    
-    #Deterministic value, found in the model
-    #mu = model(rule_firing, lf)
-
     # Likelihood (sampling distribution) of observations
     Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-    #Slice should be used for continuous variables but it gets stuck sometimes - you can also use Metropolis
+    #Metropolis algorithm for steps in simulation
     step = Metropolis(basic_model.vars)
 
-    #step = Slice(basic_model.vars)
-
-    trace = sample(10, step, njobs=2, init='auto')
+    trace = sample(1000, tune=1000, step=step, init='auto') 
 
 print(summary(trace))
 traceplot(trace)
 pp.savefig("plot_u8_estimating_using_pymc3.png")
-print(trace['lf'], trace['rule_firing'])
-print(gelman_rubin(trace))
+print(trace['lf'], trace['sigma'])
+print("Latency factor: mean ", np.mean( trace['lf'] ))
+print("This value should be close to 0.1")
+print("Sigma estimate: mean ",np.mean( trace['sigma'] ) )
+print("This value should be close to 10")
 
-print("Of course, much more things can be explored this way: more parameters could be studied; their priors could be better adjusted etc.")
+# Of course, much more things can be explored this way:
+# more parameters could be studied; different priors could be used etc.

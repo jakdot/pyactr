@@ -43,8 +43,8 @@ if __name__ == "__main__":
     warnings.simplefilter("ignore")
     m = Model(subsymbolic=True, utility_noise=10, utility_learning=True, strict_harvesting=True)
     sim = m.m.simulation(realtime=True)
-    print(m.m._ACTRModel__productions)
+    print(m.m.productions)
     sim.run(1)
-    print(m.m._ACTRModel__productions)
+    print(m.m.productions)
     print(m.m.decmem)
 

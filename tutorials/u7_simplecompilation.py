@@ -46,4 +46,4 @@ if __name__ == "__main__":
 
     sim = model.simulation(realtime=True)
     sim.run(0.5)
-    print(model._ACTRModel__productions["one and two"])
+    print(model.productions["one and two"])
