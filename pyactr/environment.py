@@ -58,7 +58,7 @@ class Environment(object):
 
     def roundtime(self, time):
         """
-        Return rounded time.
+        Time (in seconds), rounded to tenths of milliseconds.
         """
         return utilities.roundtime(time)
 
@@ -67,6 +67,12 @@ class Environment(object):
         Example of environment process. Text appears, changes/disappers after run_time runs out.
 
         This does not do anything on its own, it has to be embedded in the simulation of an ACT-R Model.
+        stimuli: list of stimuli
+        triggers: list of triggers.
+        times: how much time (in seconds) it takes before the screen is flushed and a new environment (next screen) appears
+        start_time: starting point of the first stimulus.
+
+        The length of triggers has to match the length of stimuli or one of them has to be of length 1.
         """
         #subtract start_time from initial_time
         start_time = self.initial_time - start_time
@@ -99,9 +105,14 @@ class Environment(object):
                 raise utilities.ACTRError("In environment, times must be the same length as stimuli or times must be of length 1")
         self.stimuli = stimuli
         try:
-            self.triggers = [x.upper() for x in triggers]
-        except AttributeError:
-            raise utilities.ACTRError("Triggers are not strings; currently nothing else than strings are allowed as triggers in environment")
+            self.triggers = []
+            for trigger in triggers:
+                if isinstance(trigger, str) and trigger.upper() == "SPACE":
+                    self.triggers.append(set(["SPACE"]))
+                else:
+                    self.triggers.append(set(x.upper() for x in trigger))
+        except (TypeError, AttributeError):
+            raise utilities.ACTRError("Triggers must be strings, a list of strings or a list of iterables of strings.")
         self.times = times
         time = start_time
         yield self.Event(self.roundtime(time), self._ENV, "STARTING ENVIRONMENT") #yield Event; Event has three positions - time, process, in this case, ENVIRONMENT (specified in self._ENV) and description of action

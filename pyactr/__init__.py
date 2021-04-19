@@ -1,4 +1,4 @@
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 
 from pyactr.model import ACTRModel
 from pyactr.environment import Environment

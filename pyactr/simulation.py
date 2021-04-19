@@ -197,8 +197,8 @@ class Simulation(object):
                 self.__printevent__(event)
                 self.__activate__(event)
             try:
-                if self.__env.trigger in self.__pr.env_interaction:
-                    self.__environment_activate.succeed(value=tuple((self.__env.trigger, self.__pr.env_interaction)))
+                if self.__env.trigger and self.__pr.env_interaction.intersection(self.__env.trigger):
+                    self.__environment_activate.succeed(value=(self.__env.trigger, self.__pr.env_interaction))
                 self.__pr.env_interaction = set()
             except AttributeError:
                 pass

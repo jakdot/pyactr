@@ -104,7 +104,7 @@ class ACTRModel(object):
         start_dm = declarative.DecMem()
         self.decmems = {"decmem": start_dm}
 
-        self.__productions = productions.Productions()
+        self.productions = productions.Productions()
         self.__similarities = {}
 
         self.model_parameters = self.MODEL_PARAMETERS.copy()
@@ -128,6 +128,10 @@ class ACTRModel(object):
         else:
             raise(ValueError("Zero or more than 1 retrieval specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
 
+    @retrieval.setter
+    def retrieval(self, name):
+        self.set_retrieval(name)
+
     @property
     def decmem(self):
         """
@@ -137,6 +141,10 @@ class ACTRModel(object):
             return list(self.decmems.values())[0]
         else:
             raise(ValueError("Zero or more than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.decmems instead."))
+    
+    @decmem.setter
+    def decmem(self, data):
+        self.set_decmem(data)
 
     def set_decmem(self, data=None):
         """
@@ -158,13 +166,19 @@ class ACTRModel(object):
             return list(self.goals.values())[0]
         else:
             raise(ValueError("Zero or more than 1 goal specified, unclear which one should be shown. Use ACTRModel.goals instead."))
+    
+    @goal.setter
+    def goal(self, name):
+        self.set_goal(name, 0)
 
     def set_retrieval(self, name):
         """
         Set retrieval.
 
-        name specifies the name by which the retrieval buffer is referred to in production rules.
+        name: the name by which the retrieval buffer is referred to in production rules.
         """
+        if not isinstance(name, str):
+            raise(ValueError("Retrieval buffer can be only set with a string, the name of the retrieval buffer."))
         dmb = declarative.DecMemBuffer()
         self.__buffers[name] = dmb
         self.retrievals[name] = dmb
@@ -174,8 +188,10 @@ class ACTRModel(object):
         """
         Set goal buffer. delay specifies the delay of setting a chunk in the buffer.
 
-        name specifies the name by which the goal buffer is referred to in production rules.
+        name: the name by which the goal buffer is referred to in production rules.
         """
+        if not isinstance(name, str):
+            raise(ValueError("Goal buffer can be only set with a string, the name of the goal buffer."))
         g = goals.Goal(delay=delay)
         self.__buffers[name] = g
         self.goals[name] = g
@@ -185,7 +201,8 @@ class ACTRModel(object):
         """
         Create visual buffers for ACTRModel. Two buffers are present in vision: visual What buffer, called just visual buffer (encoding seen objects) and visual Where buffer, called visual_location buffer (encoding positions). Both are created and returned. Finst is relevant only for the visual location buffer.
 
-        name_visual and name_visual_location specify the name by which the two buffers are referred to in production rules.
+        name_visual: the name by which the visual buffer isreferred to in production rules.
+        name_visual_location: the name by which the visual_location buffer is referred to in production rules.
 
         """
         v1 = vision.Visual(self.__env, default_harvest)
@@ -194,16 +211,21 @@ class ACTRModel(object):
         self.visbuffers[name_visual_location] = v2
         return v1, v2
 
-    def productions(self, *rules):
+    def set_productions(self, *rules):
         """
         Creates production rules out of functions. One or more functions can be inserted.
         """
-        self.__productions = productions.Productions(*rules)
-        return self.__productions
+        self.productions = productions.Productions(*rules)
+        return self.productions
 
     def productionstring(self, name='', string='', utility=0, reward=None):
         """
         Create a production rule when given a string. The string is specified in the following form (as a string): LHS ==> RHS
+        
+        name: name of the production rule
+        string: string specifying the production rule
+        utility: utility of the rule (default: 0)
+        reward: reward of the rule (default: None)
 
         The following example would be a rule that checks the buffer 'g' and if the buffer has value one, it will reset it to two:
         >>> ACTRModel().productionstring(name='example0', string='=g>\
@@ -253,8 +275,8 @@ class ACTRModel(object):
                         raise utilities.ACTRError("The rule string %s is not defined correctly; %s" %(name, e))
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield rhs
-        self.__productions.update({name: {"rule": func, "utility": utility, "reward": reward}})
-        return self.__productions[name]
+        self.productions.update({name: {"rule": func, "utility": utility, "reward": reward}})
+        return self.productions[name]
 
     def set_similarities(self, chunk, otherchunk, value):
         """
@@ -271,14 +293,14 @@ class ACTRModel(object):
         """
         Prepare simulation of the model
 
-        This will actually not run the simulation it will only return the simulation object. The object can then be run using run(max_time) command.
+        This does not run the simulation, it only returns the simulation object. The object can then be run using run(max_time) command.
 
-        realtime - should the simulation be run in real time or not?
-        trace - should the trace of the simulation be printed?
-        gui - should the environment appear on a separate screen? (This requires tkinter)
-        initial_time - what is the starting time point of the simulation?
-        environment_process - what environment process should the simulation use?
-        The last argument should be supplied with the method environment_process of the environment used in the model.
+        realtime: should the simulation be run in real time or not?
+        trace: should the trace of the simulation be printed?
+        gui: should the environment appear on a separate screen? (This requires tkinter.)
+        initial_time: what is the starting time point of the simulation?
+        environment_process: what environment process should the simulation use?
+        The environment_process argument should be supplied with the method environment_process of the environment used in the model.
         kwargs are arguments that environment_process will be supplied with.
         """
 
@@ -303,9 +325,11 @@ class ACTRModel(object):
                 dm = list(decmem.values())[0]
                 self.__buffers["visual"] = vision.Visual(self.__env, dm) #adding vision buffers
                 self.__buffers["visual_location"] = vision.VisualLocation(self.__env, dm) #adding vision buffers
+        
+        self.productions.used_rulenames = {} # remove any previously stored rules for utility learning
 
-        self.used_productions = productions.ProductionRules(self.__productions, self.__buffers, decmem, self.model_parameters) #only temporarily changed, should be used_productions
+        used_productions = productions.ProductionRules(self.productions, self.__buffers, decmem, self.model_parameters)
 
         chunks.Chunk._similarities = self.__similarities
 
-        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, self.used_productions, initial_time, environment_process, **kwargs)
+        return simulation.Simulation(self.__env, realtime, trace, gui, self.__buffers, used_productions, initial_time, environment_process, **kwargs)

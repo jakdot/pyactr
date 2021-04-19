@@ -423,7 +423,7 @@ class TestCountModel(unittest.TestCase):
     def setUp(self):
         counting = modeltests.Counting()
         self.test = counting.model
-        self.test.productions(counting.start, counting.increment, counting.stop)
+        self.test.set_productions(counting.start, counting.increment, counting.stop)
         self.sim = self.test.simulation(trace=False)
 
 
@@ -752,7 +752,7 @@ class TestModel2(unittest.TestCase):
     def setUp(self):
         self.m2 = modeltests.Model2(strict_harvesting=True)
         self.test = self.m2.model
-        self.test.productions(self.m2.start, self.m2.switch, self.m2.clear)
+        self.test.set_productions(self.m2.start, self.m2.switch, self.m2.clear)
         self.sim = self.test.simulation(trace=False)
 
 
@@ -785,7 +785,7 @@ class TestModel3(unittest.TestCase):
         self.m3 = modeltests.Model3(strict_harvesting=True)
         self.dm = self.m3.dm
         self.test = self.m3.model
-        self.test.productions(self.m3.start, self.m3.switch, self.m3.clear)
+        self.test.set_productions(self.m3.start, self.m3.switch, self.m3.clear)
         self.sim = self.test.simulation(trace=False)
 
 
@@ -817,7 +817,7 @@ class TestMotorModel(unittest.TestCase):
     def setUp(self):
         mm = modeltests.MotorModel()
         self.test = mm.model
-        self.test.productions(mm.start, mm.go_on, mm.finish)
+        self.test.set_productions(mm.start, mm.go_on, mm.finish)
         self.sim = self.test.simulation(trace=False)
 
     def test_procedure(self):
@@ -1325,7 +1325,7 @@ class TestProductionUtilities(unittest.TestCase):
     def setUp(self):
         mm = modeltests.Utilities(subsymbolic=True, utility_noise=10, utility_learning=True)
         self.test = mm.m
-        self.test.productions(mm.one, mm.two, mm.three)
+        self.test.set_productions(mm.one, mm.two, mm.three)
         self.sim = self.test.simulation(trace=False)
 
     def test_procedure(self):
@@ -1361,11 +1361,11 @@ class TestProductionUtilities(unittest.TestCase):
         utility_two = ut_two
         for idx in range(len(times_two)):
             utility_two = utility_two + 0.2*(10-times_two[idx]-utility_two)
-        self.assertEqual(self.test._ACTRModel__productions["one"]["utility"], round(utility_one, 4))
+        self.assertEqual(self.test.productions["one"]["utility"], round(utility_one, 4))
 
-        self.assertEqual(self.test._ACTRModel__productions["two"]["utility"], round(utility_two, 4))
+        self.assertEqual(self.test.productions["two"]["utility"], round(utility_two, 4))
 
-        self.assertEqual(self.test._ACTRModel__productions["three"]["utility"], 1.99)
+        self.assertEqual(self.test.productions["three"]["utility"], 1.99)
 
 class TestCompilation1(unittest.TestCase):
     """
@@ -1383,7 +1383,7 @@ class TestCompilation1(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
 
@@ -1424,7 +1424,7 @@ class TestCompilation2(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
 
@@ -1466,7 +1466,7 @@ class TestCompilation3(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
         
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
 
@@ -1529,13 +1529,13 @@ class TestCompilation4(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
 
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
         self.assertSetEqual(set(pro), {"=g", "?g"})
         self.assertDictEqual(pro["?g"], {'buffer': 'full', 'state': 'free'})
         
-        self.model._ACTRModel__productions.pop("one")
+        self.model.productions.pop("one")
 
         g_noncompiled = self.model.goal.copy()
         self.sim = self.model.simulation(trace=False)
@@ -1584,7 +1584,7 @@ class TestCompilation5(unittest.TestCase):
                 break
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
         self.assertSetEqual(set(pro), {"=g"})
@@ -1609,7 +1609,7 @@ class TestCompilation5(unittest.TestCase):
         self.assertEqual(val1, '4')
         self.assertEqual(val2, None)
         
-        self.model._ACTRModel__productions.pop("one")
+        self.model.productions.pop("one")
 
         g_noncompiled = self.model.goal.copy()
 
@@ -1651,7 +1651,7 @@ class TestCompilation6(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
         
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
 
@@ -1713,7 +1713,7 @@ class TestCompilation7(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
         
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
 
@@ -1764,7 +1764,7 @@ class TestCompilation8(unittest.TestCase):
         mm = modeltests.Compilation8(production_compilation=True, strict_harvesting=False)
         self.test = mm
         self.model = mm.m
-        self.model.productions(mm.start, mm.go_on, mm.still_go_on, mm.finish)
+        self.model.set_productions(mm.start, mm.go_on, mm.still_go_on, mm.finish)
         self.sim = self.model.simulation(trace=False)
 
     def test_procedure(self):
@@ -1775,7 +1775,7 @@ class TestCompilation8(unittest.TestCase):
                 break
             if self.sim.current_event.action == "RULE CREATED: go_on and still_go_on":
                 break
-        new_rule = self.model._ACTRModel__productions["go_on and still_go_on"]["rule"]()
+        new_rule = self.model.productions["go_on and still_go_on"]["rule"]()
 
         pro = next(new_rule)
 
@@ -1804,7 +1804,7 @@ class TestCompilation9(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
         
-        self.assertSetEqual(set(self.model._ACTRModel__productions), {"one", "two"})
+        self.assertSetEqual(set(self.model.productions), {"one", "two"})
         
 class TestCompilation10(unittest.TestCase):
     """
@@ -1826,7 +1826,7 @@ class TestCompilation10(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
         
-        self.assertSetEqual(set(self.model._ACTRModel__productions), {"one", "two"})
+        self.assertSetEqual(set(self.model.productions), {"one", "two"})
 
 class TestCompilation11(unittest.TestCase):
     """
@@ -1844,8 +1844,8 @@ class TestCompilation11(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RULE RE-CREATED: one and two":
                 break
-        new_rule = self.model._ACTRModel__productions["one and two"]
-        new_rule2 = self.model._ACTRModel__productions.pop("two and one")
+        new_rule = self.model.productions["one and two"]
+        new_rule2 = self.model.productions.pop("two and one")
         u1 = 0 + 0.2*(10 - 0)
         self.assertEqual(new_rule["utility"], u1)
         self.assertEqual(new_rule2["utility"], 0)
@@ -1854,7 +1854,7 @@ class TestCompilation11(unittest.TestCase):
             if self.sim.current_event.action == "RULE RE-CREATED: one and two":
                 break
         u2 = u1 + 0.2*(10 - u1)
-        self.model._ACTRModel__productions.pop("two and one")
+        self.model.productions.pop("two and one")
         self.assertEqual(new_rule["utility"], u2)
 
 class TestCompilation12(unittest.TestCase):
@@ -1877,7 +1877,7 @@ class TestCompilation12(unittest.TestCase):
             if self.sim.current_event.action == "RULE CREATED: one and two":
                 break
 
-        new_rule = self.model._ACTRModel__productions["one and two"]["rule"]()
+        new_rule = self.model.productions["one and two"]["rule"]()
 
         pro = next(new_rule)
         self.assertSetEqual(set(pro), {"=g"})
@@ -1904,7 +1904,7 @@ class TestCompilation12(unittest.TestCase):
         self.assertEqual(val2, None)
         self.assertEqual(val3, 'completeend')
         
-        self.model._ACTRModel__productions.pop("one")
+        self.model.productions.pop("one")
 
         g_noncompiled = self.model.goal.copy()
 
