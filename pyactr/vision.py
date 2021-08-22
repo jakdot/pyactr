@@ -178,7 +178,7 @@ class VisualLocation(buffers.Buffer):
 
             #check on closest
             try: 
-                if (chunk_used_for_search.screen_x.values == utilities.VISIONCLOSEST or chunk_used_for_search.screen_y.values == utilities.VISIONCLOSEST) and utilities.calculate_pythagorian_distance(self.environment.current_focus, position) > closest:
+                if (chunk_used_for_search.screen_x.values == utilities.VISIONCLOSEST or chunk_used_for_search.screen_y.values == utilities.VISIONCLOSEST) and utilities.calculate_pythagorean_distance(self.environment.current_focus, position) > closest:
                     continue
             except (TypeError, AttributeError):
                 pass
@@ -205,7 +205,7 @@ class VisualLocation(buffers.Buffer):
                 found = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
                 current_x = position[0]
                 current_y = position[1]
-                closest = utilities.calculate_pythagorian_distance(self.environment.current_focus, position)
+                closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
                 x_closest = utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=True)
                 y_closest = utilities.calculate_onedimensional_distance(self.environment.current_focus, position, horizontal=False)
 
@@ -224,13 +224,13 @@ class VisualLocation(buffers.Buffer):
 
                 #check on closest
                 try: 
-                    if utilities.calculate_pythagorian_distance(self.environment.current_focus, position) > closest:
+                    if utilities.calculate_pythagorean_distance(self.environment.current_focus, position) > closest:
                         continue
                 except TypeError:
                     pass
                 temp_dict = {key: st[key]  for key in st if key != 'position' and key != 'text' and key != 'vis_delay'}
                 temp_dict.update({'screen_x': st['position'][0], 'screen_y': st['position'][1]})
-                closest = utilities.calculate_pythagorian_distance(self.environment.current_focus, position)
+                closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
                 new_chunk = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
                 found = st
         

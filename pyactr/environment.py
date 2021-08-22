@@ -21,9 +21,9 @@ class Environment(object):
         self.size = size
         try:
             if focus_position and len(focus_position) != 2:
-                raise utilities.ACTRError("Focus position of the environemnt must be an iterable with 2 values.")
+                raise utilities.ACTRError("Focus position of the environment must be an iterable with 2 values.")
         except TypeError:
-            raise utilities.ACTRError("Focus position of the environemnt must be an iterable with 2 values.")
+            raise utilities.ACTRError("Focus position of the environment must be an iterable with 2 values.")
         if not focus_position:
             focus_position = (size[0]/2, size[1]/2)
         
