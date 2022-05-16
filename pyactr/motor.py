@@ -2,9 +2,6 @@
 Motor module. Carries out key presses.
 """
 
-import collections
-import string
-
 import pyactr.chunks as chunks
 import pyactr.utilities as utilities
 from pyactr.utilities import ACTRError

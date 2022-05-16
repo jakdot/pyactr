@@ -2,8 +2,6 @@
 Goals.
 """
 
-import collections
-
 import pyactr.chunks as chunks
 import pyactr.utilities as utilities
 from pyactr.utilities import ACTRError

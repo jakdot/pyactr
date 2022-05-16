@@ -4,7 +4,6 @@ A model for extended visual interface: multiple objects at the same time, vision
 
 import string
 import random
-import warnings
 
 import pyactr as actr
 

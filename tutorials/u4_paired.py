@@ -2,9 +2,7 @@
 Pairing a word to a number, can be run repeatedly. It corresponds to 'paired' in Lisp ACT-R, unit 4.
 """
 
-import string
 import random
-import warnings
 
 import pyactr as actr
 

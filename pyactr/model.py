@@ -2,9 +2,6 @@
 ACT-R Model.
 """
 
-import warnings
-
-import simpy
 import pyparsing
 
 import pyactr.chunks as chunks

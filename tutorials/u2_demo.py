@@ -4,9 +4,7 @@ Demo - pressing a key by ACT-R model. It corresponds to 'demo2' in Lisp ACT-R, u
 
 import string
 import random
-import warnings
 
-import tkinter as tk #delete later
 import pyactr as actr
 
 stimulus = random.sample(string.ascii_uppercase, 1)[0]
