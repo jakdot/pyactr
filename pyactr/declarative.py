@@ -75,7 +75,7 @@ class DecMem(collections.MutableMapping):
         if element in self:
             self.activations[element] = activation
         else:
-            raise AttributeError("The chunk %s is not in the declarative memory." % key)
+            raise AttributeError("The chunk %s is not in the declarative memory." % element)
 
     def add(self, element, time=0):
         """
