@@ -5,7 +5,6 @@ Helper functions used by ACT-R modules.
 import collections
 import re
 import math
-import random
 import warnings
 
 import numpy as np

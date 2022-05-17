@@ -3,10 +3,8 @@ Environment used for ACT-R model.
 """
 
 import collections
-import warnings
 
 import pyactr.utilities as utilities
-import pyactr.chunks as chunks
 
 class Environment(object):
     """

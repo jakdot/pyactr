@@ -4,8 +4,6 @@ This example shows the workings of pyMC3 in pyactr. pyMC3 allows Bayesian infere
 You will need to install pymc3 and packages it depends on to make this work.
 """
 
-import math
-
 import numpy as np
 import simpy
 import pyactr as actr

@@ -4,9 +4,7 @@ Chunks
 
 import collections
 import re
-import random
 import warnings
-import numbers
 
 import pyactr.utilities as utilities
 from pyactr.utilities import ACTRError

@@ -4,7 +4,6 @@ Requires Python >= 3.3
 """
 
 import unittest
-import collections
 import re
 import warnings
 import math
@@ -14,7 +13,6 @@ import numpy as np
 
 import pyactr.chunks as chunks
 
-import pyactr.buffers as buffers
 import pyactr.goals as goals
 import pyactr.declarative as declarative
 import pyactr.utilities as util
