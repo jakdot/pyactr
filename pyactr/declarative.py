@@ -150,7 +150,7 @@ class DecMemBuffer(buffers.Buffer):
         try:
             self.dm = value
         except ValueError:
-            raise ACTRError('The default harvest set in the retrieval buffer is not a possible declarative memory')
+            raise utilities.ACTRError('The default harvest set in the retrieval buffer is not a possible declarative memory')
 
     def add(self, elem, time=0):
         """
