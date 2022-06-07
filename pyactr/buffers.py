@@ -3,11 +3,12 @@ General class on buffers.
 """
 
 import collections
+from collections.abc import MutableSet
 
 import pyactr.chunks as chunks
 import pyactr.utilities as utilities
 
-class Buffer(collections.MutableSet):
+class Buffer(MutableSet):
     """
     Buffer module.
     """

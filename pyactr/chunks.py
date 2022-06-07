@@ -3,6 +3,7 @@ Chunks
 """
 
 import collections
+from collections.abc import Sequence
 import re
 import warnings
 
@@ -35,7 +36,7 @@ def chunktype(cls_name, field_names, defaults=None):
     except TypeError:
         Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names)}) #chunktypes are not returned; they are stored as Chunk class attribute
 
-class Chunk(collections.Sequence):
+class Chunk(Sequence):
     """
     ACT-R chunks. Based on namedtuple (tuple with dictionary-like properties).
 
