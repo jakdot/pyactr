@@ -3,6 +3,7 @@ Helper functions used by ACT-R modules.
 """
 
 import collections
+import collections.abc
 import re
 import math
 import warnings
@@ -351,7 +352,7 @@ def match(dict2, slotvals, name1, name2):
             except KeyError:
                 chunkdict3 = chunkdict2
 
-            if isinstance(chunkdict3, collections.MutableSequence): #this is retrieval, it consists of mutable sequence -- 0=chunk description in the 1st rule; 1=retrieved chunk
+            if isinstance(chunkdict3, collections.abc.MutableSequence): #this is retrieval, it consists of mutable sequence -- 0=chunk description in the 1st rule; 1=retrieved chunk
                 for elem in chunkdict2:
                     chunkpart2 = splitting(chunkdict2[elem])
                     try:

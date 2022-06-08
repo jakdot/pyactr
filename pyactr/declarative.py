@@ -3,7 +3,7 @@ Declarative memory. Consists of the actual declarative memory, and its associate
 """
 
 import collections
-from collections.abc import MutableMapping
+import collections.abc
 import math
 
 import numpy as np
@@ -12,7 +12,7 @@ import pyactr.chunks as chunks
 import pyactr.utilities as utilities
 import pyactr.buffers as buffers
 
-class DecMem(MutableMapping):
+class DecMem(collections.abc.MutableMapping):
     """
     Declarative memory module.
     """

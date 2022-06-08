@@ -3,6 +3,7 @@ Production rules.
 """
 
 import collections
+import collections.abc
 import inspect
 
 import pyactr.declarative as declarative
@@ -117,7 +118,7 @@ class Productions(collections.UserDict):
         return txt
 
     def __setitem__(self, key, value):
-        if isinstance(value, collections.MutableMapping):
+        if isinstance(value, collections.abc.MutableMapping):
             self.rules[key] = Production(**value)
         else:
             self.rules[key] = Production(rule=value["rule"], utility=self.__DFT_UTILITY, reward=self.__DFT_REWARD)
@@ -394,7 +395,7 @@ class Productions(collections.UserDict):
         retrieval = None
         for buff in slotvals:
             if slotvals[buff]:
-                if isinstance(slotvals[buff], collections.MutableSequence):
+                if isinstance(slotvals[buff], collections.abc.MutableSequence):
                     retrieval = buff #store which buffer carries retrieval info that can be discarded later
                     #if the retrieval is not gone at the end of rule_name2 -- do not compile!!! -- this catches one case in which rules should not be combined because they might yield unsafe results
                     if buffers[buff]:

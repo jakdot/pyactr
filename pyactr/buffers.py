@@ -2,13 +2,12 @@
 General class on buffers.
 """
 
-import collections
-from collections.abc import MutableSet
+import collections.abc
 
 import pyactr.chunks as chunks
 import pyactr.utilities as utilities
 
-class Buffer(MutableSet):
+class Buffer(collections.abc.MutableSet):
     """
     Buffer module.
     """
@@ -35,7 +34,7 @@ class Buffer(MutableSet):
 
     @dm.setter
     def dm(self, value):
-        if isinstance(value, collections.MutableMapping) or not value:
+        if isinstance(value, collections.abc.MutableMapping) or not value:
             self.__dm = value
         else:
             raise ValueError('The attempted dm value cannot be set; it is not a possible declarative memory')
