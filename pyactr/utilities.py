@@ -610,7 +610,7 @@ def calculate_distance(angle_degree, screen_size, simulated_screen_size, viewing
     pxpercm = float(screen_size[0])/float(simulated_screen_size[0])
     return pxpercm*math.tan(angle) * viewing_distance
 
-def calculate_pythagorian_distance(x, y):
+def calculate_pythagorean_distance(x, y):
     """
     x and y are 2D positions.
     """
