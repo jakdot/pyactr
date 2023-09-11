@@ -7,8 +7,6 @@ import warnings
 try:
     import tkinter as tk
 except ImportError:
-    warnings.warn("Simulation cannot start a new window because tkinter is not installed. This does not affect ACT-R models in any way, but you will see no separate window for environment. If you want to change that, install tkinter.")
-    warnings.warn("Simulation GUI is set to False.")
     GUI = False
 else:
     GUI = True
@@ -34,6 +32,16 @@ class Simulation(object):
     _UNKNOWN = utilities._UNKNOWN
     
     def __init__(self, environment, realtime, trace, gui, buffers, used_productions, initial_time=0, environment_process=None, **kwargs):
+
+        if gui:
+            if not environment:
+                # GUI requires an environment
+                warnings.warn("Simulation GUI requested but no environment was set.")
+                warnings.warn("Simulation GUI is set to False.")
+            if not GUI:
+                # tkinter import error
+                warnings.warn("Simulation cannot start a new window because tkinter is not installed. This does not affect ACT-R models in any way, but you will see no separate window for environment. If you want to change that, install tkinter.")
+                warnings.warn("Simulation GUI is set to False.")
 
         self.gui = environment and gui and GUI
 
