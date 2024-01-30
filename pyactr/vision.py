@@ -301,7 +301,7 @@ class Visual(buffers.Buffer):
         model_parameters = model_parameters.copy()
         model_parameters.update(self.model_parameters)
 
-        new_chunk = chunk_from_stimulus(stim, hide=False, copy_loc=True)
+        new_chunk = chunk_from_stimulus(stim, position=False, hide=False, copy_loc=True)
         
         if new_chunk:
             angle_distance = 2*utilities.calculate_visual_angle(self.environment.current_focus, (stim['position'][0], stim['position'][1]), self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance) #the stimulus has to be within 2 degrees from the focus (foveal region)
@@ -342,10 +342,11 @@ class Visual(buffers.Buffer):
             try:
                 if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].values.screen_x.values), float(mod_attr_val['screen_pos'].values.screen_y.values)):
                     vis_delay = self.environment.stimulus[each].get('vis_delay')
+                    stim = self.environment.stimulus[each]
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
 
-        new_chunk = chunks.Chunk(self._VISUAL, **mod_attr_val) #creates new chunk
+        new_chunk = chunk_from_stimulus(stim, position=False, hide=False, copy_loc=True) #creates new chunk
 
         if model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
