@@ -301,7 +301,7 @@ class Visual(buffers.Buffer):
         model_parameters = model_parameters.copy()
         model_parameters.update(self.model_parameters)
 
-        new_chunk = chunk_from_stimulus(stim, "visual", position=False, hide=False, copy_loc=True)
+        new_chunk = chunk_from_stimulus(stim, "visual", position=False)
         
         if new_chunk:
             angle_distance = 2*utilities.calculate_visual_angle(self.environment.current_focus, (stim['position'][0], stim['position'][1]), self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance) #the stimulus has to be within 2 degrees from the focus (foveal region)
@@ -346,7 +346,7 @@ class Visual(buffers.Buffer):
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
 
-        new_chunk = chunk_from_stimulus(stim, "visual", position=False, hide=False, copy_loc=True) #creates new chunk
+        new_chunk = chunk_from_stimulus(stim, "visual", position=False) #creates new chunk
 
         if model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
@@ -374,7 +374,7 @@ class Visual(buffers.Buffer):
         """
         return getattr(self, state) == inquiry
 
-def chunk_from_stimulus(stimulus, buffer, position=True, hide=True, copy_loc=False):
+def chunk_from_stimulus(stimulus, buffer, position=True):
     """
     Given a stimulus dict from the environment, a buffer name, and flags, returns a chunk
     Flags for whether to encode position, whether to hide some attributes, and whether to copy in a location chunk
@@ -390,10 +390,13 @@ def chunk_from_stimulus(stimulus, buffer, position=True, hide=True, copy_loc=Fal
 
     # a list of values in the stimulus object to leave out of the chunk
     # by default, this is just 'text', but additional ones to skip are merged from stimulus['hidden']
-    # if hide = False, these will be encoded, with 'text' as 'value'
+    # if adding to the visual buffer, these will be encoded, with 'text' as 'value'
     stim_hidden = ['text']
-    if hide:
-        stim_hidden += stimulus.get('hidden', [])
+    if buffer == "visual_location":
+        try:
+            stim_hidden += stimulus.get('hidden', [])
+        except AttributeError:
+            raise ValueError("stimulus['hidden'] should be a list of strings")
     else:
         stimulus.update({'value': stimulus.get('text', '')})
 
@@ -404,7 +407,7 @@ def chunk_from_stimulus(stimulus, buffer, position=True, hide=True, copy_loc=Fal
     if position:
         temp_dict.update({'screen_x': int(stimulus['position'][0]),
                           'screen_y': int(stimulus['position'][1])})
-    if copy_loc:
+    if buffer == "visual":
         location = chunk_from_stimulus(stimulus, "visual_location")
         temp_dict.update({'screen_pos': location})
     visible_chunk = chunks.Chunk(stim_typename, **temp_dict)
