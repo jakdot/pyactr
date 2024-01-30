@@ -71,6 +71,10 @@ class Environment(object):
         start_time: starting point of the first stimulus.
 
         The length of triggers has to match the length of stimuli or one of them has to be of length 1.
+
+        Arbitrary visual attributes can be added as keys within each stimulus dictionary
+        You must also specify extended types using keys 'visual_typename' and/or 'visual_location_typename' as needed
+        Additional key 'hidden' can pass a list of keys which will not be visible to the visual location buffer
         """
         #subtract start_time from initial_time
         start_time = self.initial_time - start_time
