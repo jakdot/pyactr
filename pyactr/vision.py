@@ -197,12 +197,10 @@ class VisualLocation(buffers.Buffer):
                 pass
 
             found_stim = self.environment.stimulus[each]
+            visible_chunk = self.chunk_from_stimulus(found_stim, position=False)
 
-            visible_chunk = chunks.makechunk(nameofchunk="vis1", typename="_visuallocation", **{key: each[key] for key in self.environment.stimulus[each] if key != 'position' and key != 'text' and key != 'vis_delay'})
             if visible_chunk <= chunk_used_for_search:
-                temp_dict = visible_chunk._asdict()
-                temp_dict.update({"screen_x":position[0], "screen_y":position[1]})
-                found = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
+                found = self.chunk_from_stimulus(found_stim, position=True)
                 current_x = position[0]
                 current_y = position[1]
                 closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
@@ -221,20 +219,48 @@ class VisualLocation(buffers.Buffer):
         for st in stim:
             if st not in self.recent:
                 position = st['position']
-
                 #check on closest
                 try: 
                     if utilities.calculate_pythagorean_distance(self.environment.current_focus, position) > closest:
                         continue
                 except TypeError:
                     pass
-                temp_dict = {key: st[key]  for key in st if key != 'position' and key != 'text' and key != 'vis_delay'}
-                temp_dict.update({'screen_x': st['position'][0], 'screen_y': st['position'][1]})
+
                 closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
-                new_chunk = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
+
+                new_chunk = self.chunk_from_stimulus(st)
                 found = st
         
         return new_chunk, found
+
+    def chunk_from_stimulus(self, stimulus, position=True):
+        """
+        Given a stimulus dict from the environment and flag for whether to encode position, return a visible chunk
+        """
+        # extract a possible extended chunk type from the stimulus
+        # defaults to utilities.VISUALLOCATION
+        if 'typename' in stimulus:
+            stim_typename = stimulus['typename']
+        else:
+            stim_typename = utilities.VISUALLOCATION
+
+        # a list of values in the stimulus object to leave out of the chunk in the visual location buffer
+        # by default, this is just 'text', but additional ones to skip are merged from found_stim['hidden']
+        # these will all be picked up during visual encoding later
+        stim_hidden = ['text']
+        if 'hidden' in stimulus:
+            stim_hidden += stimulus['hidden']
+
+        # a list of reserved values for control parameters, also not encoded into the visual location buffer
+        stim_control = ['position', 'vis_delay', 'typename', 'hidden']
+
+        temp_dict = {key: stimulus[key] for key in stimulus if key not in stim_hidden + stim_control}
+        if position:
+            temp_dict.update({'screen_x': int(stimulus['position'][0]),
+                              'screen_y': int(stimulus['position'][1])})
+        visible_chunk = chunks.Chunk(stim_typename, **temp_dict)
+
+        return visible_chunk
 
     def test(self, state, inquiry):
         """
