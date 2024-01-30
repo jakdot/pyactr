@@ -197,10 +197,10 @@ class VisualLocation(buffers.Buffer):
                 pass
 
             found_stim = self.environment.stimulus[each]
-            visible_chunk = chunk_from_stimulus(found_stim, position=False)
+            visible_chunk = chunk_from_stimulus(found_stim, "visual_location", position=False)
 
             if visible_chunk <= chunk_used_for_search:
-                found = chunk_from_stimulus(found_stim, position=True)
+                found = chunk_from_stimulus(found_stim, "visual_location", position=True)
                 current_x = position[0]
                 current_y = position[1]
                 closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
@@ -228,7 +228,7 @@ class VisualLocation(buffers.Buffer):
 
                 closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
 
-                new_chunk = chunk_from_stimulus(st)
+                new_chunk = chunk_from_stimulus(st, "visual_location")
                 found = st
         
         return new_chunk, found
@@ -301,7 +301,7 @@ class Visual(buffers.Buffer):
         model_parameters = model_parameters.copy()
         model_parameters.update(self.model_parameters)
 
-        new_chunk = chunk_from_stimulus(stim, position=False, hide=False, copy_loc=True)
+        new_chunk = chunk_from_stimulus(stim, "visual", position=False, hide=False, copy_loc=True)
         
         if new_chunk:
             angle_distance = 2*utilities.calculate_visual_angle(self.environment.current_focus, (stim['position'][0], stim['position'][1]), self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance) #the stimulus has to be within 2 degrees from the focus (foveal region)
@@ -346,7 +346,7 @@ class Visual(buffers.Buffer):
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
 
-        new_chunk = chunk_from_stimulus(stim, position=False, hide=False, copy_loc=True) #creates new chunk
+        new_chunk = chunk_from_stimulus(stim, "visual", position=False, hide=False, copy_loc=True) #creates new chunk
 
         if model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
@@ -374,14 +374,19 @@ class Visual(buffers.Buffer):
         """
         return getattr(self, state) == inquiry
 
-def chunk_from_stimulus(stimulus, position=True, hide=True, copy_loc=False):
+def chunk_from_stimulus(stimulus, buffer, position=True, hide=True, copy_loc=False):
     """
-    Given a stimulus dict from the environment and flags, returns a chunk
+    Given a stimulus dict from the environment, a buffer name, and flags, returns a chunk
     Flags for whether to encode position, whether to hide some attributes, and whether to copy in a location chunk
     """
     # extract a possible extended chunk type from the stimulus
-    # defaults to utilities.VISUALLOCATION
-    stim_typename = stimulus.get('typename',utilities.VISUALLOCATION)
+    # defaults to utilities.VISUALLOCATION/.VISUAL
+    if buffer == "visual_location":
+        stim_typename = stimulus.get(buffer+"_typename", utilities.VISUALLOCATION)
+    elif buffer == "visual":
+        stim_typename = stimulus.get(buffer+"_typename", utilities.VISUAL)
+    else:
+        raise ValueError("buffer must be either ""visual_location"" or ""visual""")
 
     # a list of values in the stimulus object to leave out of the chunk
     # by default, this is just 'text', but additional ones to skip are merged from stimulus['hidden']
@@ -393,14 +398,14 @@ def chunk_from_stimulus(stimulus, position=True, hide=True, copy_loc=False):
         stimulus.update({'value': stimulus.get('text', '')})
 
     # a list of reserved values for control parameters, never encoded into the chunk
-    stim_control = ['position', 'vis_delay', 'typename', 'hidden']
+    stim_control = ['position', 'vis_delay', 'visual_location_typename', 'visual_typename', 'hidden']
 
     temp_dict = {key: stimulus[key] for key in stimulus if key not in stim_hidden + stim_control}
     if position:
         temp_dict.update({'screen_x': int(stimulus['position'][0]),
                           'screen_y': int(stimulus['position'][1])})
     if copy_loc:
-        location = chunk_from_stimulus(stimulus)
+        location = chunk_from_stimulus(stimulus, "visual_location")
         temp_dict.update({'screen_pos': location})
     visible_chunk = chunks.Chunk(stim_typename, **temp_dict)
 
