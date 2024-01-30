@@ -343,6 +343,7 @@ class Visual(buffers.Buffer):
                 if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].values.screen_x.values), float(mod_attr_val['screen_pos'].values.screen_y.values)):
                     vis_delay = self.environment.stimulus[each].get('vis_delay')
                     stim = self.environment.stimulus[each]
+                    stim.update({'cmd': mod_attr_val['cmd']})
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
 
@@ -393,6 +394,7 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
     # if adding to the visual buffer, these will be encoded, with 'text' as 'value'
     stim_hidden = ['text']
     if buffer == "visual_location":
+        stim_hidden.append('cmd')
         try:
             stim_hidden += stimulus.get('hidden', [])
         except AttributeError:
