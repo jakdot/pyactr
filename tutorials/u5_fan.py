@@ -8,7 +8,7 @@ import pyactr as actr
 
 class Model(object):
     """
-    Model for fan experiment. We will abstract away from enviornment, key presses and visual module (the same is done in the abstract model of Lisp ACT-R).
+    Model for fan experiment. We will abstract away from environment, key presses and visual module (the same is done in the abstract model of Lisp ACT-R).
     """
 
     def __init__(self, person, location, **kwargs):
@@ -25,7 +25,6 @@ class Model(object):
 
         for idx, word in enumerate("park church bank".split(), start=1):
             dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["hippie"], arg2=dict_dm[word])
-            print(idx, word)
         
         for idx, word in enumerate("park cave".split(), start=4):
             dict_dm[idx] = actr.makechunk(nameofchunk=idx, typename="comprehend", relation=dict_dm["in"], arg1=dict_dm["captain"], arg2=dict_dm[word])

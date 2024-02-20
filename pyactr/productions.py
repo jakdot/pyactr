@@ -689,7 +689,7 @@ class ProductionRules(object):
             self.current_slotvals[name] = slotvaldict
 
         modified.modify(otherchunk, temp_actrvariables)
-        modified.state = modifed._FREE
+        modified.state = modified._FREE
         yield Event(roundtime(time), name, "MODIFIED")
 
     def overwrite(self, name, updated, otherchunk, temp_actrvariables, time):
@@ -1024,5 +1024,3 @@ class ProductionRules(object):
                 return False, dict(temp_actrvariables)
 
         return True, dict(temp_actrvariables)
-
-
