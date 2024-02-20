@@ -469,7 +469,7 @@ def chunkstring(name='', string=''):
     chunktype_example0(value= one)
     """
     chunk_reader = utilities.getchunk()
-    chunk = chunk_reader.parseString(string, parseAll=True)
+    chunk = chunk_reader.parse_string(string, parse_all=True)
     try:
         type_chunk, chunk_dict = createchunkdict(chunk)
     except utilities.ACTRError as e:
