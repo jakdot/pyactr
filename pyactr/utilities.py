@@ -58,7 +58,7 @@ def varval_repr(self):
             for each in temp.negvariables:
                 y = "".join([y, "~=", str(each)])
         else:
-            y = "".join([y, "~=", str(temp[key])])
+            y = "".join([y, "~=", str(temp.negvariables)])
     return y
 
 VarvalClass.__repr__ = varval_repr
