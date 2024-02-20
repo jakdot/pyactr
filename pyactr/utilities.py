@@ -425,32 +425,35 @@ def baselevel_learning(current_time, times, bll, decay, activation=None, optimiz
     """
     Calculate base-level learning: B_i = ln(sum(t_j^{-decay})) for t_j = current_time - t for t in times.
     """
-    if len(times) > 0:
-        with warnings.catch_warnings(record=True):
-            warnings.filterwarnings('error')
-            if bll and not optimized_learning:
-                try:
-                    B = math.log(np.sum((current_time - times) ** (-decay)))
-                #this part removes chunk storages that are stored at current time (blocking simultaneous retrieval)
-                except RuntimeWarning:
-                    temp_times = np.delete(times, times.argmax())
-                    if len(temp_times) > 0:
-                        B = math.log(np.sum((current_time - temp_times) ** (-decay)))
-            elif bll:
-                try:
-                    B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(times)) #calculating bll using optimized learning -- much faster since it's a single calculation
-                #this part removes chunk storages that are stored at current time (blocking simultaneous retrieval)
-                except RuntimeWarning:
-                    temp_times = np.delete(times, times.argmax())
-                    if len(temp_times) > 0:
-                        B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(temp_times)) #calculating bll using optimized learning -- much faster since it's a single calculation
+    if bll:
+        if len(times) > 0:
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings('error')
+                if not optimized_learning:
+                    try:
+                        B = math.log(np.sum((current_time - times) ** (-decay)))
+                    #this part removes chunk storages that are stored at current time (blocking simultaneous retrieval)
+                    except RuntimeWarning:
+                        temp_times = np.delete(times, times.argmax())
+                        if len(temp_times) > 0:
+                            B = math.log(np.sum((current_time - temp_times) ** (-decay)))
+                else:
+                    try:
+                        B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(times)) #calculating bll using optimized learning -- much faster since it's a single calculation
+                    #this part removes chunk storages that are stored at current time (blocking simultaneous retrieval)
+                    except RuntimeWarning:
+                        temp_times = np.delete(times, times.argmax())
+                        if len(temp_times) > 0:
+                            B = math.log(len(times)/(1-decay)) - decay*math.log(current_time - np.max(temp_times)) #calculating bll using optimized learning -- much faster since it's a single calculation
+    else:
+        B = 0
 
-    #add hard-coded activation
     if activation != None:
         try:
             B = math.log(math.exp(B) + math.exp(activation))
-        except NameError:
+        except NameError: # B has not been used yet
             B = activation
+
     return B
 
 def calculate_instantaneous_noise(instantaneous_noise):
