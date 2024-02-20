@@ -109,7 +109,6 @@ class Simulation(object):
             pro = self.__simulation.process(self.__envprocess__(event))
             yield pro | self.__environment_activate
             if self.__environment_activate.triggered:
-                expected, triggered = self.__environment_activate.value
                 self.__environment_activate = self.__simulation.event()
                 pro.interrupt()
             try:
@@ -410,7 +409,7 @@ class GuiPart(object):
                 if focus:
                     for elem in self.canvas.find_withtag("foc"):
                         self.canvas.delete(elem)
-                    focus_id = self.canvas.create_oval(focus[0]-4, focus[1]-4, focus[0]+4, focus[1]+4, outline="red", tags="foc")
+                    self.canvas.create_oval(focus[0]-4, focus[1]-4, focus[0]+4, focus[1]+4, outline="red", tags="foc")
 
             except queue.Empty:
                 # just on general principles, although we don't
