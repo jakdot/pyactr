@@ -377,7 +377,7 @@ def createchunkdict(chunk):
                     updating = sp_dict[elem[idx][0]]
                     update_val = elem[idx][1]
 
-            except (KeyError, IndexError) as err: #indexerror --> only a string is present; keyerror: the first element in elem[idx] is not a special symbol (in sp)
+            except (KeyError, IndexError): #indexerror --> only a string is present; keyerror: the first element in elem[idx] is not a special symbol (in sp)
                 if elem[idx][0] == "'" or elem[idx][0] == '"':
                     update_val = elem[idx][1:-1]
                 else:

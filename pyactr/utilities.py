@@ -306,7 +306,6 @@ def check_bound_vars(actrvariables, elem, negative_impossible=True):
     try:
         if temp_result:
             returned_tuple = VarvalClass(variables=None, values=result, negvariables=(), negvalues=tuple(neg_result))
-        returned_tuple
     except UnboundLocalError: #temp_result was never used, which means that no values were defined
         returned_tuple = VarvalClass(variables=None, values=None, negvariables=(), negvalues=tuple(neg_result))
     return returned_tuple
