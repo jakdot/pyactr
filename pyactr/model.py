@@ -243,7 +243,7 @@ class ACTRModel(object):
         temp_dictLHS = {v: k for k, v in utilities._LHSCONVENTIONS.items()}
         rule_reader = utilities.getrule()
         try:
-            rule = rule_reader.parseString(string, parseAll=True)
+            rule = rule_reader.parse_string(string, parse_all=True)
         except pyparsing.ParseException as e:
             raise(utilities.ACTRError("The rule '%s' could not be parsed. The following error was observed: %s" %(name, e)))
         lhs, rhs = {}, {}
