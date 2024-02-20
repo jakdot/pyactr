@@ -69,7 +69,6 @@ class Model(object):
         arg2    =location
         state   harvest_person
         =retrieval>
-        isa     nonempty
         ==>
         =g>
         isa     sentence_goal
@@ -84,7 +83,6 @@ class Model(object):
         isa     sentence_goal
         state   harvest_location
         =retrieval>
-        isa     nonempty
         ?retrieval>
         state   free
         ==>
