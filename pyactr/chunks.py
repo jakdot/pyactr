@@ -424,8 +424,8 @@ def makechunk(nameofchunk="", typename="", **dictionary):
     (ii) slot-value pairs.
 
     For example:
-    >>> makechunk(nameofchunk='example0', typename='chunktype_example0', value='one')
-    chunktype_example0(value= one)
+    >>> makechunk(nameofchunk='example0', typename='chunk1', value='one')
+    chunk1(value= one)
 
     This creates a chunk of type chunk1, which has one slot (value) and the value of that slot is one.
     """
