@@ -672,7 +672,7 @@ class ProductionRules(object):
         Modify a buffer chunk. Unlike plain modify, this might add extra time to changing the chunk in the buffer.
         """
         modified.state = modified._BUSY
-        extra_time = utilities.calculate_setting_time(updated)
+        extra_time = utilities.calculate_setting_time(modified)
         time += extra_time
         yield Event(roundtime(time), name, self._UNKNOWN)
         if self.model_parameters['production_compilation']:
