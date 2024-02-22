@@ -163,8 +163,8 @@ def getchunk():
     Using pyparsing, create chunk reader for chunk strings.
     """
     slot = pp.Word("".join([pp.alphas, "_"]), "".join([pp.alphanums, "_"]))
-    special_value = pp.Group(pp.oneOf([ACTRVARIABLE, "".join([ACTRNEG, ACTRVARIABLE]), ACTRNEG, VISIONGREATER, VISIONSMALLER, "".join([VISIONGREATER, ACTRVARIABLE]), "".join([VISIONSMALLER, ACTRVARIABLE])])\
-            + pp.Word("".join([pp.alphanums, "_", '"', "'"])))
+    elements = [ACTRVARIABLE, "".join([ACTRNEG, ACTRVARIABLE]), ACTRNEG, VISIONGREATER, VISIONSMALLER, "".join([VISIONGREATER, ACTRVARIABLE]), "".join([VISIONSMALLER, ACTRVARIABLE])]
+    special_value = pp.Group(pp.one_of(elements) + pp.Word("".join([pp.alphanums, "_", '"', "'"])))
     strvalue = pp.QuotedString('"', unquoteResults=False)
     strvalue2 = pp.QuotedString("'", unquoteResults=False)
     varvalue = pp.Word("".join([pp.alphanums, "_", "\:", "\|", "\.", ",", "%", "&", "\$", "`", "\*", "-"]))
@@ -252,9 +252,9 @@ def getrule():
     """
     arrow = pp.Literal("==>")
     buff = pp.Word(pp.alphas, "".join([pp.alphanums, "_"]))
-    special_valueLHS = pp.oneOf([x for x in _LHSCONVENTIONS.keys()])
+    special_valueLHS = pp.one_of([x for x in _LHSCONVENTIONS.keys()])
     end_buffer = pp.Literal(">")
-    special_valueRHS = pp.oneOf([x for x in _RHSCONVENTIONS.keys()])
+    special_valueRHS = pp.one_of([x for x in _RHSCONVENTIONS.keys()])
     chunk = getchunk()
     rule_reader = pp.Group(pp.OneOrMore(pp.Group(special_valueLHS + buff + end_buffer + pp.Group(pp.Optional(chunk))))) + arrow + pp.Group(pp.OneOrMore(pp.Group(special_valueRHS + buff + end_buffer + pp.Group(pp.Optional(chunk)))))
     return rule_reader
