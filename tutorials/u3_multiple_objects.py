@@ -8,7 +8,7 @@ import random
 import pyactr as actr
 
 
-class Model(object):
+class Model:
     """
     Model searching and attending to various stimuli.
     """

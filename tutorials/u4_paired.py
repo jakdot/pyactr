@@ -7,7 +7,7 @@ import random
 import pyactr as actr
 
 
-class Model(object):
+class Model:
     """
     Model pressing the right key.
     """

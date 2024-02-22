@@ -45,7 +45,7 @@ class Chunk(Sequence):
     chunktype_example0(value= one)
     """
 
-    class EmptyValue(object):
+    class EmptyValue:
         """
         Empty values used in chunks. These are None values.
         """

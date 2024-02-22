@@ -452,7 +452,7 @@ class Productions(collections.UserDict):
 
         return new_name, re_created
 
-class ProductionRules(object):
+class ProductionRules:
     """
     Production knowledge.
     """

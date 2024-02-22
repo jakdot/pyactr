@@ -6,7 +6,7 @@ import collections.abc
 
 import pyactr.utilities as utilities
 
-class Environment(object):
+class Environment:
     """
     Environment module for ACT-R. This shows whatever is seen on screen at the moment, allows interaction with ACT-R model (vision and motor modules).
     """

@@ -4,7 +4,7 @@ Models testing symbolic system of ACT-R.
 
 import pyactr as actr
 
-class Counting(object):
+class Counting:
 
     def __init__(self):
         self.model = actr.ACTRModel()
@@ -45,7 +45,7 @@ class Counting(object):
         yield {"=g":actr.chunks.makechunk("01", "countFrom", count="=x", end="=x")}
         yield {"!g": ("clear", (0, self.model.decmem))}
 
-class Counting_stringversion(object):
+class Counting_stringversion:
 
     def __init__(self):
         self.model = actr.ACTRModel()
@@ -115,7 +115,7 @@ class Counting_stringversion(object):
         ==>
         ~g>""")
 
-class Addition(object):
+class Addition:
 
     def __init__(self):
         self.model = actr.ACTRModel()
@@ -189,7 +189,7 @@ class Addition(object):
         isa     countOrder
         first   =count""")
 
-class Model1(object):
+class Model1:
 
     def __init__(self):
         self.model = actr.ACTRModel()
@@ -246,7 +246,7 @@ class Model1(object):
         ==>
         ~g>""")
 
-class Model2(object):
+class Model2:
     
     def __init__(self, **kwargs):
         self.model = actr.ACTRModel(**kwargs)
@@ -272,7 +272,7 @@ class Model2(object):
         yield {"?retrieval": {"buffer": "full"}, "?g": {"buffer": "empty"}}
         yield {"~retrieval": None}
 
-class Model3(object):
+class Model3:
     
     def __init__(self, **kwargs):
         self.model = actr.ACTRModel(**kwargs)
@@ -327,7 +327,7 @@ Demo - pressing a key by ACT-R model. Tutorial 2 of Lisp ACT-R.
 import string
 import random
 
-class Paired(object):
+class Paired:
     """
     Model pressing the right key.
     """
@@ -463,7 +463,7 @@ class Paired(object):
         answer  =val
         ~g2>""")
 
-class Utilities(object):
+class Utilities:
     """
     Model testing utilities.
     """
@@ -489,7 +489,7 @@ class Utilities(object):
         yield {"=g": actr.makechunk("change", "phase", state="change")}
         yield {"~g": None}
 
-class Compilation1(object):
+class Compilation1:
     """
     Model testing compilation -- basic cases. Modification.
     """
@@ -523,7 +523,7 @@ class Compilation1(object):
             isa     state
             starting 4""")
         
-class Compilation2(object):
+class Compilation2:
     """
     Model testing compilation -- basic cases. Modification.
     """
@@ -557,7 +557,7 @@ class Compilation2(object):
             isa     state
             ending =x""")
 
-class Compilation3(object):
+class Compilation3:
     """
     Model testing compilation -- basic cases. Modification.
     """
@@ -597,7 +597,7 @@ class Compilation3(object):
             arg3    =v1
             arg4    =v0""")
 
-class Compilation4(object):
+class Compilation4:
     """
     Model testing compilation -- basic cases. Query.
     """
@@ -636,7 +636,7 @@ class Compilation4(object):
             isa     goal
             arg1    3""")
 
-class Compilation5(object):
+class Compilation5:
     """
     Model testing compilation -- basic cases. Setting a chunk.
     """
@@ -673,7 +673,7 @@ class Compilation5(object):
             isa     state
             starting 4""")
         
-class Compilation6(object):
+class Compilation6:
     """
     Model testing compilation. Modification and retrieval.
     """
@@ -724,7 +724,7 @@ class Compilation6(object):
             arg3    =v1
             arg4    =v0""")
 
-class Compilation7(object):
+class Compilation7:
     """
     Model testing compilation. Modification and retrieval.
     """
@@ -814,7 +814,7 @@ class Compilation8(actr.ACTRModel):
         yield {"=g": actr.makechunk("","press", key="=k!d"), "?manual": {"state": "free"}}
         yield {"=g": actr.makechunk("","press", key="e")}
 
-class Compilation9(object):
+class Compilation9:
     """
     Model testing compilation. Modification and retrieval.
     """
@@ -866,7 +866,7 @@ class Compilation9(object):
             arg3    =v1
             arg4    =v0""")
 
-class Compilation10(object):
+class Compilation10:
     """
     Model testing compilation. Modification and retrieval.
     """
@@ -917,7 +917,7 @@ class Compilation10(object):
             arg3    =v1
             arg4    =v0""")
 
-class Compilation11(object):
+class Compilation11:
     """
     Model testing compilation -- compilation + utilities.
     """
@@ -950,7 +950,7 @@ class Compilation11(object):
             isa   state
             ending 2""")
 
-class Compilation12(object):
+class Compilation12:
     """
     Model testing compilation -- basic cases. Setting a chunk with an empty value.
     """

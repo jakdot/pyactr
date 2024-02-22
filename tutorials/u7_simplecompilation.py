@@ -6,7 +6,7 @@ import warnings
 
 import pyactr as actr
 
-class Compilation1(object):
+class Compilation1:
     """
     Model testing compilation -- basic cases.
     """

@@ -6,7 +6,7 @@ import warnings
 
 import pyactr as actr
 
-class Model(object):
+class Model:
     """
     Model 'grouped'.
     """

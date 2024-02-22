@@ -13,7 +13,7 @@ import pyactr.motor as motor
 import pyactr.vision as vision
 import pyactr.simulation as simulation
 
-class ACTRModel(object):
+class ACTRModel:
     """
     ACT-R model, running ACT-R simulations.
 
