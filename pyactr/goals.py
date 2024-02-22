@@ -2,10 +2,8 @@
 Goals.
 """
 
-import pyactr.chunks as chunks
-import pyactr.utilities as utilities
+from pyactr import buffers, chunks, utilities
 from pyactr.utilities import ACTRError
-import pyactr.buffers as buffers
 
 class Goal(buffers.Buffer):
     """

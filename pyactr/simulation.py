@@ -3,6 +3,9 @@ ACT-R simulations.
 """
 
 import warnings
+import simpy
+
+from pyactr import utilities, vision
 
 try:
     import tkinter as tk
@@ -15,12 +18,6 @@ if GUI:
     import threading
     import queue
     import time
-
-import simpy
-
-import pyactr.utilities as utilities
-import pyactr.vision as vision
-import pyactr.chunks as chunks
 
 Event = utilities.Event
 

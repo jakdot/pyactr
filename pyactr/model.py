@@ -4,14 +4,7 @@ ACT-R Model.
 
 import pyparsing
 
-import pyactr.chunks as chunks
-import pyactr.goals as goals
-import pyactr.productions as productions
-import pyactr.utilities as utilities
-import pyactr.declarative as declarative
-import pyactr.motor as motor
-import pyactr.vision as vision
-import pyactr.simulation as simulation
+from pyactr import chunks, declarative, goals, motor, productions, simulation, utilities, vision
 
 class ACTRModel(object):
     """

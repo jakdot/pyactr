@@ -6,12 +6,7 @@ import collections
 import collections.abc
 import inspect
 
-import pyactr.declarative as declarative
-import pyactr.chunks as chunks
-import pyactr.goals as goals
-import pyactr.vision as vision
-import pyactr.motor as motor
-import pyactr.utilities as utilities
+from pyactr import chunks, declarative, goals, motor, utilities, vision
 from pyactr.utilities import ACTRError
 
 Event = utilities.Event
