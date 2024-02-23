@@ -75,17 +75,17 @@ class Productions(collections.UserDict):
         self.rules = {}
         for rule in rules:
             try:    
-                utility_position = len(inspect.getargspec(rule).args)-inspect.getargspec(rule).args.index('utility')
+                utility_position = len(inspect.getfullargspec(rule).args)-inspect.getfullargspec(rule).args.index('utility')
             except ValueError:
                 utility = self.__DFT_UTILITY
             else:
-                utility = inspect.getargspec(rule).defaults[0-utility_position]
+                utility = inspect.getfullargspec(rule).defaults[0-utility_position]
             try:    
-                reward_position = len(inspect.getargspec(rule).args)-inspect.getargspec(rule).args.index('reward')
+                reward_position = len(inspect.getfullargspec(rule).args)-inspect.getfullargspec(rule).args.index('reward')
             except ValueError:
                 reward = self.__DFT_REWARD
             else:
-                reward = inspect.getargspec(rule).defaults[0-reward_position]
+                reward = inspect.getfullargspec(rule).defaults[0-reward_position]
             self.update({rule.__name__: {'rule': rule, 'utility': utility, 'reward': reward}})
 
         self.used_rulenames = {} #the dictionary of used rulenames, needed for utility learning
