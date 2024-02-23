@@ -21,7 +21,7 @@ if GUI:
 
 Event = utilities.Event
 
-class Simulation(object):
+class Simulation:
     """
     ACT-R simulations.
     """
@@ -364,7 +364,7 @@ class Simulation(object):
         self.__running = False
 
 
-class GuiPart(object):
+class GuiPart:
     """
     GUI part is used to run GUI on top of ACT-R model. It is used for environment simulations.
     """

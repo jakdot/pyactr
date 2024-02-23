@@ -6,7 +6,7 @@ import warnings
 
 import pyactr as actr
 
-class Model(object):
+class Model:
 
     def __init__(self, **kwargs):
         self.m = actr.ACTRModel(**kwargs)

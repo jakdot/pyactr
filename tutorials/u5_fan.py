@@ -6,7 +6,7 @@ import warnings
 
 import pyactr as actr
 
-class Model(object):
+class Model:
     """
     Model for fan experiment. We will abstract away from environment, key presses and visual module (the same is done in the abstract model of Lisp ACT-R).
     """

@@ -6,7 +6,7 @@ import pyparsing
 
 from pyactr import chunks, declarative, goals, motor, productions, simulation, utilities, vision
 
-class ACTRModel(object):
+class ACTRModel:
     """
     ACT-R model, running ACT-R simulations.
 
