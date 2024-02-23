@@ -324,9 +324,6 @@ class MotorModel(actr.ACTRModel):
 Demo - pressing a key by ACT-R model. Tutorial 2 of Lisp ACT-R.
 """
 
-import string
-import random
-
 class Paired:
     """
     Model pressing the right key.
@@ -686,7 +683,7 @@ class Compilation6:
 
         self.dm = self.m.decmem
 
-        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+        self.dm.add(actr.makechunk("", "fact", arg1=3, arg2=3, arg3=5, arg4=1) )
 
         self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
@@ -737,7 +734,7 @@ class Compilation7:
 
         self.dm = self.m.decmem
 
-        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+        self.dm.add(actr.makechunk("", "fact", arg1=3, arg2=3, arg3=5, arg4=1) )
 
         self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
@@ -827,7 +824,7 @@ class Compilation9:
 
         self.dm = self.m.decmem
 
-        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+        self.dm.add(actr.makechunk("", "fact", arg1=3, arg2=3, arg3=5, arg4=1) )
 
         self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 
@@ -879,7 +876,7 @@ class Compilation10:
 
         self.dm = self.m.decmem
 
-        self.dm.add(actr.makechunk("", "fact",  arg1=3, arg2=3, arg3=5, arg4=1) )
+        self.dm.add(actr.makechunk("", "fact", arg1=3, arg2=3, arg3=5, arg4=1) )
 
         self.m.goal.add(actr.makechunk(nameofchunk="start", typename="goal", arg1=3))
 

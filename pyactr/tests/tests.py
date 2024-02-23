@@ -11,15 +11,12 @@ import math
 import simpy
 import numpy as np
 
-import pyactr.chunks as chunks
-
-import pyactr.goals as goals
-import pyactr.declarative as declarative
+from pyactr import chunks, declarative, goals
 import pyactr.utilities as util
+import pyactr.tests.modeltests as modeltests
 
 import pyactr as actr
 
-import pyactr.tests.modeltests as modeltests
 
 class TestChunks1(unittest.TestCase):
     """
@@ -211,26 +208,26 @@ class Testchunkstring(unittest.TestCase):
     def setUp(self):
         chunks.chunktype("test", ("arg1", "arg2"))
         self.chunk = chunks.chunkstring("c1", "isa test arg1 'v1' arg2 'v2'")
-        self.chunk2 = chunks.chunkstring("c2", \
+        self.chunk2 = chunks.chunkstring("c2",
                 "isa    test\
                 arg1    'v1'\
                 arg2    'v2'")
-        self.chunk2p = chunks.chunkstring("c2p", \
+        self.chunk2p = chunks.chunkstring("c2p",
                 'isa    test\
                 arg2    "v2"\
                 arg1    "v1"')
-        self.chunk2not = chunks.chunkstring("c2not", \
+        self.chunk2not = chunks.chunkstring("c2not",
                 'isa    test\
                 arg2    "v1"\
                 arg1    "v2"')
         self.chunk3 = chunks.makechunk("","test", arg1=util.VarvalClass(values='v1', negvariables=(), negvalues=(), variables=None), arg2=util.VarvalClass(values='v2', negvariables=(), negvalues=(), variables=None))
         self.chunk4 = chunks.makechunk("","test", arg1="v1", arg2="v2")
-        self.chunk5 = chunks.chunkstring("c5", \
+        self.chunk5 = chunks.chunkstring("c5",
                 "isa test\
                 arg1 None\
                 arg2 ~=x\
                 arg2  =y")
-        self.chunk5a = chunks.chunkstring("c5a",\
+        self.chunk5a = chunks.chunkstring("c5a",
                 "isa test\
                 arg2 ~= x\
                 arg2 = y")
@@ -264,75 +261,75 @@ class Testchunkstring2(unittest.TestCase):
     def setUp(self):
         chunks.chunktype("newtest", ("arg1", "arg2"))
         chunks.chunktype("nexttest", ("a1", "a5"))
-        self.chunk = chunks.chunkstring("c1", \
+        self.chunk = chunks.chunkstring("c1",
                 "isa    newtest\
                 arg2    'v2'\
                 arg1    'v1'")
-        self.chunk2 = chunks.chunkstring("c2", \
+        self.chunk2 = chunks.chunkstring("c2",
                 "arg1    c1\
                 newarg   10")
-        self.chunk3 = chunks.chunkstring("c3", \
+        self.chunk3 = chunks.chunkstring("c3",
                 "arg1    5\
                 newarg   c1")
-        self.chunk4 = chunks.chunkstring("c4", \
+        self.chunk4 = chunks.chunkstring("c4",
                 "arg1    5\
                 newarg   = x")
-        self.chunk5 = chunks.chunkstring("c5", \
+        self.chunk5 = chunks.chunkstring("c5",
                 "isa    nexttest\
                 a1      'v7'\
                 a5      c4")
-        self.chunk6 = chunks.chunkstring("c6", \
+        self.chunk6 = chunks.chunkstring("c6",
                 "isa    nexttest\
                 a5      =x\
                 a1      'v7'")
         chunks.chunktype("startcount", ("start", "count"))
         chunks.chunktype("countcount", ("first", "second"))
-        self.chunk7 = chunks.chunkstring("c7", \
+        self.chunk7 = chunks.chunkstring("c7",
                 "isa startcount\
                 start =x\
                 count None")
-        self.chunk7super = chunks.chunkstring("c7s", \
+        self.chunk7super = chunks.chunkstring("c7s",
                 "isa startcount\
                 start 2")
-        self.chunk8 = chunks.chunkstring("c7s", \
+        self.chunk8 = chunks.chunkstring("c7s",
                 "isa startcount\
                 start 2")
-        self.chunk9 = chunks.chunkstring("c7s", \
+        self.chunk9 = chunks.chunkstring("c7s",
                 "isa startcount\
                 start None")
-        self.chunk10 = chunks.chunkstring("c10", \
+        self.chunk10 = chunks.chunkstring("c10",
                 "isa countcount\
                 first 2")
-        self.chunk11 = chunks.chunkstring("c11", \
+        self.chunk11 = chunks.chunkstring("c11",
                 "isa countcount\
                 first 2\
                 second 4")
-        self.chunk12 = chunks.chunkstring("c12", \
+        self.chunk12 = chunks.chunkstring("c12",
                 "isa countcount\
                 first 3\
                 first =zz")
-        self.chunk13 = chunks.chunkstring("c13", \
+        self.chunk13 = chunks.chunkstring("c13",
                 "isa countcount\
                 first 3")
-        self.chunk14 = chunks.chunkstring("c14", \
+        self.chunk14 = chunks.chunkstring("c14",
                 "isa countcount\
                 first None")
-        self.chunk15 = chunks.chunkstring("c15", \
+        self.chunk15 = chunks.chunkstring("c15",
                 "isa countcount\
                 first =t\
                 first 20")
-        self.chunk16 = chunks.chunkstring("c16", \
+        self.chunk16 = chunks.chunkstring("c16",
                 "isa countcount\
                 first 20")
-        self.chunk17 = chunks.chunkstring("c17", \
+        self.chunk17 = chunks.chunkstring("c17",
                 "isa countcount\
                 first ~=t\
                 first ~=z\
                 first =x")
-        self.chunk18 = chunks.chunkstring("c18", \
+        self.chunk18 = chunks.chunkstring("c18",
                 "isa countcount\
                 first 20")
-        self.chunk19 = chunks.chunkstring("c19", \
+        self.chunk19 = chunks.chunkstring("c19",
                 "isa countcount\
                 first =x\
                 first ~None")
@@ -987,7 +984,7 @@ class TestBaseLevelLearning(unittest.TestCase):
             self.sim2.step()
             if self.sim2.current_event.action == "RULE FIRED: start":
                 break
-        time0 = self.assertEqual(self.sim2.show_time(), 0.05)
+        self.assertEqual(self.sim2.show_time(), 0.05)
         time0 = self.sim2.show_time()
         while True:
             self.sim2.step()
@@ -1000,7 +997,7 @@ class TestBaseLevelLearning(unittest.TestCase):
             self.sim3.step()
             if self.sim3.current_event.action == "RULE FIRED: start":
                 break
-        time0 = self.assertEqual(self.sim3.show_time(), 0.05)
+        self.assertEqual(self.sim3.show_time(), 0.05)
         time0 = self.sim3.show_time()
         while True:
             self.sim3.step()
@@ -1832,7 +1829,7 @@ class TestCompilation11(unittest.TestCase):
     """
     
     def setUp(self):
-        mm = modeltests.Compilation11(utility_learning=True,  production_compilation=True, utility_noise=1)
+        mm = modeltests.Compilation11(utility_learning=True, production_compilation=True, utility_noise=1)
         self.test = mm
         self.model = mm.m
         self.sim = self.model.simulation(trace=False)
