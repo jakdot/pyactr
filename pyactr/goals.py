@@ -81,7 +81,7 @@ class Goal(buffers.Buffer):
         """
         Retrieve a chunk. This is not possible in goal buffer, so an error is raised.
         """
-        raise utilities.ACTRError("An attempt to retrieve from goal in the chunk '%s'; retrieving from goal is not possible" % otherchunk)
+        raise utilities.ACTRError(f"An attempt to retrieve from goal in the chunk '{otherchunk}'; retrieving from goal is not possible")
 
 
     def create(self, otherchunk, harvest=None, actrvariables=None):
@@ -91,10 +91,8 @@ class Goal(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
         except utilities.ACTRError as arg:
-            raise utilities.ACTRError("Setting the buffer using the chunk '%s' is impossible; %s" % (otherchunk, arg))
+            raise utilities.ACTRError(f"Setting the buffer using the chunk '{otherchunk}' is impossible; {arg}")
 
         new_chunk = chunks.Chunk(otherchunk.typename, **mod_attr_val) #creates new chunk
 
         self.add(new_chunk, 0, harvest) #put chunk using add
-
-

@@ -101,7 +101,9 @@ class ACTRModel:
 
         try:
             if not set(model_parameters.keys()).issubset(set(self.MODEL_PARAMETERS.keys())):
-                raise(utilities.ACTRError("Incorrect model parameter(s) %s. The only possible model parameters are: '%s'" % (set(model_parameters.keys()).difference(set(self.MODEL_PARAMETERS.keys())), set(self.MODEL_PARAMETERS.keys()))))
+                params = set(model_parameters.keys()).difference(set(self.MODEL_PARAMETERS.keys()))
+                allowed_params = set(self.MODEL_PARAMETERS.keys())
+                raise utilities.ACTRError(f"Incorrect model parameter(s) {params}. The only possible model parameters are: '{allowed_params}'")
             self.model_parameters.update(model_parameters)
         except TypeError:
             pass
@@ -115,8 +117,8 @@ class ACTRModel:
         """
         if len(self.retrievals) == 1:
             return list(self.retrievals.values())[0]
-        else:
-            raise(ValueError("Zero or more than 1 retrieval specified, unclear which one should be shown. Use ACTRModel.retrievals instead."))
+
+        raise ValueError("Zero or more than 1 retrieval specified, unclear which one should be shown. Use ACTRModel.retrievals instead.")
 
     @retrieval.setter
     def retrieval(self, name):
@@ -129,8 +131,8 @@ class ACTRModel:
         """
         if len(self.decmems) == 1:
             return list(self.decmems.values())[0]
-        else:
-            raise(ValueError("Zero or more than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.decmems instead."))
+
+        raise ValueError("Zero or more than 1 declarative memory specified, unclear which one should be shown. Use ACTRModel.decmems instead.")
     
     @decmem.setter
     def decmem(self, data):
@@ -155,7 +157,7 @@ class ACTRModel:
         if len(self.goals) == 1:
             return list(self.goals.values())[0]
         else:
-            raise(ValueError("Zero or more than 1 goal specified, unclear which one should be shown. Use ACTRModel.goals instead."))
+            raise ValueError("Zero or more than 1 goal specified, unclear which one should be shown. Use ACTRModel.goals instead.")
     
     @goal.setter
     def goal(self, name):
@@ -168,7 +170,7 @@ class ACTRModel:
         name: the name by which the retrieval buffer is referred to in production rules.
         """
         if not isinstance(name, str):
-            raise(ValueError("Retrieval buffer can be only set with a string, the name of the retrieval buffer."))
+            raise ValueError("Retrieval buffer can be only set with a string, the name of the retrieval buffer.")
         dmb = declarative.DecMemBuffer()
         self.__buffers[name] = dmb
         self.retrievals[name] = dmb
@@ -181,7 +183,7 @@ class ACTRModel:
         name: the name by which the goal buffer is referred to in production rules.
         """
         if not isinstance(name, str):
-            raise(ValueError("Goal buffer can be only set with a string, the name of the goal buffer."))
+            raise ValueError("Goal buffer can be only set with a string, the name of the goal buffer.")
         g = goals.Goal(delay=delay)
         self.__buffers[name] = g
         self.goals[name] = g
@@ -238,7 +240,7 @@ class ACTRModel:
         try:
             rule = rule_reader.parse_string(string, parse_all=True)
         except pyparsing.ParseException as e:
-            raise(utilities.ACTRError("The rule '%s' could not be parsed. The following error was observed: %s" %(name, e)))
+            raise utilities.ACTRError(f"The rule '{name}' could not be parsed. The following error was observed: {e}")
         lhs, rhs = {}, {}
         def func():
             for each in rule[0]:
@@ -248,7 +250,7 @@ class ACTRModel:
                     try:
                         type_chunk, chunk_dict = chunks.createchunkdict(each[3])
                     except utilities.ACTRError as e:
-                        raise utilities.ACTRError("The rule string %s is not defined correctly; %s" %(name, e))
+                        raise utilities.ACTRError(f"The rule string {name} is not defined correctly; {e}")
                     lhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield lhs
             for each in rule[2]:
@@ -262,7 +264,7 @@ class ACTRModel:
                     try:
                         type_chunk, chunk_dict = chunks.createchunkdict(each[3])
                     except utilities.ACTRError as e:
-                        raise utilities.ACTRError("The rule string %s is not defined correctly; %s" %(name, e))
+                        raise utilities.ACTRError(f"The rule string {name} is not defined correctly; {e}")
                     rhs[each[0]+each[1]] = chunks.makechunk("", type_chunk, **chunk_dict)
             yield rhs
         self.productions.update({name: {"rule": func, "utility": utility, "reward": reward}})

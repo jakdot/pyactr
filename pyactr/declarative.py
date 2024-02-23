@@ -63,7 +63,7 @@ class DecMem(collections.abc.MutableMapping):
                 except TypeError:
                     self._data[key] = np.array(time)
         else:
-            raise utilities.ACTRError("Only chunks can be added as attributes to Declarative Memory; '%s' is not a chunk" % key)
+            raise utilities.ACTRError(f"Only chunks can be added as attributes to Declarative Memory; '{key}' is not a chunk")
     
     def add_activation(self, element, activation):
         """
@@ -74,7 +74,7 @@ class DecMem(collections.abc.MutableMapping):
         if element in self:
             self.activations[element] = activation
         else:
-            raise AttributeError("The chunk %s is not in the declarative memory." % element)
+            raise AttributeError(f"The chunk {element} is not in the declarative memory.")
 
     def add(self, element, time=0):
         """
@@ -192,7 +192,7 @@ class DecMemBuffer(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1], negative_impossible=False) for x in otherchunk.removeunused()}
         except utilities.ACTRError as arg:
-            raise utilities.ACTRError("Retrieving the chunk '%s' is impossible; %s" % (otherchunk, arg))
+            raise utilities.ACTRError(f"Retrieving the chunk '{otherchunk}' is impossible; {arg}")
         chunk_tobe_matched = chunks.Chunk(otherchunk.typename, **mod_attr_val)
 
         max_A = float("-inf")
@@ -223,7 +223,7 @@ class DecMemBuffer(buffers.Buffer):
                 except UnboundLocalError:
                     continue
                 if math.isnan(A_bll):
-                    raise utilities.ACTRError("The following chunk cannot receive base activation: %s. The reason is that one of its traces did not appear in a past moment." % chunk)
+                    raise utilities.ACTRError(f"The following chunk cannot receive base activation: {chunk}. The reason is that one of its traces did not appear in a past moment.")
                 A_sa = utilities.spreading_activation(chunk, buffers, self.dm, model_parameters["buffer_spreading_activation"], model_parameters["strength_of_association"], model_parameters["spreading_activation_restricted"], model_parameters["association_only_from_chunks"])
                 inst_noise = utilities.calculate_instantaneous_noise(model_parameters["instantaneous_noise"])
                 A = A_bll + A_sa + A_pm + inst_noise #chunk.activation is the manually specified activation, potentially used by the modeller

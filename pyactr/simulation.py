@@ -170,7 +170,7 @@ class Simulation:
                     cont = yield pro
                 except simpy.Interrupt:
                     if not pro.triggered:
-                        warnings.warn("Process in %s interrupted" % name)
+                        warnings.warn(f"Process in {name} interrupted")
                         pro.interrupt() #interrupt process
 
                 #if first extra process is followed by another process (returned as cont), do what follows; used only for motor and visual

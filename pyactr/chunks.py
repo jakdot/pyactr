@@ -22,7 +22,7 @@ def chunktype(cls_name, field_names, defaults=None, include=None):
     :param defaults: default values for the slots, given as an iterable, counting from the last element
     """
     if cls_name in utilities.SPECIALCHUNKTYPES and field_names != utilities.SPECIALCHUNKTYPES[cls_name]:
-        raise ACTRError("You cannot redefine slots of the chunk type '%s'; you can only use the slots '%s'" % (cls_name, utilities.SPECIALCHUNKTYPES[cls_name]))
+        raise ACTRError(f"You cannot redefine slots of the chunk type '{cls_name}'; you can only use the slots '{utilities.SPECIALCHUNKTYPES[cls_name]}'")
 
     try:
         field_names = field_names.replace(',', ' ').split()
@@ -94,7 +94,6 @@ class Chunk(Sequence):
 
         kwargs = {}
         for key in dictionary:
-
             #change values (and values in a tuple) into string, when possible (when the value is not another chunk)
             if isinstance(dictionary[key], Chunk):
                 dictionary[key] = utilities.VarvalClass(variables=None, values=dictionary[key], negvariables=(), negvalues=())
@@ -108,14 +107,14 @@ class Chunk(Sequence):
                         raise TypeError("Negvalues and negvariables must be tuples")
 
             elif (isinstance(dictionary[key], collections.abc.Iterable) and not isinstance(dictionary[key], str)) or not isinstance(dictionary[key], collections.abc.Hashable):
-                raise ValueError("The value of a chunk slot must be hashable and not iterable; you are using an illegal type for the value of the chunk slot %s, namely %s" % (key, type(dictionary[key])))
+                raise ValueError(f"The value of a chunk slot must be hashable and not iterable; you are using an illegal type for the value of the chunk slot {key}, namely {type(dictionary[key])}")
 
             else:
                 #create namedtuple varval and split dictionary[key] into variables, values, negvariables, negvalues
                 try:
                     temp_dict = utilities.stringsplitting(str(dictionary[key]))
                 except utilities.ACTRError as e:
-                    raise utilities.ACTRError("The chunk %s is not defined correctly; %s" %(dictionary[key], e))
+                    raise utilities.ACTRError(f"The chunk {dictionary[key]} is not defined correctly; {e}")
                 loop_dict = temp_dict.copy()
                 for x in loop_dict:
                     if x == "negvariables" or x == "negvalues":
@@ -141,12 +140,12 @@ class Chunk(Sequence):
             if set(self._chunktypes[typename]._fields) != set(kwargs.keys()):
 
                 chunktype(typename, dictionary.keys())  #If there are more args than in the original chunktype, chunktype has to be created again, with slots for new attributes
-                warnings.warn("Chunk type %s is extended with new attributes" % typename)
+                warnings.warn(f"Chunk type {typename} is extended with new attributes")
 
         except KeyError:
 
             chunktype(typename, dictionary.keys())  #If chunktype completely missing, it is created first
-            warnings.warn("Chunk type %s was not defined; added automatically" % typename)
+            warnings.warn(f"Chunk type {typename} was not defined; added automatically")
 
         finally:
             self.actrchunk = self._chunktypes[typename](**kwargs)
@@ -225,11 +224,11 @@ class Chunk(Sequence):
             elif isinstance(y, self.EmptyValue):
                 y = ""
             if reprtxt:
-                reprtxt = ", ".join([reprtxt, '%s= %s' % (x, y)])
+                reprtxt = ", ".join([reprtxt, f"{x}= {y}"])
             elif x:
-                reprtxt = '%s= %s' % (x, y)
+                reprtxt = f"{x}= {y}"
             else:
-                reprtxt = '%s' % y
+                reprtxt = y
         return "".join([self.typename, "(", reprtxt, ")"])
 
     def __lt__(self, otherchunk):
@@ -413,7 +412,7 @@ def createchunkdict(chunk):
         chunk_dict[key]["negvariables"] = tuple(chunk_dict[key]["negvariables"])
         for x in ["values", "variables"]:
             if len(chunk_dict[key][x]) > 1:
-                raise utilities.ACTRError("Any slot must have fewer than two %s, there is more than one in this slot" %x)
+                raise utilities.ACTRError(f"Any slot must have fewer than two {x}, there is more than one in this slot")
             elif len(chunk_dict[key][x]) == 1:
                 chunk_dict[key][x] = chunk_dict[key][x].pop()
             else:
@@ -459,7 +458,7 @@ def makechunk(nameofchunk="", typename="", **dictionary):
             try:
                 temp_dict = utilities.stringsplitting(str(dictionary[key]))
             except utilities.ACTRError as e:
-                raise utilities.ACTRError("The chunk value %s is not defined correctly; %s" %(dictionary[key], e))
+                raise utilities.ACTRError(f"The chunk value {dictionary[key]} is not defined correctly; {e}")
             loop_dict = temp_dict.copy()
             for x in loop_dict:
                 if x == "negvariables" or x == "negvalues":
@@ -489,7 +488,7 @@ def chunkstring(name='', string=''):
     try:
         type_chunk, chunk_dict = createchunkdict(chunk)
     except utilities.ACTRError as e:
-        raise utilities.ACTRError("The chunk string %s is not defined correctly; %s" %(string, e))
+        raise utilities.ACTRError(f"The chunk string {string} is not defined correctly; {e}")
 
     created_chunk = makechunk(name, type_chunk, **chunk_dict)
     return created_chunk

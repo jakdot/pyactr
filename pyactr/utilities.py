@@ -181,14 +181,14 @@ def make_chunkparts_without_varconflicts(chunkpart, rule_name, variables):
     if varval.variables:
         new_name = "".join([str(varval.variables), "__rule__", rule_name])
         if "".join(["=", new_name]) in variables:
-            raise ACTRError("A name clash appeared when trying to compile two rules. Try to rename variables in the rule '%s'" %rule_name)
+            raise ACTRError(f"A name clash appeared when trying to compile two rules. Try to rename variables in the rule '{rule_name}'")
         else:
             temp_var = new_name
     temp_negvar = set()
     for x in varval.negvariables:
         new_name = "".join([str(x), "__rule__", rule_name])
         if "".join(["=", "new_name"]) in variables:
-            raise ACTRError("A name clash appeared when trying to compile two rules. Try to rename variables in the rule '%s'" %rule_name)
+            raise ACTRError(f"A name clash appeared when trying to compile two rules. Try to rename variables in the rule '{rule_name}'")
         else:
             temp_negvar.add(new_name)
     new_varval = VarvalClass(variables=temp_var, values=varval.values, negvariables=tuple(temp_negvar), negvalues=varval.negvalues)
@@ -210,7 +210,7 @@ def make_chunkparts_with_new_vars(chunkpart, variable_dict, val_dict):
                 if val_dict[varval.variables] == varval.values:
                     pass
                 else:
-                    raise ACTRError("During the compilation, one slot received two different values, namely %s and %s; exiting" %(varval.values, val_dict[varval.variables]))
+                    raise ACTRError(f"During the compilation, one slot received two different values, namely {varval.values} and {val_dict[varval.variables]}; exiting")
             else:
                 temp_val = val_dict[varval.variables]
     temp_negvar = set()
@@ -274,18 +274,18 @@ def check_bound_vars(actrvariables, elem, negative_impossible=True):
             try:
                 temp_result = actrvariables[var]
             except KeyError:
-                raise ACTRError("Object '%s' in the value '%s' is a variable that is not bound; this is illegal in ACT-R" % (var[1:], elem)) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
+                raise ACTRError(f"Object '{var[1:]}' in the value '{elem}' is a variable that is not bound; this is illegal in ACT-R") #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
         elif x == "values" and getattr(varval, x):
             temp_result = getattr(varval, x)
         elif x == "negvalues" and getattr(varval, x):
             if negative_impossible:
-                raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of some ACT-R rules, notably, the ones that do not search environment or memory; '%s' is illegal in this case" % elem)
+                raise ACTRError(f"It is not allowed to define negative values or negative variables on the right hand side of some ACT-R rules, notably, the ones that do not search environment or memory; '{elem}' is illegal in this case")
             else:
                 for neg in getattr(varval, x):
                     neg_result.add(neg)
         elif x == "negvariables" and getattr(varval, x):
             if negative_impossible:
-                raise ACTRError("It is not allowed to define negative values or negative variables on the right hand side of some ACT-R rules, notably, the ones that do not search environment or memory; '%s' is illegal in this case" % elem)
+                raise ACTRError(f"It is not allowed to define negative values or negative variables on the right hand side of some ACT-R rules, notably, the ones that do not search environment or memory; '{elem}' is illegal in this case")
             else:
                 for neg in getattr(varval, x):
                     neg_var = neg
@@ -293,11 +293,11 @@ def check_bound_vars(actrvariables, elem, negative_impossible=True):
                     try:
                         neg_result.add(actrvariables[neg_var])
                     except KeyError:
-                        raise ACTRError("Object '%s' in the value '%s' is a variable that is not bound; this is illegal in ACT-R" % (var[1:], elem)) #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
+                        raise ACTRError(f"Object '{var[1:]}' in the value '{elem}' is a variable that is not bound; this is illegal in ACT-R") #is this correct? maybe in some special cases binding only in RHS should be allowed? If so this should be adjusted in productions.py
         if result and temp_result in {VISIONGREATER, VISIONSMALLER} or result in {VISIONGREATER, VISIONSMALLER}:
             result = "".join(sorted([temp_result, result], reverse=True))
         elif result and temp_result != result:
-            raise ACTRError("It looks like in '%s', one slot would have to carry two values at the same time; this is illegal in ACT-R" % elem)
+            raise ACTRError(f"It looks like in '{elem}', one slot would have to carry two values at the same time; this is illegal in ACT-R")
         else:
             try:
                 result = temp_result
@@ -389,7 +389,7 @@ def match(dict2, slotvals, name1, name2):
                         val3 = chunkpart3.values
 
                     if val2 and val3 and val2 != val3:
-                        raise ACTRError("The values in rules '%s' and '%s' do not match, production compilation failed" % (name1, name2))
+                        raise ACTRError(f"The values in rules '{name1}' and '{name2}' do not match, production compilation failed")
             
                     temp_val = val2 or val3
 
@@ -709,4 +709,3 @@ def splitting_submodules(string): #currently not used, maybe eventually !!!not u
     variables = re.findall("(?<="+ ACTRVARIABLER+").*?(?=$)", string)
     retrievals = re.findall("(?<="+ ACTRRETRIEVER+").*?(?=$)", string)
     return {"variables": set(variables), "retrievals": set(retrievals)}
-
