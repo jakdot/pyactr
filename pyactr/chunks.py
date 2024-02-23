@@ -7,7 +7,7 @@ from collections.abc import Sequence
 import re
 import warnings
 
-import pyactr.utilities as utilities
+from pyactr import utilities
 from pyactr.utilities import ACTRError
 
 def chunktype(cls_name, field_names, defaults=None):

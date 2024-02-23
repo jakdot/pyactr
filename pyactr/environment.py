@@ -4,7 +4,7 @@ Environment used for ACT-R model.
 
 import collections.abc
 
-import pyactr.utilities as utilities
+from pyactr import utilities
 
 class Environment(object):
     """

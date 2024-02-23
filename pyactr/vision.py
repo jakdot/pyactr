@@ -4,10 +4,8 @@ Vision module. Just basic.
 
 import collections
 
-import pyactr.chunks as chunks
-import pyactr.utilities as utilities
+from pyactr import buffers, chunks, utilities
 from pyactr.utilities import ACTRError
-import pyactr.buffers as buffers
 
 #TODO
 #setting ERROR/FREE should work even in buffers that can be interrupted -- check it does
