@@ -4,6 +4,7 @@ pyactr/__pycache__
 
 # Setuptools distribution folder.
 /build/
+/distOLD/
 /dist/
 
 # Python egg metadata, regenerated from source files by setuptools.

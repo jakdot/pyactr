@@ -4,6 +4,7 @@ This example shows the workings of pyMC3 in pyactr. pyMC3 allows Bayesian infere
 You will need to install pymc3 and packages it depends on to make this work.
 """
 
+import warnings
 import numpy as np
 import simpy
 import pyactr as actr
@@ -11,7 +12,8 @@ from pymc3 import Model, Normal, Gamma, Uniform, sample, summary, Metropolis, tr
 import theano.tensor as T
 from theano.compile.ops import as_op
 import matplotlib.pyplot as pp
-
+    
+warnings.simplefilter("ignore")
 
 #Each chunk type should be defined first.
 actr.chunktype("countOrder", ("first", "second"))
@@ -97,7 +99,7 @@ sim = counting.simulation(trace=True)
 # an example of one run of the simulation
 sim.run()
 
-size=5000
+size = 5000
 
 Y = np.random.normal(loc=257.4, scale=10, size=size) #suppose these are data on counting, that is, how fast people are in counting from 2 to 4; we simulate them as normal distribution with mean 257.4 (milliseconds) and st.d. 10 (milliseconds)
 print("Simulated data")
