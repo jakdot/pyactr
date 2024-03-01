@@ -342,7 +342,7 @@ class Visual(buffers.Buffer):
             try:
                 if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].values.screen_x.values), float(mod_attr_val['screen_pos'].values.screen_y.values)):
                     vis_delay = self.environment.stimulus[each].get('vis_delay')
-                    stim = self.environment.stimulus[each]
+                    stim = self.environment.stimulus[each].copy()
                     stim.update({'cmd': mod_attr_val['cmd']})
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
@@ -391,7 +391,7 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
 
     # a list of values in the stimulus object to leave out of the chunk
     # by default, this is just 'text', but additional ones to skip are merged from stimulus['hidden']
-    # if adding to the visual buffer, these will be encoded, with 'text' as 'value'
+    # if adding to the visual buffer, these will be encoded (with 'text' as 'value', see below)
     stim_hidden = ['text']
     if buffer == "visual_location":
         stim_hidden.append('cmd')
@@ -399,8 +399,6 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
             stim_hidden += stimulus.get('hidden', [])
         except AttributeError:
             raise ValueError("stimulus['hidden'] should be a list of strings")
-    else:
-        stimulus.update({'value': stimulus.get('text', '')})
 
     # a list of reserved values for control parameters, never encoded into the chunk
     stim_control = ['position', 'vis_delay', 'visual_location_typename', 'visual_typename', 'hidden']
@@ -412,6 +410,7 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
     if buffer == "visual":
         location = chunk_from_stimulus(stimulus, "visual_location")
         temp_dict.update({'screen_pos': location})
+        temp_dict.update({'value': stimulus.get('text', '')})
     visible_chunk = chunks.Chunk(stim_typename, **temp_dict)
 
     return visible_chunk
