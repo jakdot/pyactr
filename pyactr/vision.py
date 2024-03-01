@@ -389,21 +389,25 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
     else:
         raise ValueError("buffer must be either ""visual_location"" or ""visual""")
 
-    # a list of values in the stimulus object to leave out of the chunk
-    # by default, this is just 'text', but additional ones to skip are merged from stimulus['hidden']
-    # if adding to the visual buffer, these will be encoded (with 'text' as 'value', see below)
-    stim_hidden = ['text']
-    if buffer == "visual_location":
-        stim_hidden.append('cmd')
-        try:
-            stim_hidden += stimulus.get('hidden', [])
-        except AttributeError:
-            raise ValueError("stimulus['hidden'] should be a list of strings")
-
     # a list of reserved values for control parameters, never encoded into the chunk
-    stim_control = ['position', 'vis_delay', 'visual_location_typename', 'visual_typename', 'hidden']
+    stim_control = ['text', 'position', 'vis_delay', 'visual_location_typename', 'visual_typename', 'externally_visible']
 
-    temp_dict = {key: stimulus[key] for key in stimulus if key not in stim_hidden + stim_control}
+    # determining the values that will be visible in the chunk
+    # by default, for visual location chunks this is just 'screen_x' and 'screen_y', but others are merged from stimulus['externally_visible']
+    # in contrast, for visual chunks, all non-control keys will be encoded regardless (with 'text' as 'value', see below)
+    # be careful when adding to stimulus['externally_visible']: visual search checks if the stimulus chunk subsumes the search chunk...
+    # ... so ALL externally visible features of a stimulus must be included in a search in order to fixate it
+
+    if buffer == "visual_location":
+        visible_features = []
+        try:
+            visible_features += stimulus.get('externally_visible', [])
+        except AttributeError:
+            raise ValueError("stimulus['externally_visible'] should be a list of strings")
+    else:
+        visible_features = [key for key in stimulus if key not in stim_control]
+
+    temp_dict = {key: stimulus[key] for key in stimulus if key in visible_features}
     if position:
         temp_dict.update({'screen_x': int(stimulus['position'][0]),
                           'screen_y': int(stimulus['position'][1])})
