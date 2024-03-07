@@ -74,7 +74,9 @@ class Environment(object):
 
         Arbitrary visual attributes can be added as keys within each stimulus dictionary
         You must also specify extended types using keys 'visual_typename' and/or 'visual_location_typename' as needed
-        Additional key 'hidden' can pass a list of keys which will not be visible to the visual location buffer
+        Additional key 'externally_visible' can pass a list of keys which will be visible to the visual location buffer
+        (Use this key with caution: visual_location searches cannot return an object if it contains
+        an externally-visible attribute that is not present in the search)
         """
         #subtract start_time from initial_time
         start_time = self.initial_time - start_time
