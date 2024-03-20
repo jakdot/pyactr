@@ -10,7 +10,7 @@ import warnings
 import pyactr.utilities as utilities
 from pyactr.utilities import ACTRError
 
-def chunktype(cls_name, field_names, include=None, defaults=None):
+def chunktype(cls_name, field_names, defaults=None, include=None):
     """
     Creates type chunk. Works like namedtuple.
 
