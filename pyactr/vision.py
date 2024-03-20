@@ -375,8 +375,7 @@ class Visual(buffers.Buffer):
 
 def chunk_from_stimulus(stimulus, buffer_name, position=True):
     """
-    Given a stimulus dict from the environment, a buffer name, and flags, returns a chunk
-    Flags for whether to encode position, whether to hide some attributes, and whether to copy in a location chunk
+    Given a stimulus dict from the environment, a buffer name, and whether to encode position, returns a chunk to be used in that buffer.
     """
     # extract a possible extended chunk type from the stimulus
     # defaults to utilities.VISUALLOCATION/.VISUAL
