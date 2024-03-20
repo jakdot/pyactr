@@ -244,8 +244,6 @@ class Visual(buffers.Buffer):
     Visual buffer. This sees objects in the environment.
     """
 
-    _VISUAL = utilities.VISUAL
-
     def __init__(self, environment, default_harvest=None):
         self.environment = environment
         buffers.Buffer.__init__(self, default_harvest, None)
