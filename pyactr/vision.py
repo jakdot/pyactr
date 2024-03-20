@@ -375,19 +375,19 @@ class Visual(buffers.Buffer):
         """
         return getattr(self, state) == inquiry
 
-def chunk_from_stimulus(stimulus, buffer, position=True):
+def chunk_from_stimulus(stimulus, buffer_name, position=True):
     """
     Given a stimulus dict from the environment, a buffer name, and flags, returns a chunk
     Flags for whether to encode position, whether to hide some attributes, and whether to copy in a location chunk
     """
     # extract a possible extended chunk type from the stimulus
     # defaults to utilities.VISUALLOCATION/.VISUAL
-    if buffer == "visual_location":
-        stim_typename = stimulus.get(buffer+"_typename", utilities.VISUALLOCATION)
-    elif buffer == "visual":
-        stim_typename = stimulus.get(buffer+"_typename", utilities.VISUAL)
+    if buffer_name == "visual_location":
+        stim_typename = stimulus.get(buffer_name + "_typename", utilities.VISUALLOCATION)
+    elif buffer_name == "visual":
+        stim_typename = stimulus.get(buffer_name + "_typename", utilities.VISUAL)
     else:
-        raise ValueError("buffer must be either ""visual_location"" or ""visual""")
+        raise ValueError("buffer_name must be either ""visual_location"" or ""visual""")
 
     # a list of reserved values for control parameters, never encoded into the chunk
     stim_control = ['text', 'position', 'vis_delay', 'visual_location_typename', 'visual_typename', 'externally_visible']
@@ -398,7 +398,7 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
     # be careful when adding to stimulus['externally_visible']: visual search checks if the stimulus chunk subsumes the search chunk...
     # ... so ALL externally visible features of a stimulus must be included in a search in order to fixate it
 
-    if buffer == "visual_location":
+    if buffer_name == "visual_location":
         visible_features = []
         try:
             visible_features += stimulus.get('externally_visible', [])
@@ -411,7 +411,7 @@ def chunk_from_stimulus(stimulus, buffer, position=True):
     if position:
         temp_dict.update({'screen_x': int(stimulus['position'][0]),
                           'screen_y': int(stimulus['position'][1])})
-    if buffer == "visual":
+    if buffer_name == "visual":
         location = chunk_from_stimulus(stimulus, "visual_location")
         temp_dict.update({'screen_pos': location})
         temp_dict.update({'value': stimulus.get('text', '')})
