@@ -10,7 +10,7 @@ import warnings
 from pyactr import utilities
 from pyactr.utilities import ACTRError
 
-def chunktype(cls_name, field_names, defaults=None):
+def chunktype(cls_name, field_names, defaults=None, include=None):
     """
     Creates type chunk. Works like namedtuple.
 
@@ -18,6 +18,7 @@ def chunktype(cls_name, field_names, defaults=None):
     >>> chunktype('chunktype_example0', 'value')
 
     :param field_names: an iterable or a string of slot names separated by spaces
+    :param include: a string or list of strings naming existing chunk type(s) to inherit slot names from
     :param defaults: default values for the slots, given as an iterable, counting from the last element
     """
     if cls_name in utilities.SPECIALCHUNKTYPES and field_names != utilities.SPECIALCHUNKTYPES[cls_name]:
@@ -31,6 +32,20 @@ def chunktype(cls_name, field_names, defaults=None):
     for each in field_names:
         if each == "ISA" or each == "isa":
             raise ACTRError("You cannot use the slot 'isa' in your chunk. That slot is used to define chunktypes.")
+
+    # If an ancestor was specified, union the field names and re-sort
+    if include:
+        inherits = []
+        if isinstance(include, str):
+            include = [include]
+        for parent_name in include:
+            try:
+                inherits += Chunk._chunktypes[parent_name]._fields
+            except KeyError:
+                raise ACTRError("The parent chunk type '%s' was not found" % parent_name)
+            unique_field_names = set(field_names).union(set(inherits))
+            field_names = tuple(sorted(list(unique_field_names)))
+
     try:
         Chunk._chunktypes.update({cls_name:collections.namedtuple(cls_name, field_names, defaults=defaults)}) #chunktypes are not returned; they are stored as Chunk class attribute
     except TypeError:

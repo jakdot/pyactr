@@ -195,12 +195,10 @@ class VisualLocation(buffers.Buffer):
                 pass
 
             found_stim = self.environment.stimulus[each]
+            visible_chunk = chunk_from_stimulus(found_stim, "visual_location", position=False)
 
-            visible_chunk = chunks.makechunk(nameofchunk="vis1", typename="_visuallocation", **{key: each[key] for key in self.environment.stimulus[each] if key != 'position' and key != 'text' and key != 'vis_delay'})
             if visible_chunk <= chunk_used_for_search:
-                temp_dict = visible_chunk._asdict()
-                temp_dict.update({"screen_x":position[0], "screen_y":position[1]})
-                found = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
+                found = chunk_from_stimulus(found_stim, "visual_location", position=True)
                 current_x = position[0]
                 current_y = position[1]
                 closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
@@ -219,17 +217,16 @@ class VisualLocation(buffers.Buffer):
         for st in stim:
             if st not in self.recent:
                 position = st['position']
-
                 #check on closest
                 try: 
                     if utilities.calculate_pythagorean_distance(self.environment.current_focus, position) > closest:
                         continue
                 except TypeError:
                     pass
-                temp_dict = {key: st[key]  for key in st if key != 'position' and key != 'text' and key != 'vis_delay'}
-                temp_dict.update({'screen_x': st['position'][0], 'screen_y': st['position'][1]})
+
                 closest = utilities.calculate_pythagorean_distance(self.environment.current_focus, position)
-                new_chunk = chunks.Chunk(utilities.VISUALLOCATION, **temp_dict)
+
+                new_chunk = chunk_from_stimulus(st, "visual_location")
                 found = st
         
         return new_chunk, found
@@ -244,8 +241,6 @@ class Visual(buffers.Buffer):
     """
     Visual buffer. This sees objects in the environment.
     """
-
-    _VISUAL = utilities.VISUAL
 
     def __init__(self, environment, default_harvest=None):
         self.environment = environment
@@ -302,9 +297,7 @@ class Visual(buffers.Buffer):
         model_parameters = model_parameters.copy()
         model_parameters.update(self.model_parameters)
 
-        temp_dict = {key: stim[key] for key in stim if key != 'position' and key != 'text' and key != 'vis_delay'}
-        temp_dict.update({'screen_pos': chunks.Chunk(utilities.VISUALLOCATION, **{'screen_x': stim['position'][0], 'screen_y': stim['position'][1]}), 'value': stim['text']})
-        new_chunk = chunks.Chunk(utilities.VISUAL, **temp_dict)
+        new_chunk = chunk_from_stimulus(stim, "visual", position=False)
         
         if new_chunk:
             angle_distance = 2*utilities.calculate_visual_angle(self.environment.current_focus, (stim['position'][0], stim['position'][1]), self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance) #the stimulus has to be within 2 degrees from the focus (foveal region)
@@ -344,12 +337,13 @@ class Visual(buffers.Buffer):
         for each in self.environment.stimulus:
             try:
                 if self.environment.stimulus[each]['position'] == (float(mod_attr_val['screen_pos'].values.screen_x.values), float(mod_attr_val['screen_pos'].values.screen_y.values)):
-                    mod_attr_val['value'] = self.environment.stimulus[each]['text']
                     vis_delay = self.environment.stimulus[each].get('vis_delay')
+                    stim = self.environment.stimulus[each].copy()
+                    stim.update({'cmd': mod_attr_val['cmd']})
             except (AttributeError, KeyError):
                 raise ACTRError("The chunk in the visual buffer is not defined correctly. It is not possible to move attention.")
 
-        new_chunk = chunks.Chunk(self._VISUAL, **mod_attr_val) #creates new chunk
+        new_chunk = chunk_from_stimulus(stim, "visual", position=False) #creates new chunk
 
         if model_parameters['emma']:
             angle_distance = utilities.calculate_visual_angle(self.environment.current_focus, [float(new_chunk.screen_pos.values.screen_x.values), float(new_chunk.screen_pos.values.screen_y.values)], self.environment.size, self.environment.simulated_screen_size, self.environment.viewing_distance)
@@ -376,3 +370,46 @@ class Visual(buffers.Buffer):
         Is current state busy/free/error?
         """
         return getattr(self, state) == inquiry
+
+def chunk_from_stimulus(stimulus, buffer_name, position=True):
+    """
+    Given a stimulus dict from the environment, a buffer name, and whether to encode position, returns a chunk to be used in that buffer.
+    """
+    # extract a possible extended chunk type from the stimulus
+    # defaults to utilities.VISUALLOCATION/.VISUAL
+    if buffer_name == "visual_location":
+        stim_typename = stimulus.get(buffer_name + "_typename", utilities.VISUALLOCATION)
+    elif buffer_name == "visual":
+        stim_typename = stimulus.get(buffer_name + "_typename", utilities.VISUAL)
+    else:
+        raise ValueError("buffer_name must be either ""visual_location"" or ""visual""")
+
+    # a list of reserved values for control parameters, never encoded into the chunk
+    stim_control = ['text', 'position', 'vis_delay', 'visual_location_typename', 'visual_typename', 'externally_visible']
+
+    # determining the values that will be visible in the chunk
+    # by default, for visual location chunks this is just 'screen_x' and 'screen_y', but others are merged from stimulus['externally_visible']
+    # in contrast, for visual chunks, all non-control keys will be encoded regardless (with 'text' as 'value', see below)
+    # be careful when adding to stimulus['externally_visible']: visual search checks if the stimulus chunk subsumes the search chunk...
+    # ... so ALL externally visible features of a stimulus must be included in a search in order to fixate it
+
+    if buffer_name == "visual_location":
+        visible_features = []
+        try:
+            visible_features += stimulus.get('externally_visible', [])
+        except AttributeError:
+            raise ValueError("stimulus['externally_visible'] should be a list of strings")
+    else:
+        visible_features = [key for key in stimulus if key not in stim_control]
+
+    temp_dict = {key: stimulus[key] for key in stimulus if key in visible_features}
+    if position:
+        temp_dict.update({'screen_x': int(stimulus['position'][0]),
+                          'screen_y': int(stimulus['position'][1])})
+    if buffer_name == "visual":
+        location = chunk_from_stimulus(stimulus, "visual_location")
+        temp_dict.update({'screen_pos': location})
+        temp_dict.update({'value': stimulus.get('text', '')})
+    visible_chunk = chunks.Chunk(stim_typename, **temp_dict)
+
+    return visible_chunk
