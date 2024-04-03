@@ -434,11 +434,12 @@ def makechunk(nameofchunk="", typename="", **dictionary):
 
     Three values can be specified:
     
-    (i) the name of the chunk (the name could be used if the chunk appears as a value of other chunks or production rules)
-    (ii) its type
-    (ii) slot-value pairs.
+    1. the name of the chunk (the name could be used if the chunk appears as a value of other chunks or production rules)
+    2. its type
+    3. slot-value pairs
 
     For example:
+    
     >>> makechunk(nameofchunk='example0', typename='chunk1', value='one')
     chunk1(value= one)
 
