@@ -898,7 +898,7 @@ class ProductionRules:
 
         time_presses = None #used for time stamps of 4 phases of motor
         for elem in motorbuffer.TIME_PRESSES.keys():
-            if newchunk.key in elem:
+            if str(newchunk.key) in elem:
                 time_presses = motorbuffer.TIME_PRESSES[elem]
         if not time_presses:
             time_presses = motorbuffer.TIME_PRESSES[()] #if not pressing or slowest, use default (short mvt)
