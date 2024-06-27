@@ -245,7 +245,7 @@ class DecMemBuffer(buffers.Buffer):
             else: #otherwise, just standard time for rule firing, so no extra calculation needed
                 if chunk_tobe_matched <= chunk and self.dm[chunk][0] != time: #the second condition ensures that the chunk that was created are not retrieved at the same time
                     retrieved = chunk
-                    extra_time = model_parameters["rule_firing"]
+                    extra_time = 0
 
         if not retrieved:
             if model_parameters["subsymbolic"]:
