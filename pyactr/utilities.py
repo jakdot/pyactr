@@ -650,13 +650,13 @@ def calculate_delay_visual_attention(angle_distance, K, k, emma_noise, vis_delay
     Original formula: K*[-log frequency]*e^(k*distance). Simplified as: K * vis_delay * e^(k*distance).
     
     The modeller herself can decide how frequency should be hooked to delay via the parameter vis_delay.
-    
+
     Distance is measured in degrees of visual angle.
     """
     if vis_delay:
         delay = K * float(vis_delay)* math.exp(k*float(angle_distance))
     else:
-        delay = K * math.exp(k*float(angle_distance))
+        delay = 0
     if emma_noise:
         return np.random.gamma(shape=9, scale=delay/9)
     else:
