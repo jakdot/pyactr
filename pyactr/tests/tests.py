@@ -1016,8 +1016,8 @@ class TestBaseLevelLearningModel(unittest.TestCase):
         used_stim = {"bank": "0"}
         text = []
         for x in zip(used_stim.keys(), used_stim.values()):
-            text.append({1: {'text': x[0], 'position': (1366, 0)}})
-            text.append({1: {'text': x[1], 'position': (1366, 0)}})
+            text.append({1: {'text': x[0], 'position': (1366, 0), "vis_delay": 1}})
+            text.append({1: {'text': x[1], 'position': (1366, 0), "vis_delay": 1}})
         trigger = list(used_stim.values())
 
         environ = actr.Environment(size=(1366,768), focus_position=(0,0))
