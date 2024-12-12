@@ -451,50 +451,50 @@ class TestCountModel(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 2, second= 3)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.sim.show_time(), 0.05)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "PROCEDURAL":
                 break
-        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.sim.show_time(), 0.05)
         self.assertEqual(self.sim.current_event.action, 'CONFLICT RESOLUTION')
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: increment":
                 break
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 3, second= 4)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: increment":
                 break
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: stop":
                 break
-        self.assertEqual(self.sim.show_time(), 0.3)
+        self.assertEqual(self.sim.show_time(), 0.2)
 
 
 class TestCountModelstring(unittest.TestCase):
@@ -535,50 +535,50 @@ class TestCountModelstring(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 2, second= 3)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.sim.show_time(), 0.05)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "PROCEDURAL":
                 break
-        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.sim.show_time(), 0.05)
         self.assertEqual(self.sim.current_event.action, 'CONFLICT RESOLUTION')
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: increment":
                 break
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 3, second= 4)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: increment":
                 break
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: stop":
                 break
-        self.assertEqual(self.sim.show_time(), 0.3)
+        self.assertEqual(self.sim.show_time(), 0.2)
 
 class TestAdditionModel(unittest.TestCase):
     """
@@ -619,86 +619,86 @@ class TestAdditionModel(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 5, second= 6)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.sim.show_time(), 0.05)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "PROCEDURAL":
                 break
-        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.sim.show_time(), 0.05)
         self.assertEqual(self.sim.current_event.action, 'CONFLICT RESOLUTION')
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: incrementSum":
                 break
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 0, second= 1)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: incrementCount":
                 break
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 6, second= 7)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.3)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
-        self.assertEqual(self.sim.show_time(), 0.3)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: incrementSum":
                 break
-        self.assertEqual(self.sim.show_time(), 0.35)
+        self.assertEqual(self.sim.show_time(), 0.2)
         while True:
             self.sim.step()
             if self.sim.current_event.proc == "retrieval":
                 break
         self.assertEqual(self.sim.current_event.action, 'START RETRIEVAL')
-        self.assertEqual(self.sim.show_time(), 0.35)
+        self.assertEqual(self.sim.show_time(), 0.2)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RETRIEVED: countOrder(first= 1, second= 2)":
                 break
-        self.assertEqual(self.sim.show_time(), 0.4)
+        self.assertEqual(self.sim.show_time(), 0.2)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CONFLICT RESOLUTION":
                 break
-        self.assertEqual(self.sim.show_time(), 0.4)
+        self.assertEqual(self.sim.show_time(), 0.2)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: incrementCount":
                 break
-        self.assertEqual(self.sim.show_time(), 0.45)
+        self.assertEqual(self.sim.show_time(), 0.25)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: terminateAddition":
                 break
-        self.assertEqual(self.sim.show_time(), 0.5)
+        self.assertEqual(self.sim.show_time(), 0.3)
         
 
 class TestModel1(unittest.TestCase):
@@ -727,17 +727,17 @@ class TestModel1(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: increment":
                 break
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: increment":
                 break
-        self.assertEqual(self.sim.show_time(), 0.25)
+        self.assertEqual(self.sim.show_time(), 0.15)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "RULE FIRED: stop":
                 break
-        self.assertEqual(self.sim.show_time(), 0.35)
+        self.assertEqual(self.sim.show_time(), 0.2)
 
 class TestModel2(unittest.TestCase):
     """
@@ -761,14 +761,14 @@ class TestModel2(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "g":
                 break
-        self.assertEqual(self.sim.show_time(), 0.15)
-        self.assertEqual(self.m2.dm, declarative.DecMem({chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])}))
+        self.assertEqual(self.sim.show_time(), 0.1)
+        self.assertEqual(self.m2.dm, declarative.DecMem({chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.1])}))
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "retrieval":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
-        self.assertEqual(self.m2.dm, {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])})
+        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.m2.dm, {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.15]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.1])})
 
 
 class TestModel3(unittest.TestCase):
@@ -794,14 +794,14 @@ class TestModel3(unittest.TestCase):
             self.sim.step()
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "g":
                 break
-        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim.show_time(), 0.1)
         while True:
             self.sim.step()
             if self.sim.current_event.action == "CLEARED" and self.sim.current_event.proc == "retrieval":
                 break
-        self.assertEqual(self.sim.show_time(), 0.2)
-        self.assertEqual(self.sim._Simulation__pr.dm, {'retrieval': {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])}, 'g': {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])}})
-        self.assertEqual(self.m3.dm, {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.2]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.15])})
+        self.assertEqual(self.sim.show_time(), 0.15)
+        self.assertEqual(self.sim._Simulation__pr.dm, {'retrieval': {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.15]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.1])}, 'g': {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.15]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.1])}})
+        self.assertEqual(self.m3.dm, {chunks.makechunk("","twoVars", x=10, y=20): np.array([0.0]), chunks.makechunk("","twoVars", x=20, y=10): np.array([0.15]), chunks.makechunk("","reverse", x=10, y=10): np.array([0.1])})
         self.assertTrue(self.sim._Simulation__pr.dm['retrieval'] is self.sim._Simulation__pr.dm['g'])
 
 class TestMotorModel(unittest.TestCase):
@@ -1016,8 +1016,8 @@ class TestBaseLevelLearningModel(unittest.TestCase):
         used_stim = {"bank": "0"}
         text = []
         for x in zip(used_stim.keys(), used_stim.values()):
-            text.append({1: {'text': x[0], 'position': (1366, 0)}})
-            text.append({1: {'text': x[1], 'position': (1366, 0)}})
+            text.append({1: {'text': x[0], 'position': (1366, 0), "vis_delay": 1}})
+            text.append({1: {'text': x[1], 'position': (1366, 0), "vis_delay": 1}})
         trigger = list(used_stim.values())
 
         environ = actr.Environment(size=(1366,768), focus_position=(0,0))
