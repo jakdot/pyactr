@@ -98,7 +98,7 @@ class VisualLocation(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1], negative_impossible=False) for x in otherchunk.removeunused()}
         except utilities.ACTRError as arg:
-            raise utilities.ACTRError("The chunk '%s' is not defined correctly; %s" % (otherchunk, arg))
+            raise utilities.ACTRError(f"The chunk '{otherchunk}' is not defined correctly; {arg}")
         chunk_used_for_search = chunks.Chunk(utilities.VISUALLOCATION, **mod_attr_val)
             
         found = None
@@ -330,7 +330,7 @@ class Visual(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()}
         except ACTRError as arg:
-            raise ACTRError("Shifting towards the chunk '%s' is impossible; %s" % (otherchunk, arg))
+            raise ACTRError(f"Shifting towards the chunk '{otherchunk}' is impossible; {arg}")
 
         vis_delay = None
 

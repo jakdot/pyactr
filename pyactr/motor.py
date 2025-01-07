@@ -48,19 +48,18 @@ class Motor(buffers.Buffer):
         try:
             mod_attr_val = {x[0]: utilities.check_bound_vars(actrvariables, x[1]) for x in otherchunk.removeunused()} #creates dict of attr-val pairs according to otherchunk
         except ACTRError as arg:
-            raise ACTRError("Setting the chunk '%s' in the manual buffer is impossible; %s" % (otherchunk, arg))
+            raise ACTRError(f"Setting the chunk '{otherchunk}' in the manual buffer is impossible; {arg}")
 
         new_chunk = chunks.Chunk(self._MANUAL, **mod_attr_val) #creates new chunk
 
         if new_chunk.cmd.values not in utilities.CMDMANUAL:
-            raise ACTRError("Motor module received an invalid command: '%s'. The valid commands are: '%s'" % (new_chunk.cmd.values, utilities.CMDMANUAL))
+            raise ACTRError(f"Motor module received an invalid command: '{new_chunk.cmd.values}'. The valid commands are: '{utilities.CMDMANUAL}'")
 
         if new_chunk.cmd.values == utilities.CMDPRESSKEY:
             pressed_key = new_chunk.key.values.upper() #change key into upper case
             mod_attr_val["key"] = pressed_key
             new_chunk = chunks.Chunk(self._MANUAL, **mod_attr_val) #creates new chunk
         if pressed_key not in self.LEFT_HAND and new_chunk.key.values not in self.RIGHT_HAND:
-            raise ACTRError("Motor module received an invalid key: %s" % pressed_key)
+            raise ACTRError(f"Motor module received an invalid key: {pressed_key}")
 
         return new_chunk
-

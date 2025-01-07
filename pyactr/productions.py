@@ -50,15 +50,15 @@ class Production(collections.UserDict):
         production = self["rule"]()
         utility = self["utility"]
         reward = self["reward"]
-        txt += '{}\n==>\n{}'.format(next(production), next(production))
+        txt += f"{next(production)}\n==>\n{next(production)}"
         if utility:
-            txt += "\nUtility: {}\n".format(utility)
+            txt += f"\nUtility: {utility}\n"
         if reward:
-            txt += "Reward: {}\n".format(reward)
+            txt += f"Reward: {reward}\n"
         return txt
 
     def __setitem__(self, key, value):
-        assert key in {"rule", "utility", "reward"}, "The production can set only one of four values -- rule, utility, reward; you are using '%s'" %key
+        assert key in {"rule", "utility", "reward"}, f"The production can set only one of four values -- rule, utility, reward; you are using '{key}'"
         self.rule[key] = value
 
 class Productions(collections.UserDict):
@@ -109,7 +109,7 @@ class Productions(collections.UserDict):
     def __repr__(self):
         txt = ''
         for rulename in self.rules:
-            txt += rulename + '{}\n'.format(self.rules[rulename])
+            txt += rulename + f"{self.rules[rulename]}\n"
         return txt
 
     def __setitem__(self, key, value):
@@ -517,14 +517,14 @@ class ProductionRules:
             production = self.rules[used_rulename]["rule"]()
             self.rules.used_rulenames.setdefault(used_rulename, []).append(time)
             
-            yield Event(roundtime(time), self._PROCEDURAL, 'RULE SELECTED: %s' % used_rulename)
+            yield Event(roundtime(time), self._PROCEDURAL, f"RULE SELECTED: {used_rulename}")
             time = time + self.model_parameters["rule_firing"]
             yield Event(roundtime(time), self._PROCEDURAL, self._UNKNOWN)
 
             pro = next(production)
 
             if not self.LHStest(pro, self.__actrvariables.copy(), True):
-                yield Event(roundtime(time), self._PROCEDURAL, 'RULE STOPPED FROM FIRING: %s' % used_rulename)
+                yield Event(roundtime(time), self._PROCEDURAL, f"RULE STOPPED FROM FIRING: {used_rulename}")
             else:
                 if self.model_parameters["utility_learning"] and self.rules[used_rulename]["reward"] != None:
                     utilities.modify_utilities(time, self.rules[used_rulename]["reward"], self.rules.used_rulenames, self.rules, self.model_parameters)
@@ -532,13 +532,13 @@ class ProductionRules:
                 compiled_rulename, re_created = self.compile_rules()
                 self.compile = []
                 if re_created:
-                    yield Event(roundtime(time), self._PROCEDURAL, 'RULE %s: %s' % (re_created, compiled_rulename))
+                    yield Event(roundtime(time), self._PROCEDURAL, f"RULE {re_created}: {compiled_rulename}")
                 self.current_slotvals = {key: None for key in self.buffers}
-                yield Event(roundtime(time), self._PROCEDURAL, 'RULE FIRED: %s' % used_rulename)
+                yield Event(roundtime(time), self._PROCEDURAL, f"RULE FIRED: {used_rulename}")
                 try:
                     yield from self.update(next(production), time)
                 except utilities.ACTRError as e:
-                    raise utilities.ACTRError("The following rule is not defined correctly according to ACT-R: '%s'. The following error occurred: %s" % (self.used_rulename, e))
+                    raise utilities.ACTRError(f"The following rule is not defined correctly according to ACT-R: '{self.used_rulename}'. The following error occurred: {e}")
                 if self.last_rule and self.last_rule != used_rulename:
                     self.compile = [self.last_rule, used_rulename, self.last_rule_slotvals.copy()]
                     self.last_rule_slotvals = {key: None for key in self.buffers}
@@ -570,7 +570,7 @@ class ProductionRules:
         try:
             dictionary = collections.OrderedDict.fromkeys(sorted(RHSdictionary, key=lambda x:ordering_dict[x[0]]))
         except KeyError:
-            raise ACTRError("The RHS rule '%s' is invalid; every condition in RHS rules must start with one of these signs: %s" % (self.used_rulename, list(self._RHSCONVENTIONS.keys())))
+            raise ACTRError(f"The RHS rule '{self.used_rulename}' is invalid; every condition in RHS rules must start with one of these signs: {list(self._RHSCONVENTIONS.keys())}")
         dictionary.update(RHSdictionary)
         for key in dictionary:
             submodule_name = key[1:] #this is the name of updated submodule
@@ -622,7 +622,7 @@ class ProductionRules:
                 try:
                     cleared.clear(time, self.dm[name]) #if nothing else works, check whether buffer instance was bound to a decl. mem by user
                 except KeyError:
-                    raise ACTRError("It is not specified to what memory the buffer %s should be cleared" % name)
+                    raise ACTRError(f"It is not specified to what memory the buffer {name} should be cleared")
         yield Event(roundtime(time), name, "CLEARED")
         if freeing:
             cleared.state = cleared._FREE
@@ -704,7 +704,7 @@ class ProductionRules:
 
         created_elem = list(updated)[0]
         updated.state = updated._FREE
-        yield Event(roundtime(time), name, "WROTE A CHUNK: %s" % str(created_elem))
+        yield Event(roundtime(time), name, f"WROTE A CHUNK: {str(created_elem)}")
 
     def visualencode(self, name, visualbuffer, chunk, temp_actrvariables, time, extra_time, site):
         """
@@ -716,7 +716,7 @@ class ProductionRules:
         yield from self.clear(name, visualbuffer, None, temp_actrvariables, time, freeing=False)
         visualbuffer.add(chunk, time)
         visualbuffer.state = visualbuffer._FREE
-        yield Event(roundtime(time), name, "ENCODED VIS OBJECT:'%s'" % str(chunk))
+        yield Event(roundtime(time), name, f"ENCODED VIS OBJECT:'{str(chunk)}'")
 
     def retrieveorset(self, name, updated, otherchunk, temp_actrvariables, time):
         """
@@ -736,7 +736,7 @@ class ProductionRules:
             updated.create(otherchunk, list(self.dm.values())[0], temp_actrvariables)
             created_elem = list(updated)[0]
             updated.state = updated._FREE
-            yield Event(roundtime(time), name, "CREATED A CHUNK: %s" % str(created_elem))
+            yield Event(roundtime(time), name, f"CREATED A CHUNK: {str(created_elem)}")
         elif isinstance(updated, vision.VisualLocation):
             extra_time = utilities.calculate_setting_time(updated)
             time += extra_time #0 ms to create chunk in location (pop-up effect)
@@ -748,11 +748,11 @@ class ProductionRules:
                 updated.state = updated._FREE
             else:
                 updated.state = updated._ERROR
-            yield Event(roundtime(time), name, "ENCODED LOCATION:'%s'" % str(chunk))
+            yield Event(roundtime(time), name, f"ENCODED LOCATION:'{str(chunk)}'")
         elif isinstance(updated, vision.Visual):
             mod_attr_val = {x[0]: utilities.check_bound_vars(temp_actrvariables, x[1]) for x in otherchunk.removeunused()}
             if (not mod_attr_val['cmd'].values) or mod_attr_val['cmd'].values not in utilities.CMDVISUAL:
-                raise ACTRError("Visual module received no command or an invalid command: '%s'. The valid commands are: '%s'" % (mod_attr_val['cmd'].values, utilities.CMDVISUAL))
+                raise ACTRError(f"Visual module received no command or an invalid command: '{mod_attr_val['cmd'].values}'. The valid commands are: '{utilities.CMDVISUAL}'")
             if mod_attr_val['cmd'].values == utilities.CMDMOVEATTENTION:
                 ret = yield from self.visualshift(name, updated, otherchunk, temp_actrvariables, time)
                 yield ret #visual action returns value, namely, its continuation method
@@ -787,7 +787,7 @@ class ProductionRules:
             RHSdict = {item[0]: item[1] for item in RHSdict.items() if item[1] != chunks.Chunk.EmptyValue()} #delete None values
             self.current_slotvals[name] = [RHSdict, retrieved_elem]
 
-        yield Event(roundtime(time), name, 'RETRIEVED: %s' % str(retrieved_elem))
+        yield Event(roundtime(time), name, f"RETRIEVED: {str(retrieved_elem)}")
 
     def automatic_search(self, name, visualbuffer, stim, time):
         """
@@ -802,7 +802,7 @@ class ProductionRules:
                 visualbuffer.modify(newchunk, stim)
             else:
                 visualbuffer.add(newchunk, stim, time)
-            yield Event(roundtime(time), name, 'ENCODED LOCATION: %s' %newchunk)
+            yield Event(roundtime(time), name, f"ENCODED LOCATION: {newchunk}")
         else:
             yield Event(roundtime(time), name, self._UNKNOWN)
 
@@ -829,7 +829,7 @@ class ProductionRules:
                 visualbuffer.modify(newchunk)
             else:
                 visualbuffer.add(newchunk, time)
-            yield Event(roundtime(time), name, 'AUTOMATIC BUFFERING: %s' % str(newchunk))
+            yield Event(roundtime(time), name, f"AUTOMATIC BUFFERING: {str(newchunk)}")
 
     def visualshift(self, name, visualbuffer, otherchunk, temp_actrvariables, time):
         """
@@ -878,7 +878,7 @@ class ProductionRules:
 
         yield Event(roundtime(time), name, self._UNKNOWN)
         visualbuffer.move_eye(landing_site)
-        yield Event(roundtime(time), name, 'SHIFT COMPLETE TO POSITION: %s' % str(visualbuffer.current_focus))
+        yield Event(roundtime(time), name, f"SHIFT COMPLETE TO POSITION: {str(visualbuffer.current_focus)}")
         if encoding > preparation+execution:
             newchunk, extra_time, _ = visualbuffer.shift(otherchunk, actrvariables=temp_actrvariables, model_parameters=self.model_parameters)
             yield from self.visualencode(name, visualbuffer, otherchunk, temp_actrvariables, time, (1-((preparation+execution)/encoding))*extra_time[0], landing_site)
@@ -918,7 +918,7 @@ class ProductionRules:
         motorbuffer.preparation = motorbuffer._BUSY
         motorbuffer.processor = motorbuffer._BUSY
 
-        yield Event(roundtime(time), name, 'COMMAND: %s' % str(newchunk.cmd))
+        yield Event(roundtime(time), name, f"COMMAND: {str(newchunk.cmd)}")
         time += preparation
         
         yield Event(roundtime(time), name, 'PREPARATION COMPLETE')
@@ -952,7 +952,7 @@ class ProductionRules:
         
         self.env_interaction.add(otherchunk.key.values)
 
-        yield Event(roundtime(time), name, 'KEY PRESSED: %s' % str(otherchunk.key))
+        yield Event(roundtime(time), name, f"KEY PRESSED: {str(otherchunk.key)}")
         
         time += movement_finish
 
@@ -971,7 +971,7 @@ class ProductionRules:
             submodule_name = key[1:] #this is the module
             code = key[0] #this is what the module should do; standardly, query, i.e., ?, or test, =
             if code not in self._LHSCONVENTIONS:
-                raise ACTRError("The LHS rule '%s' is invalid; every condition in LHS rules must start with one of these signs: %s" % (self.used_rulename, list(self._LHSCONVENTIONS.keys())))
+                raise ACTRError(f"The LHS rule '{self.used_rulename}' is invalid; every condition in LHS rules must start with one of these signs: {list(self._LHSCONVENTIONS.keys())}")
             result = getattr(self, self._LHSCONVENTIONS[code])(submodule_name, self.buffers.get(submodule_name), dictionary[key], actrvariables)
             if not result[0]:
                 return False
