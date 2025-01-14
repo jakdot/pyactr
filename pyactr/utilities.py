@@ -21,13 +21,13 @@ _ERROR = "error"
 #special characters for chunks
 
 ACTRVARIABLE = "="
-ACTRVARIABLER = "\=" #used for regex
+ACTRVARIABLER = r"\=" #used for regex
 ACTRVALUE = "!"
-ACTRVALUER = "\!" #used for regex
+ACTRVALUER = r"\!" #used for regex
 ACTRNEG = "~"
-ACTRNEGR = "\~" #used for regex
+ACTRNEGR = r"\~" #used for regex
 ACTRRETRIEVE = "+"
-ACTRRETRIEVER = "\+" #used for regex
+ACTRRETRIEVER = r"\+" #used for regex
 
 MANUAL = "_manual"
 VISUAL = "_visual"
@@ -167,7 +167,7 @@ def getchunk():
     special_value = pp.Group(pp.one_of(elements) + pp.Word("".join([pp.alphanums, "_", '"', "'"])))
     strvalue = pp.QuotedString('"', unquoteResults=False)
     strvalue2 = pp.QuotedString("'", unquoteResults=False)
-    varvalue = pp.Word("".join([pp.alphanums, "_", "\:", "\|", "\.", ",", "%", "&", "\$", "`", "\*", "-"]))
+    varvalue = pp.Word("".join([pp.alphanums, "_", ":", "|", ".", ",", "%", "&", "$", "`", "*", "-"]))
     value = varvalue | special_value | strvalue | strvalue2
     chunk_reader = pp.OneOrMore(pp.Group(slot + value))
     return chunk_reader
