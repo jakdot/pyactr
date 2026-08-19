@@ -1922,6 +1922,7 @@ class TestCompilation12(unittest.TestCase):
 
         self.assertEqual(g_noncompiled, g_compiled)
 
+
 class TestAutomaticBuffering(unittest.TestCase):
     """
     Testing automatic_buffering setting.
@@ -1965,6 +1966,41 @@ class TestAutomaticBuffering(unittest.TestCase):
             except simpy.core.EmptySchedule:
                 break
         self.assertEqual(self.model._ACTRModel__buffers["visual"], set())
+
+
+class TestPeek(unittest.TestCase):
+    """
+    Testing the public Simulation.peek() method, which returns the time of the
+    next scheduled event, or float("inf") when the schedule is empty.
+    """
+
+    def setUp(self):
+        self.model = actr.ACTRModel()
+        actr.chunktype("countFrom", ("start", "count"))
+        self.model.goal.add(actr.chunkstring(string="isa countFrom start 1 count None"))
+        self.model.productionstring(name="start", string="""
+            =g>
+            isa countFrom
+            start =x
+            count None
+            ==>
+            =g>
+            isa countFrom
+            count =x""")
+        self.sim = self.model.simulation(trace=False)
+
+    def test_peek(self):
+        warnings.simplefilter("ignore")
+        # peek() returns a number and, before running, agrees with the current time
+        self.assertIsInstance(self.sim.peek(), (int, float))
+        self.assertEqual(self.sim.peek(), self.sim.show_time())
+        # peek() never lies behind the clock while events remain scheduled
+        self.sim.step()
+        self.assertGreaterEqual(self.sim.peek(), self.sim.show_time())
+        # once the simulation finishes, the schedule is empty
+        self.sim.run()
+        self.assertEqual(self.sim.peek(), float("inf"))
+
 
 if __name__ == '__main__':
     unittest.main()

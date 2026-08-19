@@ -273,6 +273,17 @@ class Simulation:
         else:
             return t
 
+    def peek(self):
+        """
+        Return the time of the next scheduled event, or float("inf") if no event is scheduled.
+        """
+        try:
+            t = self.__simulation.peek()
+        except AttributeError:
+            raise AttributeError("No simulation is running")
+        else:
+            return t
+
     def step(self):
         """
         Make one step through simulation.
